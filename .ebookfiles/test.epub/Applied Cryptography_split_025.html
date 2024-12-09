@@ -1,0 +1,783 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Applied Cryptography, Second Edition: Protocols, Algorithms, and Source Code in C</title>
+    <meta content="Bruce Schneier" name="author"/>
+    <meta content="An introduction to cryptography." name="description"/>
+    <meta content="programming,cryptography" name="keywords"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body class="calibre">
+<div id="book" class="calibre1">
+<h1 class="chapter" id="22">Chapter 22 <br class="calibre3"/>
+Key-Exchange Algorithms</h1>
+
+<h3 id="22.1" class="calibre7">22.1 Diffie-Hellman</h3>
+
+<p class="calibre9">Diffie-Hellman was the first public-key algorithm ever invented, way back in
+1976 [<a href="Applied%20Cryptography_split_035.html#r496" class="calibre5 pcalibre">496</a>]. It gets its security from the difficulty of calculating discrete
+logarithms in a finite field, as compared with the ease of calculating
+exponentiation in the same field. Diffie-Hellman can be used for key
+distribution — Alice and Bob can use this algorithm to generate a secret
+key — but it cannot be used to encrypt and decrypt messages.</p>
+
+<p class="calibre9">The math is simple. First, Alice and Bob agree on a large prime, <i class="calibre12">n</i> and <i class="calibre12">g, </i> such that <i class="calibre12">g</i> is primitive mod <i class="calibre12">n. </i> These two integers don’t have to be secret; Alice and Bob can agree to them over some insecure channel. They can even be common
+among a group of users. It doesn’t matter.</p>
+
+<p class="calibre9">Then, the protocol goes as follows:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses a random large integer <i class="calibre12">x</i> and sends Bob
+<p class="math"><i class="calibre12">X</i> = <i class="calibre12">g<sup class="calibre19">x</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Bob chooses a random large integer <i class="calibre12">y</i> and sends Alice
+<p class="math"><i class="calibre12">Y</i> = <i class="calibre12">g<sup class="calibre19">y</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Alice computes
+<p class="math"><i class="calibre12">k</i> = <i class="calibre12">Y<sup class="calibre19">x</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Bob computes
+<p class="math"><i class="calibre12">k´</i> = <i class="calibre12">X<sup class="calibre19">y</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">Both <i class="calibre12">k</i> and <i class="calibre12">k´</i> are equal to <i class="calibre12">g<sup class="calibre19">xy</sup></i> mod <i class="calibre12">n. </i> No one listening on the channel can compute that value; they only know <i class="calibre12">n, g, X, </i> and <i class="calibre12">Y. </i> Unless they can compute the discrete logarithm and recover <i class="calibre12">x</i> or <i class="calibre12">y, </i> they do not solve the problem. So, <i class="calibre12">k</i> is the secret key that both Alice and Bob computed independently.</p>
+
+<p class="calibre9">The choice of <i class="calibre12">g</i> and <i class="calibre12">n</i> can have a substantial impact on the security of this system. The number (<i class="calibre12">n</i> - 1)/2 should also be a prime [<a href="Applied%20Cryptography_split_036.html#r1253" class="calibre5 pcalibre">1253</a>]. And most
+important, <i class="calibre12">n</i> should be large: The security of the system is based on the
+difficulty of factoring numbers the same size as <i class="calibre12">n. </i> You can choose any <i class="calibre12">g, </i> such that <i class="calibre12">g</i> is primitive mod <i class="calibre12">n; </i> there’s no reason not to choose the smallest <i class="calibre12">g</i> you can — generally a one-digit number. (And actually, <i class="calibre12">g</i> does not have to be
+primitive; it just has to generate a large subgroup of the multiplicitive group
+mod <i class="calibre12">n. </i>)</p>
+
+<h4 class="calibre8">Diffie-Hellman with Three or More Parties</h4>
+
+<p class="calibre9">The Diffie-Hellman key-exchange protocol can easily be extended to work
+with three or more people. In this example, Alice, Bob, and Carol together
+generate a secret key.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses a random large integer <i class="calibre12">x</i> and sends Bob
+<p class="math"><i class="calibre12">X</i> = <i class="calibre12">g<sup class="calibre19">x</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Bob chooses a random large integer <i class="calibre12">y</i> and sends Carol
+<p class="math"><i class="calibre12">Y</i> = <i class="calibre12">g<sup class="calibre19">y</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Carol chooses a random large integer <i class="calibre12">z</i> and sends Alice
+<p class="math"><i class="calibre12">Z</i> = <i class="calibre12">g<sup class="calibre19">z</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Alice sends Bob
+<p class="math"><i class="calibre12">Z´</i> = <i class="calibre12">Z<sup class="calibre19">x</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Bob sends Carol
+<p class="math"><i class="calibre12">X´</i> = <i class="calibre12">X<sup class="calibre19">y</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Carol sends Alice
+<p class="math"><i class="calibre12">Y´</i> = <i class="calibre12">Y<sup class="calibre19">z</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Alice computes
+<p class="math"><i class="calibre12">k</i> = <i class="calibre12">Y´<sup class="calibre19">x</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Bob computes
+<p class="math"><i class="calibre12">k</i> = <i class="calibre12">Z´<sup class="calibre19">y</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Carol computes
+<p class="math"><i class="calibre12">k</i> = <i class="calibre12">X´<sup class="calibre19">z</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">The secret key, <i class="calibre12">k, </i> is equal to g<sup class="calibre19">xyz</sup> mod <i class="calibre12">n, </i> and no one else listening in on the communications can compute that value. The protocol can be easily extended
+to four or more people; just add more people and more rounds of computation.</p>
+
+<h4 class="calibre8">Extended Diffie-Hellman</h4>
+
+<p class="calibre9">Diffie-Hellman also works in commutative rings [<a href="Applied%20Cryptography_split_036.html#r1253" class="calibre5 pcalibre">1253</a>]. Z. Shmuley and
+Kevin McCurley studied a variant of the algorithm where the modulus is a
+composite number [<a href="Applied%20Cryptography_split_036.html#r1442" class="calibre5 pcalibre">1442</a>,<a href="Applied%20Cryptography_split_036.html#r1038" class="calibre5 pcalibre">1038</a>]. V. S. Miller and Neal Koblitz extended this
+algorithm to elliptic curves [<a href="Applied%20Cryptography_split_036.html#r1095" class="calibre5 pcalibre">1095</a>,<a href="Applied%20Cryptography_split_036.html#r867" class="calibre5 pcalibre">867</a>]. Taher ElGamal used the basic idea to
+develop an encryption and digital signature algorithm (see <a href="Applied%20Cryptography_split_022.html#19.6" class="calibre5 pcalibre">Section 19.6</a>).</p>
+
+<p class="calibre9">This algorithm also works in the Galois field GF(2k) [<a href="Applied%20Cryptography_split_036.html#r1442" class="calibre5 pcalibre">1442</a>,<a href="Applied%20Cryptography_split_036.html#r1038" class="calibre5 pcalibre">1038</a>]. Some
+implementations take this approach [<a href="Applied%20Cryptography_split_036.html#r884" class="calibre5 pcalibre">884</a>,<a href="Applied%20Cryptography_split_036.html#r1631" class="calibre5 pcalibre">1631</a>,<a href="Applied%20Cryptography_split_036.html#r1632" class="calibre5 pcalibre">1632</a>], because the computation
+is much quicker. Similarly, cryptanalytic computation is equally fast, so it is
+important to carefully choose a field large enough to ensure security.</p>
+
+<h4 class="calibre8">Hughes</h4>
+
+<p class="calibre9">This variant of Diffie-Hellman allows Alice to generate a key and send it to
+Bob [<a href="Applied%20Cryptography_split_035.html#r745" class="calibre5 pcalibre">745</a>].</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses a random large integer <i class="calibre12">x</i> and generates
+<p class="math-left"><i class="calibre12">k</i> = <i class="calibre12">g<sup class="calibre19">x</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Bob chooses a random large integer <i class="calibre12">y</i> and sends Alice
+<p class="math-left"><i class="calibre12">Y</i> = <i class="calibre12">g<sup class="calibre19">y</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Alice sends Bob
+<p class="math-left"><i class="calibre12">X</i> = <i class="calibre12">Y<sup class="calibre19">x</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Bob computes
+<p class="math-left"><i class="calibre12">z</i> = <i class="calibre12">y</i><sup class="calibre19">-1</sup>
+<i class="calibre12">k´</i> = <i class="calibre12">X<sup class="calibre19">z</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">If everything goes correctly, <i class="calibre12">k</i> = <i class="calibre12">k´</i>.</p>
+
+<p class="calibre9">The advantage of this protocol over Diffie-Hellman is that <i class="calibre12">k</i> can be computed
+before any interaction, and Alice can encrypt a message using <i class="calibre12">k</i> prior to
+contacting Bob. She can send it to a variety of people and interact with them to
+exchange the key individually later.</p>
+
+<h4 class="calibre8">Key Exchange without Exchanging Keys</h4>
+
+<p class="calibre9">If you have a community of users, each could publish a public key, <i class="calibre12">X</i> = <i class="calibre12">g<sup class="calibre19">x</sup></i> mod <i class="calibre12">n, </i> in a common database. If Alice wants to communicate with Bob, she just
+has to retrieve Bob’s public key and generate their shared secret key. She
+could then encrypt a message with that key and send it to Bob. Bob would
+retrieve Alice’s public key to generate the shared secret key.</p>
+
+<p class="calibre9">Each pair of users would have a unique secret key, and no prior
+communication between users is required. The public keys have to be certified
+to prevent spoofing attacks and should be changed regularly, but otherwise this
+is a pretty clever idea.</p>
+
+<h4 class="calibre8">Patents</h4>
+
+<p class="calibre9">The Diffie-Hellman key-exchange algorithm is patented in the United States
+[<a href="Applied%20Cryptography_split_035.html#r718" class="calibre5 pcalibre">718</a>] and Canada [<a href="Applied%20Cryptography_split_035.html#r719" class="calibre5 pcalibre">719</a>]. A group called Public Key Partners (PKP) licenses
+the patent, along with other public-key cryptography patents (see <a href="Applied%20Cryptography_split_029.html#25.5" class="calibre5 pcalibre">Section 25.5</a>). 
+The U.S. patent will expire on April 29, 1997.</p>
+
+<h3 id="22.2" class="calibre7">22.2 Station-to-Station Protocol</h3>
+
+<p class="calibre9">Diffie-Hellman key exchange is vulnerable to a man-in-the-middle attack. One
+way to prevent this problem is to have Alice and Bob sign their messages to
+each other [<a href="Applied%20Cryptography_split_035.html#r500" class="calibre5 pcalibre">500</a>].</p>
+
+<p class="calibre9">This protocol assumes that Alice has a certificate with Bob’s public key and
+that Bob has a certificate with Alice’s public key. These certificates have been
+signed by some trusted authority outside this protocol. Here’s how Alice and
+Bob generate a secret key, <i class="calibre12">k. </i></p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice generates a random number, <i class="calibre12">x, </i> and sends it to Bob.
+</li>
+<li class="calibre14">Bob generates a random number, <i class="calibre12">y. </i> Using the Diffie-Hellman
+protocol he computes their shared key based on <i class="calibre12">x</i> and <i class="calibre12">y: k. </i> He signs <i class="calibre12">x</i> and <i class="calibre12">y, </i> and encrypts the signature using <i class="calibre12">k. </i> He then sends that, along with <i class="calibre12">y, </i> to Alice.
+<p class="math"><i class="calibre12">y,E<sub class="calibre15">k</sub></i>(<i class="calibre12">S</i><sub class="calibre15">B</sub>(<i class="calibre12">x,y</i>))
+</p>
+
+</li>
+<li class="calibre14">Alice also computes <i class="calibre12">k. </i> She decrypts the rest of Bob’s message and verifies his signature. Then she sends Bob a signed message consisting
+of <i class="calibre12">x</i> and <i class="calibre12">y, </i> encrypted in their shared key.
+<p class="math"><i class="calibre12">E<sub class="calibre15">k</sub></i>(<i class="calibre12">S</i><sub class="calibre15">A</sub>(<i class="calibre12">x,y</i>))
+</p>
+
+</li>
+<li class="calibre14">Bob decrypts the message and verifies Alice’s signature.
+</li>
+
+</ol>
+
+<h3 id="22.3" class="calibre7">22.3 Shamir’s Three-Pass Protocol</h3>
+
+<p class="calibre9">This protocol, invented by Adi Shamir but never published, enables Alice and
+Bob to communicate securely without any advance exchange of either secret
+keys or public keys [<a href="Applied%20Cryptography_split_036.html#r1008" class="calibre5 pcalibre">1008</a>].</p>
+
+<p class="calibre9">This assumes the existence of a symmetric cipher that is commutative, that is:</p>
+
+<p class="math"><i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">P</i>)) = <i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">P</i>))
+</p>
+
+<p class="calibre9">Alice’s secret key is <i class="calibre12">A; </i> Bob’s secret key is <i class="calibre12">B. </i> Alice wants to send a message, <i class="calibre12">M, </i> to Bob. Here’s the protocol.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice encrypts <i class="calibre12">M</i> with her key and sends Bob
+<p class="math"><i class="calibre12">C</i><sub class="calibre15">1</sub> = <i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i>)
+</p>
+
+</li>
+<li class="calibre14">Bob encrypts <i class="calibre12">C</i><sub class="calibre15">1</sub> with his key and sends Alice
+<p class="math"><i class="calibre12">C</i><sub class="calibre15">2</sub> = <i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i>))
+</p>
+
+</li>
+<li class="calibre14">Alice decrypts <i class="calibre12">C</i><sub class="calibre15">2</sub> with her key and sends Bob
+<p class="math"><i class="calibre12">C</i><sub class="calibre15">3</sub> = <i class="calibre12">D</i><sub class="calibre15">A</sub>(<i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i>))) = <i class="calibre12">D</i><sub class="calibre15">A</sub>(<i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">M</i>))) = <i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">M</i>)
+</p>
+
+</li>
+<li class="calibre14">Bob decrypts <i class="calibre12">C</i><sub class="calibre15">3</sub> with his key to recover <i class="calibre12">M. </i>
+</li>
+
+</ol>
+
+<p class="calibre9">One-time pads are commutative and have perfect secrecy, but they will not
+work with this protocol. With a one-time pad, the three ciphertext messages
+would be:</p>
+
+<p class="math-left"><i class="calibre12">C</i><sub class="calibre15">1</sub> = <i class="calibre12">P</i> ⊕ <i class="calibre12">A</i>
+<i class="calibre12">C</i><sub class="calibre15">2</sub> = <i class="calibre12">P</i> ⊕ <i class="calibre12">A</i> ⊕ <i class="calibre12">B</i>
+<i class="calibre12">C</i><sub class="calibre15">3</sub> = <i class="calibre12">P</i> ⊕ <i class="calibre12">B</i>
+</p>
+
+<p class="calibre9">Eve, who can record the three messages as they pass between Alice and Bob,
+simply XORs them together to retrieve the message:</p>
+
+<p class="math"><i class="calibre12">C</i><sub class="calibre15">1</sub> ⊕ <i class="calibre12">C</i><sub class="calibre15">2</sub> ⊕ <i class="calibre12">C</i><sub class="calibre15">3</sub> = (<i class="calibre12">P</i> ⊕ <i class="calibre12">A</i>) ⊕ (<i class="calibre12">P</i> ⊕ <i class="calibre12">A</i> ⊕ <i class="calibre12">B</i>) ⊕ (<i class="calibre12">P</i> ⊕ <i class="calibre12">B</i>) = <i class="calibre12">P</i>
+</p>
+
+<p class="calibre9">This clearly won’t work.</p>
+
+<p class="calibre9">Shamir (and independently, Jim Omura) described an encryption algorithm
+that will work with this protocol, one similar to RSA. Let <i class="calibre12">p</i> be a large prime
+for which <i class="calibre12">p</i> - 1 has a large prime factor. Choose an encryption key, <i class="calibre12">e, </i> such that <i class="calibre12">e</i> is relatively prime to <i class="calibre12">p</i> - 1. Calculate <i class="calibre12">d</i> such that <i class="calibre12">de</i> ≡ 1 (mod <i class="calibre12">p</i> - 1).</p>
+
+<p class="calibre9">To encrypt a message, calculate</p>
+
+<p class="math"><i class="calibre12">C</i> = <i class="calibre12">M<sup class="calibre19">e</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+<p class="calibre9">To decrypt a message, calculate</p>
+
+<p class="math"><i class="calibre12">M</i> = <i class="calibre12">C<sup class="calibre19">d</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+<p class="calibre9">There seems to be no way for Eve to recover <i class="calibre12">M</i> without solving the discrete
+logarithm problem, but this has never been proved.</p>
+
+<p class="calibre9">Like Diffie-Hellman, this protocol allows Alice to initiate secure
+communication with Bob without knowing any of his keys. For Alice to use a
+public-key algorithm, she has to know his public key. With Shamir’s
+three-pass protocol, she just sends him a ciphertext message. The same thing
+with a public-key algorithm looks like:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice asks Bob (or a KDC) for his public key.
+</li>
+<li class="calibre14">Bob (or the KDC) sends Alice his public key.
+</li>
+<li class="calibre14">Alice encrypts <i class="calibre12">M</i> with Bob’s public key and sends it to Bob.
+</li>
+
+</ol>
+
+<p class="calibre9">Shamir’s three-pass protocol will fall to a man-in-the-middle attack.</p>
+
+<h3 id="22.4" class="calibre7">22.4 COMSET</h3>
+
+<p class="calibre9">COMSET (COMmunications SETup) is a mutual identification and key
+exchange protocol developed for the RIPE project [<a href="Applied%20Cryptography_split_036.html#r1305" class="calibre5 pcalibre">1305</a>] (see <a href="Applied%20Cryptography_split_029.html#25.7" class="calibre5 pcalibre">Section 25.7</a>).
+Using public-key cryptography, it allows Alice and Bob to identify themselves
+to each other and also to exchange a secret key.</p>
+
+<p class="calibre9">The mathematical principle behind COMSET is Rabin’s scheme [<a href="Applied%20Cryptography_split_036.html#r1283" class="calibre5 pcalibre">1283</a>] (see
+<a href="Applied%20Cryptography_split_022.html#19.5" class="calibre5 pcalibre">Section 19.5</a>). The scheme itself was originally proposed in [<a href="Applied%20Cryptography_split_035.html#r224" class="calibre5 pcalibre">224</a>]. See [<a href="Applied%20Cryptography_split_036.html#r1305" class="calibre5 pcalibre">1305</a>]
+for details.</p>
+
+<h3 id="22.5" class="calibre7">22.5 Encrypted Key Exchange</h3>
+
+<p class="calibre9">The Encrypted Key Exchange (EKE) protocol was designed by Steve Bellovin
+and Michael Merritt [<a href="Applied%20Cryptography_split_035.html#r109" class="calibre5 pcalibre">109</a>]. It provides security and authentication on computer
+networks, using both symmetric and public-key cryptography in a novel way:
+A shared secret key is used to encrypt a randomly generated public key.</p>
+
+<h4 class="calibre8">The Basic EKE Protocol</h4>
+
+<p class="calibre9">Alice and Bob (two users, a user and the host, or whoever) share a common
+password, <i class="calibre12">P. </i> Using this protocol, they can authenticate each other and generate a common session key, <i class="calibre12">K. </i></p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice generates a random public-key/private-key key pair. She
+encrypts the public key, <i class="calibre12">K´, </i> using a symmetric algorithm and <i class="calibre12">P</i> as the key: <i class="calibre12">E<sub class="calibre15">P</sub></i>(<i class="calibre12">K´</i>). She sends Bob
+<p class="math"><i class="calibre12">A, E<sub class="calibre15">P</sub></i>(<i class="calibre12">K´</i>)
+</p>
+
+</li>
+<li class="calibre14">Bob knows <i class="calibre12">P. </i> He decrypts the message to obtain <i class="calibre12">K´</i>. Then, he generates a random session key, <i class="calibre12">K, </i> and encrypts it with the public key
+he received from Alice and <i class="calibre12">P</i> as the key. He sends Alice
+<p class="math"><i class="calibre12">E<sub class="calibre15">P</sub></i>(<i class="calibre12">E<sub class="calibre15">K´</sub></i>(<i class="calibre12">K</i>))
+</p>
+
+</li>
+<li class="calibre14">Alice decrypts the message to obtain <i class="calibre12">K. </i> She generates a random
+string, <i class="calibre12">R<sub class="calibre15">A</sub></i>, encrypts it with <i class="calibre12">K, </i> and sends Bob
+<p class="math"><i class="calibre12">E<sub class="calibre15">K</sub></i>(<i class="calibre12">R<sub class="calibre15">A</sub></i>)
+</p>
+
+</li>
+<li class="calibre14">Bob decrypts the message to obtain <i class="calibre12">R<sub class="calibre15">A</sub></i>. He generates another
+random string, <i class="calibre12">R<sub class="calibre15">B</sub></i>, encrypts both strings with <i class="calibre12">K, </i> and sends Alice the result.
+<p class="math"><i class="calibre12">E<sub class="calibre15">K</sub></i>(<i class="calibre12">R<sub class="calibre15">A</sub></i>, <i class="calibre12">R<sub class="calibre15">B</sub></i>)
+</p>
+
+</li>
+<li class="calibre14">Alice decrypts the message to obtain <i class="calibre12">R<sub class="calibre15">A</sub></i> and <i class="calibre12">R<sub class="calibre15">B</sub></i>. Assuming the <i class="calibre12">R<sub class="calibre15">A</sub></i> she received from Bob is the same as the one she sent to Bob in step (3),
+she encrypts <i class="calibre12">R<sub class="calibre15">B</sub></i> with <i class="calibre12">K</i> and sends it to Bob.
+<p class="math"><i class="calibre12">E<sub class="calibre15">K</sub></i>(<i class="calibre12">R<sub class="calibre15">B</sub></i>)
+</p>
+
+</li>
+<li class="calibre14">Bob decrypts the message to obtain <i class="calibre12">R<sub class="calibre15">B</sub></i>. Assuming the <i class="calibre12">R<sub class="calibre15">B</sub></i> he received from Alice is the same one he sent to Alice in step (4), the
+protocol is complete. Both parties now communicate using <i class="calibre12">K</i> as the
+session key.
+</li>
+
+</ol>
+
+<p class="calibre9">At step (3), both Alice and Bob know <i class="calibre12">K´</i> and <i class="calibre12">K. K</i> is the session key and can be used to encrypt all other messages between Alice and Bob. Eve, sitting
+between Alice and Bob, only knows <i class="calibre12">E<sub class="calibre15">P</sub></i>(<i class="calibre12">K´</i>), <i class="calibre12">E<sub class="calibre15">P</sub></i>(<i class="calibre12">E<sub class="calibre15">K´</sub></i>(<i class="calibre12">K</i>)), and some messages encrypted with <i class="calibre12">K. </i> In other protocols, Eve could make guesses at <i class="calibre12">P</i> (people choose bad passwords all the time, and if Eve is clever she can make some
+good guesses) and then test her guesses. In this protocol, Eve cannot test her
+guess without cracking the public-key algorithm as well. And if both <i class="calibre12">K´</i> and <i class="calibre12">K</i>
+are chosen randomly, this can be an insurmountable problem.</p>
+
+<p class="calibre9">The challenge-response portion of the protocol, steps (3) through (6), provides
+validation. Steps (3) through (5) prove to Alice that Bob knows <i class="calibre12">K; </i> steps (4)
+through (6) prove to Bob that Alice knows <i class="calibre12">K. </i> The Kerberos protocol
+timestamp exchange accomplishes the same thing.</p>
+
+<p class="calibre9">EKE can be implemented with a variety of public-key algorithms: RSA,
+ElGamal, Diffie-Hellman. There are security problems with implementing
+EKE with a knapsack algorithm (aside from the inherent insecurity of
+knapsack algorithms): The normal distribution of the ciphertext messages
+negates the benefits of EKE.</p>
+
+<h4 class="calibre8">Implementing EKE with RSA</h4>
+
+<p class="calibre9">The RSA algorithm seems perfect for this application, but there are some
+subtle problems. The authors recommend encrypting only the encryption
+exponent in step (1) and sending the modulus in the clear. An explanation of
+the reasoning behind this recommendation, as well as other subtleties involved
+in using RSA, is in [<a href="Applied%20Cryptography_split_035.html#r109" class="calibre5 pcalibre">109</a>].</p>
+
+<h4 class="calibre8">Implementing EKE with ElGamal</h4>
+
+<p class="calibre9">Implementing EKE with the ElGamal algorithm is straightforward, and there is
+even a simplification of the basic protocol. Using the notation from <a href="Applied%20Cryptography_split_022.html#19.6" class="calibre5 pcalibre">Section 19.6</a>, 
+<i class="calibre12">g</i> and <i class="calibre12">p</i> are parts of the public key and are common to all users. The private key is a random number <i class="calibre12">r. </i> The public key is <i class="calibre12">g<sup class="calibre19">r</sup></i> mod <i class="calibre12">p. </i> The message Alice sends to Bob in step (1) becomes</p>
+
+<p class="math">Alice, <i class="calibre12">g<sup class="calibre19">r</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+<p class="calibre9">Note that this public key does not have to be encrypted with <i class="calibre12">P. </i> This is not true in general, but it is true for the ElGamal algorithm. Details are in [<a href="Applied%20Cryptography_split_035.html#r109" class="calibre5 pcalibre">109</a>].</p>
+
+<p class="calibre9">Bob chooses a random number, <i class="calibre12">R</i> (for the ElGamal algorithm and independent
+of any random numbers chosen for EKE), and the message he sends to Alice in
+step (2) becomes</p>
+
+<p class="math"><i class="calibre12">E<sub class="calibre15">P</sub></i>(<i class="calibre12">g<sup class="calibre19">R</sup></i> mod <i class="calibre12">p, Kg<sup class="calibre19">Rr</sup></i> mod <i class="calibre12">p</i>)
+</p>
+
+<p class="calibre9">Refer back to <a href="Applied%20Cryptography_split_022.html#19.6" class="calibre5 pcalibre">Section 19.6</a> for restrictions on choosing the variables for
+ElGamal.</p>
+
+<h4 class="calibre8">Implementing EKE with Diffie-Hellman</h4>
+
+<p class="calibre9">With the Diffie-Hellman protocol, <i class="calibre12">K</i> is generated automatically. The final
+protocol is even simpler. A value for <i class="calibre12">g</i> and <i class="calibre12">n</i> is set for all users on the network.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice picks a random number, <i class="calibre12">r<sub class="calibre15">A</sub></i>, and sends Bob
+<p class="math"><i class="calibre12">A, g<sup class="calibre19">r<sub class="calibre16">A</sub></sup></i> mod <i class="calibre12">n</i>
+</p>
+
+With Diffie-Hellman, Alice does not have to encrypt her first message
+with <i class="calibre12">P. </i>
+</li>
+<li class="calibre14">Bob picks a random number, <i class="calibre12">r<sub class="calibre15">B</sub></i>, and calculates
+<p class="math"><i class="calibre12">K</i> = <i class="calibre12">g<sup class="calibre19">r<sub class="calibre16">A</sub>*r<sub class="calibre16">B</sub></sup></i> mod <i class="calibre12">n</i>
+</p>
+
+He generates a random string <i class="calibre12">R<sub class="calibre15">B</sub>, </i> then calculates and sends Alice:
+<p class="math"><i class="calibre12">E<sub class="calibre15">P</sub></i>(<i class="calibre12">g<sup class="calibre19">r<sub class="calibre16">B</sub></sup></i> mod <i class="calibre12">n</i>), <i class="calibre12">E<sub class="calibre15">K</sub></i>(<i class="calibre12">R<sub class="calibre15">B</sub></i>)
+</p>
+
+</li>
+<li class="calibre14">Alice decrypts the first half of Bob’s message to obtain <i class="calibre12">g<sup class="calibre19">r<sub class="calibre16">B</sub></sup></i> mod <i class="calibre12">n. </i>
+Then she calculates <i class="calibre12">K</i> and uses <i class="calibre12">K</i> to decrypt <i class="calibre12">R<sub class="calibre15">B</sub></i>. She generates another random string, <i class="calibre12">R<sub class="calibre15">A</sub></i>, encrypts both strings with <i class="calibre12">K, </i> and sends Bob the
+result.
+<p class="math"><i class="calibre12">E<sub class="calibre15">K</sub></i>(<i class="calibre12">R<sub class="calibre15">A</sub></i>, <i class="calibre12">R<sub class="calibre15">B</sub></i>)
+</p>
+
+</li>
+<li class="calibre14">Bob decrypts the message to obtain <i class="calibre12">R<sub class="calibre15">A</sub></i> and <i class="calibre12">R<sub class="calibre15">B</sub></i>. Assuming the <i class="calibre12">R<sub class="calibre15">B</sub></i> he received from Alice is the same as the one he sent to Alice in step (2),
+he encrypts <i class="calibre12">R<sub class="calibre15">A</sub></i> with <i class="calibre12">K</i> and sends it to Alice.
+<p class="math"><i class="calibre12">E<sub class="calibre15">K</sub></i>(<i class="calibre12">R<sub class="calibre15">A</sub></i>)
+</p>
+
+</li>
+<li class="calibre14">Alice decrypts the message to maintain <i class="calibre12">R<sub class="calibre15">A</sub></i>. Assuming the <i class="calibre12">R<sub class="calibre15">A</sub></i> she received from Bob is the same as the one she sent to Bob in step (3), the
+protocol is complete. Both parties now communicate using <i class="calibre12">K</i> as the
+session key.
+</li>
+
+</ol>
+
+<h4 class="calibre8">Strengthening EKE</h4>
+
+<p class="calibre9">Bellovin and Merritt suggest an enhancement of the challenge-and-response
+portion of the protocol — to prevent a possible attack if a cryptanalyst recovers
+an old <i class="calibre12">K</i> value.</p>
+
+<p class="calibre9">Look at the basic EKE protocol. In step (3), Alice generates another random
+number, <i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">A</i></sub>, and sends Bob</p>
+
+<p class="math"><i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">R</i><sub class="calibre15"><i class="calibre22">A</i></sub>, <i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">A</i></sub>)
+</p>
+
+<p class="calibre9">In step (4), Bob generates another random number, <i class="calibre12">S<sub class="calibre15">B</sub>, </i> and sends Alice</p>
+
+<p class="math"><i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">R</i><sub class="calibre15"><i class="calibre22">A</i></sub>, <i class="calibre12">R</i><sub class="calibre15"><i class="calibre22">B</i></sub>, <i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">B</i></sub>)
+</p>
+
+<p class="calibre9">Alice and Bob now can both calculate the true session key, <i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">A</i></sub> ⊕ <i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">B</i></sub>. This key is used for all future messages between Alice and Bob; <i class="calibre12">K</i> is just used as a key-exchange key.
+</p>
+
+<p class="calibre9">Look at the levels of protection EKE provides. A recovered value of <i class="calibre12">S</i> gives
+Eve no information about <i class="calibre12">P, </i> because <i class="calibre12">P</i> is never used to encrypt anything that leads directly to <i class="calibre12">S. </i> A cryptanalytic attack on <i class="calibre12">K</i> is also not feasible; <i class="calibre12">K</i> is used only to encrypt random data, and <i class="calibre12">S</i> is never encrypted alone.</p>
+
+<h4 class="calibre8">Augmented EKE</h4>
+
+<p class="calibre9">The EKE protocol suffers from one serious disadvantage: It requires that both
+parties possess the <i class="calibre12">P. </i> Most password-based authentication systems store a
+one-way hash of the user’s password, not the password itself (see <a href="Applied%20Cryptography_split_004.html#3.2" class="calibre5 pcalibre">Section 3.2</a>).
+The Augmented EKE (A-EKE) protocol uses a one-way hash of the user’s
+password as the superencryption key in the Diffie-Hellman variant of EKE.
+The user then sends an extra message based on the original password; this
+message authenticates the newly chosen session key.</p>
+
+<p class="calibre9">Here’s how it works. As usual, Alice and Bob want to authenticate each other
+and generate a common key. They agree on some digital signature scheme
+where any number can serve as the private key, and where the public key is
+derived from the private key, rather than being generated along with it. The
+ElGamal and DSA algorithms work well for this. Alice’s password <i class="calibre12">P</i> (or
+perhaps some simple hash of it) will serve as the private key and as <i class="calibre12">P´. </i></p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice picks her random exponent <i class="calibre12">R</i><sub class="calibre15"><i class="calibre22">A</i></sub> and transmits
+<p class="math"><i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">P´</i></sub>(<i class="calibre12">g<sup class="calibre19">R<sub class="calibre16">A</sub></sup></i> mod <i class="calibre12">n</i>)
+</p>
+
+</li>
+<li class="calibre14">Bob, who knows only <i class="calibre12">P´</i> and cannot derive <i class="calibre12">P</i> from it, chooses <i class="calibre12">R</i><sub class="calibre15"><i class="calibre22">B</i></sub> and sends
+<p class="math"><i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">P´</i></sub>(<i class="calibre12">g<sup class="calibre19">R<sub class="calibre16">B</sub></sup></i> mod <i class="calibre12">n</i>)
+</p>
+
+</li>
+<li class="calibre14">Both Alice and Bob calculate the shared session key <i class="calibre12">K</i> = <i class="calibre12">g<sup class="calibre19">r<sub class="calibre16">A</sub>*r<sub class="calibre16">B</sub></sup></i> mod <i class="calibre12">n. </i> Finally, Alice proves that she knows <i class="calibre12">P</i> itself, and not just <i class="calibre12">P´, </i> by sending
+<p class="math"><i class="calibre12">E<sub class="calibre15">K</sub></i>(<i class="calibre12">S<sub class="calibre15">P</sub></i>(<i class="calibre12">K</i>))
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">Bob, who knows both <i class="calibre12">K</i> and <i class="calibre12">P´, </i> can decrypt and validate the signature. Only Alice could have sent this message, since only she knows <i class="calibre12">P; </i> an intruder who
+obtains a copy of Bob’s password file can try guessing at <i class="calibre12">P, </i> but cannot
+otherwise sign the session key.</p>
+
+<p class="calibre9">The A-EKE scheme does not work with the public-key variant of EKE, since
+in it one party chooses the session key and imposes it on the other. This
+permits a man-in-the-middle attack by an attacker who has captured <i class="calibre12">P´. </i></p>
+
+<h4 class="calibre8">Applications of EKE</h4>
+
+<p class="calibre9">Bellovin and Merritt suggest using this protocol for secure public telephones
+[<a href="Applied%20Cryptography_split_035.html#r109" class="calibre5 pcalibre">109</a>]:</p>
+
+<p class="quote">Let us assume that encrypting public telephones are deployed. If
+someone wishes to use one of these phones, some sort of keying
+information must be provided. Conventional solutions...require
+that the caller possess a physical key. This is undesirable in many
+situations. EKE permits use of a short, keypad-entered password,
+but uses a much longer session key for the call.
+<br class="calibre3"/><br class="calibre3"/>
+EKE would also be useful with cellular phones. Fraud has been a
+problem in the cellular industry; EKE can defend against it (and
+ensure the privacy of the call) by rendering a phone useless if a
+PIN has not been entered. Since the PIN is not stored within the
+phone, it is not possible to retrieve one from a stolen unit.</p>
+
+<p class="calibre9">EKE’s primary strength is that both symmetric and public-key cryptography
+work together in a manner that strengthens them both:</p>
+
+<p class="quote">From a general perspective, EKE functions as a <i class="calibre12">privacy amplifier. </i>
+That is, it can be used to strengthen comparatively weak
+symmetric and asymmetric systems when used together.
+Consider, for example, the key size needed to maintain security
+when using exponential key exchange. As LaMacchia and
+Odlyzko have shown [<a href="Applied%20Cryptography_split_036.html#r934" class="calibre5 pcalibre">934</a>], even modulus sizes once believed to
+be safe (to wit, 192 bits) are vulnerable to an attack requiring only
+a few minutes of computer time. But their attack is not feasible if
+one must first guess a password before applying it.
+<br class="calibre3"/><br class="calibre3"/>
+Conversely, the difficulty of cracking exponential key exchange
+can be used to frustrate attempts at password-guessing.
+Password-guessing attacks are feasible because of how rapidly
+each guess may be verified. If performing such verification
+requires solving an exponential key exchange, the total time, if
+not the conceptual difficulty, increases dramatically.</p>
+
+<p class="calibre9">EKE is patented [<a href="Applied%20Cryptography_split_035.html#r111" class="calibre5 pcalibre">111</a>].</p>
+
+<h3 id="22.6" class="calibre7">22.6 Fortified Key Negotiation</h3>
+
+<p class="calibre9">This scheme also protects key-negotiation schemes from poorly chosen
+passwords and man-in-the-middle attacks [<a href="Applied%20Cryptography_split_035.html#r47" class="calibre5 pcalibre">47</a>,<a href="Applied%20Cryptography_split_036.html#r983" class="calibre5 pcalibre">983</a>]. It uses a hash function of
+two variables that has a very special property: It has many collisions on the
+first variable while having effectively no collisions on the second variable.</p>
+
+<p class="math-left"><i class="calibre12">H´</i>(<i class="calibre12">x, y</i>) = <i class="calibre12">H</i>(<i class="calibre12">H</i>(<i class="calibre12">k, x</i>) mod 2<sup class="calibre19"><i class="calibre22">m</i></sup>, <i class="calibre12">x</i>),
+where <i class="calibre12">H</i>(<i class="calibre12">k, x</i>) is an ordinary hash function on <i class="calibre12">k</i> and <i class="calibre12">x</i>
+</p>
+
+<p class="calibre9">Here’s the protocol. Alice and Bob share a secret password, <i class="calibre12">P, </i> and have just
+exchanged a secret key, <i class="calibre12">K, </i> using Diffie-Hellman key exchange. They use <i class="calibre12">P</i> to check that their two session keys are the same (and that Eve is not attempting a
+man-in-the-middle attack), without giving <i class="calibre12">P</i> away to Eve.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice sends Bob
+<p class="math"><i class="calibre12">H´</i>(<i class="calibre12">P, K</i>)
+</p>
+
+</li>
+<li class="calibre14">Bob computes <i class="calibre12">H´</i>(<i class="calibre12">P, K</i>) and compares his result with what he received from Alice. If they match he sends Alice
+<p class="math"><i class="calibre12">H´</i>(<i class="calibre12">H</i>(<i class="calibre12">P, K</i>))
+</p>
+
+</li>
+<li class="calibre14">Alice computes <i class="calibre12">H´</i>(<i class="calibre12">H</i>(<i class="calibre12">P, K</i>)) and compares her result with what she received from Bob.
+</li>
+
+</ol>
+
+<p class="calibre9">If Eve is trying a man-in-the-middle attack, she shares one key, <i class="calibre12">K</i><sub class="calibre15">1</sub>, with Alice, and another key, <i class="calibre12">K</i><sub class="calibre15">2</sub>, with Bob. To fool Bob in step (2), she has to figure out the shared password and then send Bob <i class="calibre12">H´</i> * (<i class="calibre12">P, K</i><sub class="calibre15">2</sub>). With a normal hash function she can try common passwords until she guesses the correct one, and
+then successfully infiltrate the protocol. But with this hash function, many
+passwords are likely to produce the same value when hashed with <i class="calibre12">K</i><sub class="calibre15">1</sub>. So when
+she finds a match, she will probably have the wrong password, and hence Bob
+will not be fooled.</p>
+
+<h3 id="22.7" class="calibre7">22.7 Conference Key Distribution and Secret Broadcasting</h3>
+
+<p class="calibre9">Alice wants to broadcast a message, <i class="calibre12">M, </i> from a single transmitter. However,
+she doesn’t want it to be intelligible by every listener. In fact, she only wants a
+select subset of listeners to be able to recover <i class="calibre12">M. </i> Everyone else should get
+nonsense.</p>
+
+<p class="calibre9">Alice can share a different key (secret or public) with each listener. She
+encrypts the message in some random key, <i class="calibre12">K. </i> Then she encrypts a copy of <i class="calibre12">K</i>
+with each of the keys of her intended recipients. Finally, she broadcasts the
+encrypted message and then all of the encrypted <i class="calibre12">K</i>s. Bob, who is listening,
+either tries to decrypt all the <i class="calibre12">K</i>s with his secret key, looking for one that is correct, or, if Alice doesn’t mind everyone knowing who her message is for, he
+looks for his name followed by an encrypted key. Multiple-key cryptography,
+previously discussed, also works.</p>
+
+<p class="calibre9">Another method is suggested in [<a href="Applied%20Cryptography_split_035.html#r352" class="calibre5 pcalibre">352</a>]. First, each listener shares a secret key
+with Alice, one that is larger than any possible encrypted message. All of those
+keys should be pairwise prime. She encrypts the message in a random key, <i class="calibre12">K. </i>
+Then, she computes a single integer, <i class="calibre12">R, </i> such that <i class="calibre12">R</i> modulo a secret key is congruent to <i class="calibre12">K</i> when that secret key is supposed to decrypt the message, and <i class="calibre12">R</i>
+modulo a secret key is otherwise congruent to zero.</p>
+
+<p class="calibre9">For example, if Alice wants the secret to be received by Bob, Carol, and Ellen,
+but not by Dave and Frank, she encrypts the message with <i class="calibre12">K</i> and then
+computes <i class="calibre12">R</i> such that</p>
+
+<p class="math-left"><i class="calibre12">R</i> ≡ <i class="calibre12">K</i>(mod <i class="calibre12">K</i><sub class="calibre15"><i class="calibre22">B</i></sub>)
+<i class="calibre12">R</i> ≡ <i class="calibre12">K</i>(mod <i class="calibre12">K</i><sub class="calibre15"><i class="calibre22">C</i></sub>)
+<i class="calibre12">R</i> ≡ 0 (mod <i class="calibre12">K</i><sub class="calibre15"><i class="calibre22">D</i></sub>)
+<i class="calibre12">R</i> ≡ <i class="calibre12">K</i>(mod <i class="calibre12">K</i><sub class="calibre15"><i class="calibre22">E</i></sub>)
+<i class="calibre12">R</i> ≡ 0 (mod <i class="calibre12">K</i><sub class="calibre15"><i class="calibre22">F</i></sub>)
+</p>
+
+<p class="calibre9">This is a straightforward algebra problem, one that Alice can solve easily.
+When listeners receive the broadcast, they compute the received key modulo
+their secret key. If they were intended to receive the message, they recover the
+key. Otherwise, they recover nothing.</p>
+
+<p class="calibre9">Yet a third way, using a threshold scheme (see <a href="Applied%20Cryptography_split_004.html#3.7" class="calibre5 pcalibre">Section 3.7</a>), is suggested in
+[<a href="Applied%20Cryptography_split_035.html#r141" class="calibre5 pcalibre">141</a>]. Like the others, every potential receiver gets a secret key. This key is a
+shadow in a yet-uncreated threshold scheme. Alice saves some secret keys for
+herself, adding some randomness to the system. Let’s say there are <i class="calibre12">k</i> people
+out there.</p>
+
+<p class="calibre9">Then, to broadcast <i class="calibre12">M, </i> Alice encrypts <i class="calibre12">M</i> with key <i class="calibre12">K</i> and does the following.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses a random number, <i class="calibre12">j. </i> This number serves to hide the
+number of recipients of the message. It doesn’t have to be very large; it
+can be as small as 0.
+</li>
+<li class="calibre14">Alice creates a (<i class="calibre12">k</i> + <i class="calibre12">j</i> + 1, 2<i class="calibre12">k</i> + <i class="calibre12">j</i> + 1) threshold scheme, with:
+<p class="math-left"><i class="calibre12">K</i> as the secret.
+The secret keys of the intended recipients as shadows.
+The secret keys of nonrecipients not as shadows.
+<i class="calibre12">j</i> randomly chosen shadows, not the same as any of the secret keys.
+</p>
+</li>
+<li class="calibre14">Alice broadcasts <i class="calibre12">k</i> + <i class="calibre12">j</i> randomly chosen shadows, none of which is any of the shadows listed in step (2).
+</li>
+<li class="calibre14">All listeners who receive the broadcast add their shadow to the <i class="calibre12">k</i> + <i class="calibre12">j</i> shadows they received. If adding their shadow allows them to calculate
+the secret, then they have recovered the key. If it does not, then they
+haven’t.
+</li>
+
+</ol>
+
+<p class="calibre9">Another approach can be found in [<a href="Applied%20Cryptography_split_036.html#r885" class="calibre5 pcalibre">885</a>,<a href="Applied%20Cryptography_split_036.html#r886" class="calibre5 pcalibre">886</a>,<a href="Applied%20Cryptography_split_036.html#r1194" class="calibre5 pcalibre">1194</a>]. For yet another approach,
+see [<a href="Applied%20Cryptography_split_036.html#r1000" class="calibre5 pcalibre">1000</a>].</p>
+
+<h4 class="calibre8">Conference Key Distribution</h4>
+
+<p class="calibre9">This protocol allows a group of <i class="calibre12">n</i> users to agree on a secret key using only
+insecure channels. The group shares two large primes, <i class="calibre12">p</i> and <i class="calibre12">q, </i> and a generator <i class="calibre12">g</i> the same size as <i class="calibre12">q. </i></p>
+
+<ol class="calibre17">
+
+<li class="calibre14">User <i class="calibre12">i, </i> where i goes from 1 to <i class="calibre12">n, </i> chooses a random <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">i</i></sub> less than <i class="calibre12">q,</i> and broadcasts
+<p class="math"><i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">i</i></sub> = <i class="calibre12">g<sup class="calibre19">r<sub class="calibre16">i</sub></sup></i> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14">Every user verifies that <i class="calibre12">z<sub class="calibre15">j</sub><sup class="calibre19">q</sup></i> ≡ 1 (mod <i class="calibre12">p</i>), for all <i class="calibre12">i</i> from 1 to <i class="calibre12">n. </i>
+</li>
+<li class="calibre14">User <i class="calibre12">i</i> broadcasts
+<p class="math"><i class="calibre12">x</i><sub class="calibre15"><i class="calibre22">i</i></sub> = (<i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">i</i>+1</sub>/<i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">i</i>-1</sub>)<i class="calibre12"><sup class="calibre19">r<sub class="calibre16">i</sub></sup></i> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14">User <i class="calibre12">i</i> computes
+<p class="math"><i class="calibre12">K</i> = (<i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">i</i>-1</sub>)<sup class="calibre19">nr<sub class="calibre16">i</sub></sup> * <i class="calibre12">x</i><sub class="calibre15">i</sub><sup class="calibre19"><i class="calibre22">n</i>-1</sup> * <i class="calibre12">x</i><sub class="calibre15"><i class="calibre22">i</i>+1</sub><sup class="calibre19"><i class="calibre22">n</i>-2</sup> * ... * <i class="calibre12">x</i><sub class="calibre15"><i class="calibre22">i</i>-2</sub> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">All index computations in the above protocol — <i class="calibre12">i</i> - 1, <i class="calibre12">i</i> - 2, and <i class="calibre12">i</i> + 1 — should be computed mod <i class="calibre12">n. </i> At the end of the protocol, all honest users have the same <i class="calibre12">K. </i> No one else gets anything. However, this protocol falls to a
+man-in-the-middle attack. Another protocol, not quite as pretty, is in [<a href="Applied%20Cryptography_split_035.html#r757" class="calibre5 pcalibre">757</a>].</p>
+
+<h4 class="calibre8">Tatebayashi-Matsuzaki-Newman</h4>
+
+<p class="calibre9">This key distribution protocol is suitable for networks [<a href="Applied%20Cryptography_split_036.html#r1521" class="calibre5 pcalibre">1521</a>]. Alice wants to
+generate a session key with Bob using Trent, the KDC. All parties know
+Trent’s public key, <i class="calibre12">n. </i> Trent knows the two large primes that <i class="calibre12">n</i> factors to, and hence can easily take cube roots modulo <i class="calibre12">n. </i> A lot of the details are left out of the following protocol, but you get the idea.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses a random number, <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">A</i></sub>, and sends Trent
+<p class="math"><i class="calibre12">r<sub class="calibre15"><i class="calibre22">A</i></sub></i><sup class="calibre19">3</sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Trent tells Bob that someone wants to exchange a key with him.
+</li>
+<li class="calibre14">Bob chooses a random number, <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">B</i></sub>, and sends Trent
+<p class="math"><i class="calibre12">r<sub class="calibre15"><i class="calibre22">B</i></sub></i><sup class="calibre19">3</sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Trent uses his private key to recover <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">A</i></sub> and <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">B</i></sub>. He sends Alice
+<p class="math"><i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">A</i></sub> ⊕ <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">B</i></sub>
+</p>
+
+</li>
+<li class="calibre14">Alice calculates
+<p class="math">(<i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">A</i></sub> ⊕ <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">B</i></sub>) ⊕ <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">A</i></sub> = <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">B</i></sub>
+</p>
+She uses this <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">B</i></sub> to communicate securely with Bob.
+</li>
+
+</ol>
+
+<p class="calibre9">This protocol looks good, but it has a horrible flaw. Carol can listen in on step
+(3) and use that information, with the help of an unsuspecting Trent and
+another malicious user (Dave), to recover <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">B</i></sub> [<a href="Applied%20Cryptography_split_036.html#r1472" class="calibre5 pcalibre">1472</a>].</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Carol chooses a random number, <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">C</i></sub>, and sends Trent
+<p class="math"><i class="calibre12">r<sub class="calibre15">B</sub></i><sup class="calibre19">3</sup><i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">C</i></sub><sup class="calibre19">3</sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Trent tells Dave that someone wants to exchange a key with him.
+</li>
+<li class="calibre14">Dave chooses a random number, <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">D</i></sub>, and sends Trent
+<p class="math"><i class="calibre12">r<sub class="calibre15">D</sub></i><sup class="calibre19">3</sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Trent uses his private key to recover <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">C</i></sub> and <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">D</i></sub>. He sends Carol
+<p class="math">(<i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">B</i></sub> <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">C</i></sub>) mod <i class="calibre12">n</i> ⊕ <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">D</i></sub>
+</p>
+
+</li>
+<li class="calibre14">Dave sends <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">D</i></sub> to Carol.
+</li>
+<li class="calibre14">Carol uses <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">C</i></sub> and <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">D</i></sub> to recover <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">B</i></sub>. She uses <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">B</i></sub> to eavesdrop on Alice and Bob.
+</li>
+
+</ol>
+
+<p class="calibre9">This is not good.</p>
+
+<div class="calibre6" id="calibre_pb_50"></div>
+</div>
+
+
+
+
+
+
+</body></html>

@@ -1,0 +1,572 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Applied Cryptography, Second Edition: Protocols, Algorithms, and Source Code in C</title>
+    <meta content="Bruce Schneier" name="author"/>
+    <meta content="An introduction to cryptography." name="description"/>
+    <meta content="programming,cryptography" name="keywords"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body class="calibre">
+<div id="book" class="calibre1">
+<h1 class="chapter" id="15">Chapter 15 <br class="calibre3"/>
+Combining Block Ciphers</h1>
+
+<p class="calibre9">There are many ways to combine block algorithms to get new algorithms. The
+impetus behind these schemes is to try to increase security without going
+through the trouble of designing a new algorithm. DES is a secure algorithm; it
+has been cryptanalyzed for a good 20 years and the most practical way to
+break it is still brute force. However, the key is too short. Wouldn’t it be nice
+to use DES as a building block for another algorithm with a longer key? We’d
+have the best of both worlds: the assurance of two decades of cryptanalysis
+plus a long key.</p>
+
+<p class="calibre9"><b class="calibre10">Multiple encryption</b> is one combination technique: using an algorithm to
+encrypt the same plaintext block multiple times with multiple keys. Cascading
+is like multiple encryption, but uses different algorithms. There are other
+techniques.</p>
+
+<p class="calibre9">Encrypting a plaintext block twice with the same key, whether with the same
+algorithm or a different one, is not smart. For the same algorithm, it does not
+affect the complexity of a brute-force search. (Remember, you assume a
+cryptanalyst knows the algorithm including the number of encryptions used.)
+For different algorithms, it may or may not. If you are going to use any of the
+techniques in this chapter, make sure the multiple keys are different and
+independent.</p>
+
+<h3 id="15.1" class="calibre7">15.1 Double Encryption</h3>
+
+<p class="calibre9">A naïve way of improving the security of a block algorithm is to encrypt a
+block twice with two different keys. First encrypt a block with the first key,
+then encrypt the resulting ciphertext with the second key. Decryption is the
+reverse process.</p>
+
+<p class="math"><i class="calibre12">C</i> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i>))
+<i class="calibre12">P</i> = <i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">C</i>))
+</p>
+
+<p class="calibre9">If the block algorithm is a group (see <a href="Applied%20Cryptography_split_014.html#11.3" class="calibre5 pcalibre">Section 11.3</a>), then there is always a <i class="calibre12">K</i><sub class="calibre15">3</sub>
+such that</p>
+
+<p class="math"><i class="calibre12">C</i> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i>)) = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">P</i>)
+</p>
+
+<p class="calibre9">If this is not the case, the resultant doubly-encrypted ciphertext block should
+be much harder to break using an exhaustive search. Instead of 2<sup class="calibre19"><i class="calibre22">n</i></sup> attempts
+(where <i class="calibre12">n</i> is the bit length of the key), it would require 2<sup class="calibre19">2<i class="calibre22">n</i></sup> attempts. If the algorithm is a 64-bit algorithm, the doubly-encrypted ciphertext would require
+2<sup class="calibre19">128</sup> attempts to find the key.</p>
+
+<p class="calibre9">This turns out not to be true for a known-plaintext attack. Merkle and Hellman
+[<a href="Applied%20Cryptography_split_036.html#r1075" class="calibre5 pcalibre">1075</a>] developed a time-memory trade-off that could break this
+double-encryption scheme in 2<sup class="calibre19"><i class="calibre22">n</i> + 1</sup> encryptions, not in 2<sup class="calibre19">2<i class="calibre22">n</i></sup> encryptions. (They showed this for DES, but the result can be generalized to any block algorithm.)
+The attack is called a <b class="calibre10">meet-in-the-middle attack; </b> it works by encrypting from
+one end, decrypting from the other, and matching the results in the middle.</p>
+
+<p class="calibre9">In this attack, the cryptanalyst knows <i class="calibre12">P</i><sub class="calibre15">1</sub>, <i class="calibre12">C</i><sub class="calibre15">1</sub>, <i class="calibre12">P</i><sub class="calibre15">2</sub>, and <i class="calibre12">C</i><sub class="calibre15">2</sub>, such that</p>
+
+<p class="math"><i class="calibre12">C</i><sub class="calibre15">1</sub> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i><sub class="calibre15">1</sub>))
+<i class="calibre12">C</i><sub class="calibre15">2</sub> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i><sub class="calibre15">2</sub>))
+</p>
+
+<p class="calibre9">For each possible <i class="calibre12">K</i>, he computes <i class="calibre12">E</i><sub class="calibre15">K</sub>(<i class="calibre12">P</i><sub class="calibre15">1</sub>) and stores the result in memory.
+After collecting them all, he computes <i class="calibre12">D</i><sub class="calibre15">K</sub>(<i class="calibre12">C</i><sub class="calibre15">1</sub>) for each <i class="calibre12">K</i> and looks for the same result in memory. If he finds it, it is possible that the current key is <i class="calibre12">K</i><sub class="calibre15">2</sub>
+and the key in memory is <i class="calibre12">K</i><sub class="calibre15">1</sub>. He tries encrypting <i class="calibre12">P</i><sub class="calibre15">2</sub> with <i class="calibre12">K</i><sub class="calibre15">1</sub> and <i class="calibre12">K</i><sub class="calibre15">2</sub>; if he gets <i class="calibre12">C</i><sub class="calibre15">2</sub> he can be pretty sure (with a probability of success of 1 in 2<sup class="calibre19"><i class="calibre22">2m</i> - 2<i class="calibre22">n</i></sup>, where <i class="calibre12">m</i> is the block size) that he has both <i class="calibre12">K</i><sub class="calibre15">1</sub> and <i class="calibre12">K</i><sub class="calibre15">2</sub>. If not, he keeps looking. The maximum number of encryption trials he will probably have to run is 2*2<sup class="calibre19"><i class="calibre22">n</i></sup>, or
+2<sup class="calibre19"><i class="calibre22">n</i> + 1</sup>. If the probability of error is too large, he can use a third ciphertext block to get a probability of success of 1 in 2<sup class="calibre19">3<i class="calibre22">m</i> - 2<i class="calibre22">n</i></sup>. There are still other optimizations [<a href="Applied%20Cryptography_split_036.html#r912" class="calibre5 pcalibre">912</a>].</p>
+
+<p class="calibre9">This attack requires a lot of memory: 2<sup class="calibre19"><i class="calibre22">n</i></sup> blocks. For a 56-bit algorithm, this
+translates to 2<sup class="calibre19">56</sup> 64-bit blocks, or 10<sup class="calibre19">17</sup> bytes. This is still considerably more
+memory storage than one could comfortably comprehend, but it’s enough to
+convince the most paranoid of cryptographers that double encryption is not
+worth anything.</p>
+
+<p class="calibre9">For a 128-bit key, the amount of memory required is an enormous 10<sup class="calibre19">39</sup> bytes.
+If we assume that a way exists to store a bit of information on a single atom of
+aluminum, the memory device required to launch this attack would be a cube
+of solid aluminum over a kilometer on a side. And then you need some place
+to put it! The meet-in-the middle attack seems infeasible for keys this size.</p>
+
+<p class="calibre9">Another double-encryption method, sometimes called <b class="calibre10">Davies-Price</b>, is a
+variant of CBC [<a href="Applied%20Cryptography_split_035.html#r435" class="calibre5 pcalibre">435</a>].</p>
+
+<p class="math"><i class="calibre12">C</i><sub class="calibre15">i</sub> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">C</i><sub class="calibre15">i - 1</sub>))
+<i class="calibre12">P</i><sub class="calibre15">i</sub> = <i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">C</i><sub class="calibre15">i</sub>) ⊕ <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">C</i><sub class="calibre15">i - 1</sub>)
+</p>
+
+<p class="calibre9">They claim “no special virtue of this mode,” but it seems to be vulnerable to
+the same meet-in-the-middle attacks as other double-encryption modes.</p>
+
+<h3 id="15.2" class="calibre7">15.2 Triple Encryption</h3>
+
+<h4 class="calibre8">Triple Encryption with Two Keys</h4>
+
+<p class="calibre9">A better idea, proposed by Tuchman in [<a href="Applied%20Cryptography_split_036.html#r1551" class="calibre5 pcalibre">1551</a>], operates on a block three times
+with two keys: with the first key, then with the second key, and finally with the
+first key again. He suggested that the sender first encrypt with the first key,
+then decrypt with the second key, and finally encrypt with the first key. The
+receiver decrypts with the first key, then encrypts with the second key, and
+finally decrypts with the first key.</p>
+
+<p class="math"><i class="calibre12">C</i> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i>)))
+<i class="calibre12">P</i> = <i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">C</i>)))
+</p>
+
+<p class="calibre9">This is sometimes called <b class="calibre10">encrypt-decrypt-encrypt (EDE)</b> mode [<a href="Applied%20Cryptography_split_035.html#r55" class="calibre5 pcalibre">55</a>]. If the
+block algorithm has an <i class="calibre12">n</i>-bit key, then this scheme has a 2<i class="calibre12">n</i>-bit key. The curious encrypt-decrypt-encrypt pattern was designed by IBM to preserve
+compatibility with conventional implementations of the algorithm: Setting the
+two keys equal to each other is identical to encrypting once with the key.
+There is no security inherent in the encrypt-decrypt-encrypt pattern, but this
+mode has been adopted to improve the DES algorithm in the X9.17 and ISO
+8732 standards [<a href="Applied%20Cryptography_split_035.html#r55" class="calibre5 pcalibre">55</a>,<a href="Applied%20Cryptography_split_035.html#r761" class="calibre5 pcalibre">761</a>].</p>
+
+<p class="calibre9"><i class="calibre12">K</i><sub class="calibre15">1</sub> and <i class="calibre12">K</i><sub class="calibre15">2</sub> alternate to prevent the meet-in-the-middle attack previously described. If <i class="calibre12">C</i> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i>))), then a cryptanalyst could precompute <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i>))) for every possible <i class="calibre12">K</i><sub class="calibre15">1</sub> and then proceed with the attack. It only requires 2<sup class="calibre19"><i class="calibre22">n</i> + 2</sup> encryptions.</p>
+
+<p class="calibre9">Triple encryption with two keys is not susceptible to the same
+meet-in-the-middle attack described earlier. But Merkle and Hellman
+developed another time-memory trade-off that could break this technique 
+in 2<sup class="calibre19"><i class="calibre22">n</i> - 1</sup> steps using 2<sup class="calibre19"><i class="calibre22">n</i></sup> blocks of memory [<a href="Applied%20Cryptography_split_036.html#r1075" class="calibre5 pcalibre">1075</a>].</p>
+
+<p class="calibre9">For each possible <i class="calibre12">K</i><sub class="calibre15">2</sub>, decrypt 0 and store the result in memory. Then, decrypt 0 with each possible <i class="calibre12">K</i><sub class="calibre15">1</sub> to get <i class="calibre12">P</i>. Triple-encrypt <i class="calibre12">P</i> to get <i class="calibre12">C</i>, and then decrypt <i class="calibre12">C</i>
+with <i class="calibre12">K</i><sub class="calibre15">1</sub>. If that decryption is a decryption of 0 with a <i class="calibre12">K</i><sub class="calibre15">2</sub> (stored in memory), the <i class="calibre12">K</i><sub class="calibre15">1</sub> <i class="calibre12">K</i><sub class="calibre15">2</sub> pair is a possible candidate. Check if it is right. If it’s not, keep looking.</p>
+
+<p class="calibre9">This is a chosen-plaintext attack, requiring an enormous amount of chosen
+plaintext to mount. It requires 2<sup class="calibre19"><i class="calibre22">n</i></sup> time and memory, and 2<sup class="calibre19"><i class="calibre22">m</i></sup> chosen plaintexts.
+It is not very practical, but it is a weakness.</p>
+
+<p class="calibre9">Paul van Oorschot and Michael Wiener converted this to a known-plaintext
+attack, requiring <i class="calibre12">p</i> known plaintexts. This example assumes EDE mode.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Guess the first intermediate value, <i class="calibre12">a</i>.
+</li>
+<li class="calibre14">Tabulate, for each possible <i class="calibre12">K</i><sub class="calibre15">1</sub>, the second intermediate value, <i class="calibre12">b</i>, when the first intermediate value is <i class="calibre12">a</i>, using known plaintext:
+<p class="math"><i class="calibre12">b</i> = <i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">C</i>)
+</p>
+where <i class="calibre12">C</i> is the resulting ciphertext from a known plaintext.
+</li>
+<li class="calibre14">Look up in the table, for each possible <i class="calibre12">K</i><sub class="calibre15">2</sub>, elements with a matching second intermediate value, <i class="calibre12">b</i>:
+<p class="math"><i class="calibre12">b</i> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">a</i>)
+</p>
+</li>
+<li class="calibre14">The probability of success is <i class="calibre12">p/m</i>, where <i class="calibre12">p</i> is the number of known plaintexts and <i class="calibre12">m</i> is the block size. If there is no match, try another <i class="calibre12">a</i> and start again.
+</li>
+
+</ol>
+
+<p class="calibre9">The attack requires 2<sup class="calibre19"><i class="calibre22">n</i> + <i class="calibre22">m</i></sup>/<i class="calibre12">p</i> time and p memory. For DES, this is 2<sup class="calibre19">120</sup>/<i class="calibre12">p</i>
+[<a href="Applied%20Cryptography_split_036.html#r1558" class="calibre5 pcalibre">1558</a>]. For <i class="calibre12">p</i> greater than 256, this attack is faster than exhaustive search.</p>
+
+<h4 class="calibre8">Triple Encryption with Three Keys</h4>
+
+<p class="calibre9">If you are going to use triple encryption, I recommend three different keys.
+The key length is longer, but key storage is usually not a problem. Bits are
+cheap.</p>
+
+<p class="math"><i class="calibre12">C</i> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i>)))
+<i class="calibre12">P</i> = <i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">C</i>)))
+</p>
+
+<p class="calibre9">The best time-memory trade-off attack takes 2<sup class="calibre19">2<i class="calibre22">n</i></sup> steps and requires 2<sup class="calibre19"><i class="calibre22">n</i></sup> blocks of memory; it’s a meet-in-the-middle attack [<a href="Applied%20Cryptography_split_036.html#r1075" class="calibre5 pcalibre">1075</a>]. Triple encryption, with
+three independent keys, is as secure as one might naïvely expect double
+encryption to be.</p>
+
+<h4 class="calibre8">Triple Encryption with Minimum Key (TEMK)</h4>
+
+<p class="calibre9">There is a secure way of using triple encryption with two keys that prevents
+the previous attack, called Triple Encryption with Minimum Key (TEMK)
+[<a href="Applied%20Cryptography_split_036.html#r858" class="calibre5 pcalibre">858</a>]. The trick is to derive three keys from two: <i class="calibre12">X</i><sub class="calibre15">1</sub> and <i class="calibre12">X</i><sub class="calibre15">2</sub>:</p>
+
+<p class="math-left"><i class="calibre12">K</i><sub class="calibre15">1</sub> = <i class="calibre12">E</i><sub class="calibre15">X<sub class="calibre16">1</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">X<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">X<sub class="calibre16">1</sub></sub>(<i class="calibre12">T</i><sub class="calibre15">1</sub>)))
+<i class="calibre12">K</i><sub class="calibre15">2</sub> = <i class="calibre12">E</i><sub class="calibre15">X<sub class="calibre16">1</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">X<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">X<sub class="calibre16">1</sub></sub>(<i class="calibre12">T</i><sub class="calibre15">2</sub>)))
+<i class="calibre12">K</i><sub class="calibre15">3</sub> = <i class="calibre12">E</i><sub class="calibre15">X<sub class="calibre16">1</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">X<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">X<sub class="calibre16">1</sub></sub>(<i class="calibre12">T</i><sub class="calibre15">3</sub>)))
+</p>
+
+<p class="calibre9"><i class="calibre12">T</i><sub class="calibre15">1</sub>, <i class="calibre12">T</i><sub class="calibre15">2</sub>, and <i class="calibre12">T</i><sub class="calibre15">3</sub> are constants, which do not have to be secret. This is a special construction that guarantees that for any particular pair of keys, the best attack
+is a known-plaintext attack.</p>
+
+<h4 class="calibre8">Triple-Encryption Modes</h4>
+
+<p class="calibre9">It’s not enough to just specify triple encryption; there are several ways to do it.
+The decision of which to use affects both security and efficiency.</p>
+
+<p class="calibre9">Here are two possible triple-encryption modes:</p>
+
+<ul class="split1">
+
+<li class="calibre35"><b class="calibre10">Inner-CBC</b>: Encrypt the entire file in CBC mode three different times
+(see Figure 15.1a). This requires three different IVs.
+<p class="math"><i class="calibre12">C</i><sub class="calibre15">i</sub> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">S</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">C</i><sub class="calibre15">i - 1</sub>); <i class="calibre12">S</i><sub class="calibre15">i</sub> = <i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">T</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">S</i><sub class="calibre15">i - 1</sub>); <i class="calibre12">T</i><sub class="calibre15">i</sub> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">T</i><sub class="calibre15">i - 1</sub>)
+<i class="calibre12">P</i><sub class="calibre15">i</sub> = <i class="calibre12">T</i><sub class="calibre15">i - 1</sub> ⊕ <i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">T</i><sub class="calibre15">i</sub>); <i class="calibre12">T</i><sub class="calibre15">i</sub> = <i class="calibre12">S</i><sub class="calibre15">i - 1</sub> ⊕ <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">S</i><sub class="calibre15">i</sub>); <i class="calibre12">S</i><sub class="calibre15">i</sub> = <i class="calibre12">C</i><sub class="calibre15">i - 1</sub> ⊕ <i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">C</i><sub class="calibre15">i</sub>)
+</p>
+<i class="calibre12">C</i><sub class="calibre15">0</sub>, <i class="calibre12">S</i><sub class="calibre15">0</sub>, and <i class="calibre12">T</i><sub class="calibre15">0</sub> are IVs.</li>
+
+<li class="calibre35"><b class="calibre10">Outer-CBC:</b> Triple-encrypt the entire file in CBC mode (see Figure
+15.1b). This requires one IV.
+<p class="math"><i class="calibre12">C</i><sub class="calibre15">i</sub> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">C</i><sub class="calibre15">i - 1</sub>)))
+<i class="calibre12">P</i><sub class="calibre15">i</sub> = <i class="calibre12">C</i><sub class="calibre15">i - 1</sub> ⊕ <i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">C</i><sub class="calibre15">i</sub>)))
+</p></li>
+
+</ul>
+
+<div class="figure" id="figure-15-1">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-15-1.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 15.1</b> Triple encryption in CBC mode.</i></p>
+</div>
+
+<p class="calibre9">Both modes require more resources than single encryption: more hardware or
+more time. However, given three encryption chips, the throughput of
+inner-CBC is no slower than single encryption. Since the three CBC
+encryptions are independent, three chips can be kept busy all the time, each
+feeding back into itself.</p>
+
+<p class="calibre9">On the other hand, outer-CBC feedback is outside the three encryptions. This
+means that even with three chips, the throughput is only one-third that of
+single encryption. To get the same throughput with outer-CBC, you need to
+interleave IVs (see <a href="Applied%20Cryptography_split_011.html#9.12" class="calibre5 pcalibre">Section 9.12</a>):</p>
+
+<p class="math"><i class="calibre12">C</i><sub class="calibre15">i</sub> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">C</i><sub class="calibre15">i-3</sub>)))
+</p>
+
+<p class="calibre9">In this case <i class="calibre12">C</i><sub class="calibre15">0</sub>, <i class="calibre12">C</i><sub class="calibre15">-1</sub>, and <i class="calibre12">C</i><sub class="calibre15">-2</sub> are IVs. This doesn’t help software implementations any, unless you have a parallel machine.</p>
+
+<p class="calibre9">Unfortunately, the simpler mode is also the least secure. Biham analyzed
+various modes with respect to chosen-ciphertext differential cryptanalysis and
+found that inner-CBC is only slightly more secure than single encryption
+against a differential attack. If you think of triple encryption as a single larger
+algorithm, then inner feedbacks allow the introduction of external and known
+information into the inner workings of the algorithm; this facilitates
+cryptanalysis. The differential attacks require enormous amounts of chosen
+ciphertext to mount and are not very practical, but the results should be enough
+to give the most paranoid pause. Another analysis against meet-in-the-middle
+and brute-force attacks concludes that they are all equally secure [<a href="Applied%20Cryptography_split_035.html#r806" class="calibre5 pcalibre">806</a>].</p>
+
+<p class="calibre9">There are other modes, as well. You can encrypt the entire file once in ECB,
+then twice in CBC; or once in CBC, once in ECB, and once in CBC; or twice
+in CBC and once in ECB. Biham showed that these variants are no more
+secure than single DES against a chosen-plaintext differential cryptanalysis
+attack [<a href="Applied%20Cryptography_split_035.html#r162" class="calibre5 pcalibre">162</a>]. And he doesn’t have high hopes for any other variants. If you are
+going to use triple encryption, use modes with outer feedback.</p>
+
+<h4 class="calibre8">Variants on Triple Encryption</h4>
+
+<p class="calibre9">Before there were proofs that DES does not form a group, several schemes
+were proposed for multiple encryption. One way to guarantee that triple
+encryption doesn’t reduce to single encryption is to change the effective block
+size. One simple method is to add a bit of padding. Pad the text with a string of
+random bits, half a block in length, between the first and second and between
+the second and third encryptions (see Figure 15.2). If p is the padding function,
+then:</p>
+
+<p class="math"><i class="calibre12">C</i> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">P</i>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">P</i>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i>)))))
+</p>
+
+<div class="figure" id="figure-15-2">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-15-2.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 15.2</b> Triple encryption with padding.</i></p>
+</div>
+
+<p class="calibre9">This padding not only disrupts patterns, but also overlaps encrypted blocks
+like bricks. It only adds one block to the length of the message.</p>
+
+<p class="calibre9">Another technique, proposed by Carl Ellison, is to use some kind of keyless
+permutation function between the three encryptions. The permutation could
+work on large blocks — 8 kilobytes or so — and would effectively give this
+variant a block size of 8 kilobytes. Assuming that the permutation is fast, this
+variant is not much slower than basic triple encryption.</p>
+
+<p class="math"><i class="calibre12">C</i> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">T</i>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">T</i>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i>)))))
+</p>
+
+<p class="calibre9"><i class="calibre12">T</i> collects a block of input (up to 8 kilobytes in length) and uses a
+pseudo-random-number generator to transpose it. A 1-bit change in the input
+causes 8 changed output bytes after the first encryption, up to 64 changed
+output bytes after the second encryption, and up to 512 changed output bytes
+after the third encryption. If each block algorithm is in CBC mode, as
+originally proposed, then the effect of a single changed input bit is likely to be
+the entire 8 kilobyte block, even in blocks other than the first.</p>
+
+<p class="calibre9">The most recent variant of this scheme responded to Biham’s attack on
+inner-CBC by including a whitening pass to hide plaintext patterns. That pass
+is a stream XOR with a cryptographically secure random-number generator
+called <i class="calibre12">R</i> below. The <i class="calibre12">T</i> on either side of it prevents the cryptanalyst from knowing <i class="calibre12">a priori</i> which key was used to encrypt any given byte on input to the
+last encryption. The second encryption is labelled <i class="calibre12">nE</i> (encryption with one of <i class="calibre12">n</i> different keys, used cyclically):</p>
+
+<p class="math"><i class="calibre12">C</i> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">R</i>(<i class="calibre12">T</i>(<i class="calibre12">nE</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">T</i>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">R</i>))))))
+</p>
+
+<p class="calibre9">All encryptions are in ECB mode and keys are provided at least for the <i class="calibre12">n</i> + 2
+encryption keys and the cryptographically secure random-number generator.</p>
+
+<p class="calibre9">This scheme was proposed with DES, but works with any block algorithm. I
+know of no analysis of the security of this scheme.</p>
+
+<h3 id="15.3" class="calibre7">15.3 Doubling the Block Length</h3>
+
+<p class="calibre9">There is some argument in the academic community whether a 64-bit block is
+long enough. On the one hand, a 64-bit block length only diffuses plaintext
+over 8 bytes of ciphertext. On the other hand, a longer block length makes it
+harder to hide patterns securely; there is more room to make mistakes.</p>
+
+<p class="calibre9">Some propose doubling the block length of an algorithm using multiple
+encryptions [<a href="Applied%20Cryptography_split_035.html#r299" class="calibre5 pcalibre">299</a>]. Before implementing any of these, look for the possibility
+of meet-in-the-middle attacks. Richard Outerbridge’s scheme [<a href="Applied%20Cryptography_split_035.html#r300" class="calibre5 pcalibre">300</a>], illustrated
+in Figure 15.3, is no more secure than single-block, two-key triple encryption
+[<a href="Applied%20Cryptography_split_036.html#r859" class="calibre5 pcalibre">859</a>].</p>
+
+<div class="figure" id="figure-15-3">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-15-3.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 15.3</b> Doubling the block length.</i></p>
+</div>
+
+<p class="calibre9">However, I advise against this sort of thing. It isn’t faster than conventional
+triple encryption: six encryptions are still required to encrypt two blocks of
+data. We know the characteristics of triple encryption; constructions like this
+often have hidden problems.</p>
+
+<h3 id="15.4" class="calibre7">15.4 Other Multiple Encryption Schemes</h3>
+
+<p class="calibre9">The problem with two-key triple encryption is that it only doubles the size of
+the keyspace, but it requires three encryptions per block of plaintext. Wouldn’t
+it be nice to find some clever way of combining two encryptions that would
+double the size of the keyspace?</p>
+
+<h4 class="calibre8">Double OFB/Counter</h4>
+
+<p class="calibre9">This method uses a block algorithm to generate two keystreams, which are
+then used to encrypt the plaintext.</p>
+
+<p class="math-left"><i class="calibre12">S</i><sub class="calibre15">i</sub> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">S</i><sub class="calibre15">i - 1</sub> ⊕ <i class="calibre12">I</i><sub class="calibre15">1</sub>); <i class="calibre12">I</i><sub class="calibre15">1</sub> = <i class="calibre12">I</i><sub class="calibre15">1</sub> + 1
+<i class="calibre12">T</i><sub class="calibre15">i</sub> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">T</i><sub class="calibre15">i - 1</sub> ⊕ <i class="calibre12">I</i><sub class="calibre15">2</sub>); <i class="calibre12">I</i><sub class="calibre15">2</sub> = <i class="calibre12">I</i><sub class="calibre15">2</sub> + 1
+<i class="calibre12">C</i><sub class="calibre15">i</sub> = <i class="calibre12">P</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">S</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">T</i><sub class="calibre15">i</sub>
+</p>
+
+<p class="calibre9"><i class="calibre12">S</i><sub class="calibre15">i</sub> and <i class="calibre12">T</i><sub class="calibre15">i</sub> are internal variables, and <i class="calibre12">I</i><sub class="calibre15">1</sub> and <i class="calibre12">I</i><sub class="calibre15">2</sub> are counters. Two copies of the block algorithm run in a kind of hybrid OFB/counter mode, and the plaintext,
+ <i class="calibre12">S</i><sub class="calibre15">i</sub>, and <i class="calibre12">T</i><sub class="calibre15">i</sub> are XORed together. The two keys, <i class="calibre12">K</i><sub class="calibre15">1</sub> and <i class="calibre12">K</i><sub class="calibre15">2</sub>, are independent. I know of no cryptanalysis of this variant.</p>
+
+<h4 class="calibre8">ECB + OFB</h4>
+
+<p class="calibre9">This method was designed for encrypting multiple messages of a fixed length,
+for example, disk blocks [<a href="Applied%20Cryptography_split_035.html#r186" class="calibre5 pcalibre">186</a>,<a href="Applied%20Cryptography_split_035.html#r188" class="calibre5 pcalibre">188</a>]. Use two keys: <i class="calibre12">K</i><sub class="calibre15">1</sub> and <i class="calibre12">K</i><sub class="calibre15">2</sub>. First, use the algorithm and <i class="calibre12">K</i><sub class="calibre15">1</sub> to generate a mask of the required block length. This mask
+will be used repeatedly to encrypt messages with the same keys. Then, XOR
+the plaintext message with the mask. Finally, encrypt the XORed plaintext
+with the algorithm and <i class="calibre12">K</i><sub class="calibre15">2</sub> in ECB mode.</p>
+
+<p class="calibre9">This mode has not been analyzed outside the paper in which it was proposed.
+Clearly it is at least as strong as a single ECB encryption and may be as strong
+as two passes with the algorithm. Possibly, a cryptanalyst could search for the
+two keys independently, if several known plaintext files are encrypted with the
+same key.</p>
+
+<p class="calibre9">To thwart analysis of identical blocks in the same positions of different
+messages, you can add an IV. Unlike an IV in any other mode, here the IV is
+XORed with every block of the message before ECB encryption.</p>
+
+<p class="calibre9">Matt Blaze designed this mode for his UNIX Cryptographic File System
+(CFS). It is a nice mode because the latency is only one encryption in ECB
+mode; the mask can be generated once and stored. In CFS, DES is the block
+algorithm.</p>
+
+<h4 class="calibre8">xDES<sup class="calibre19"><i class="calibre22">i</i></sup></h4>
+
+<p class="calibre9">In [<a href="Applied%20Cryptography_split_036.html#r1644" class="calibre5 pcalibre">1644</a>,<a href="Applied%20Cryptography_split_036.html#r1645" class="calibre5 pcalibre">1645</a>], DES is used as a building block for a series of block
+algorithms with both larger key sizes and larger block sizes. These
+constructions do not depend on DES in any way and can be used with any
+block algorithm.</p>
+
+<p class="calibre9">The first, xDES<sup class="calibre19">1</sup>, is simply a Luby-Rackoff construction with the block cipher
+as the underlying function (see <a href="Applied%20Cryptography_split_017.html#14.11" class="calibre5 pcalibre">Section 14.11</a>). The block size is twice the size
+of the underlying block cipher and the key size is three times the size of the
+underlying block cipher. In each of 3 rounds, encrypt the right half with the
+block algorithm and one of the keys, XOR the result with the left half, and
+swap the two halves.</p>
+
+<p class="calibre9">This is faster than conventional triple encryption, since three encryptions
+encrypt a block twice as large as the underlying algorithm. But there is also a
+simple meet-in-the-middle attack that finds the key with a table the size of 2<sup class="calibre19"><i class="calibre22">k</i></sup>, where k is the key size of the underlying algorithm. Encrypt the right half of a
+plaintext block with all possible values of <i class="calibre12">K</i><sub class="calibre15">1</sub>, XOR the left half of the
+plaintext, and store these values in a table. Then, encrypt the right half of the
+ciphertext with all possible values of <i class="calibre12">K</i><sub class="calibre15">3</sub> and look for a match in the table. If you find one, the key pair <i class="calibre12">K</i><sub class="calibre15">1</sub> and <i class="calibre12">K</i><sub class="calibre15">3</sub> are possible candidates for the right key.
+Repeat the attack a few times, and only one candidate will remain. This shows
+that xDES<sup class="calibre19">1</sup> is not an ideal solution. Even worse, there is a chosen plaintext
+attack that proves xDES<sup class="calibre19">1</sup> is not much stronger than the underlying block
+cipher [<a href="Applied%20Cryptography_split_036.html#r858" class="calibre5 pcalibre">858</a>].</p>
+
+<p class="calibre9">xDES<sup class="calibre19">2</sup> extends this idea to a 5-round algorithm with a block size 4 times that
+of the underlying block cipher and a key size 10 times that of the underlying
+block cipher. Figure 15.4 is one round of xDES<sup class="calibre19">2</sup>; each of the four sub-blocks
+are the size of the underlying block ciphers and all 10 keys are independent.</p>
+
+<div class="figure" id="figure-15-4">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-15-4.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 15.4</b> One round of xDES<sup class="calibre19">2</sup>.</i></p>
+</div>
+
+<p class="calibre9">This scheme is also faster than triple encryption: Ten encryptions are used to
+encrypt a block four times the size of the underlying block cipher. However, it
+is vulnerable to differential cryptanalysis [<a href="Applied%20Cryptography_split_036.html#r858" class="calibre5 pcalibre">858</a>] and should not be used. The
+scheme is even vulnerable if DES with independent round keys is used.</p>
+
+<p class="calibre9">For <i class="calibre12">i</i> ≥ 3, xDES<sup class="calibre19"><i class="calibre22">i</i></sup> is probably too big to be useful as a block algorithm. 
+For example, the block size for xDES<sup class="calibre19">3</sup> is 6 times that of the underlying cipher, the
+key size is 21 times, and 21 encryptions are required to encrypt a block 6 times
+that of the underlying block cipher. Triple encryption is faster.</p>
+
+<h4 class="calibre8">Quintuple Encryption</h4>
+
+<p class="calibre9">If triple encryption isn’t secure enough — perhaps you need to encrypt
+triple-encryption keys using an even stronger algorithm — then higher multiples
+might be in order. Quintuple encryption is very strong against
+meet-in-the-middle attacks. (Similar arguments to the ones used with double
+encryption can show that quadruple encryption provides minimal security
+improvements over triple encryption.)</p>
+
+<p class="math-left"><i class="calibre12">C</i> = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i>))))) 
+<i class="calibre12">P</i> = <i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">3</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">C</i>)))))
+</p>
+
+<p class="calibre9">This construction is backwards compatible with triple encryption if <i class="calibre12">K</i><sub class="calibre15">2</sub> = <i class="calibre12">K</i><sub class="calibre15">3</sub>, and is backwards compatible with single encryption if <i class="calibre12">K</i><sub class="calibre15">1</sub> = <i class="calibre12">K</i><sub class="calibre15">2</sub> = <i class="calibre12">K</i><sub class="calibre15">3</sub>. Of course, it would be even stronger if all five keys were independent.</p>
+
+<h3 id="15.5" class="calibre7">15.5 CDMF Key Shortening</h3>
+
+<p class="calibre9">This method was designed by IBM for their Commercial Data Masking
+Facility or CDMF (see <a href="Applied%20Cryptography_split_028.html#24.8" class="calibre5 pcalibre">Section 24.8</a>) to shrink a 56-bit DES key to a 40-bit key
+suitable for export [<a href="Applied%20Cryptography_split_035.html#r785" class="calibre5 pcalibre">785</a>]. It assumes that the original DES key includes the
+parity bits.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Zero the parity bits: bits 8, 16, 24, 32, 40, 48, 56, 64.
+</li>
+<li class="calibre14">Encrypt the output of step (1) with DES and the key
+<code class="calibre18">0xc408b0540ba1e0ae</code>, and XOR the result with the output of step (1).
+</li>
+<li class="calibre14">Take the output of step (2) and zero the following bits: 1, 2, 3, 4, 8,
+16, 17, 18, 19, 20, 24, 32, 33, 34, 35, 36, 40, 48, 49, 50, 51, 52, 56, 64.
+</li>
+<li class="calibre14">Encrypt the output of step (3) with DES and the following key:
+<code class="calibre18">0xef2c041ce6382fe6</code>. This key is then used for message encryption.
+</li>
+
+</ol>
+
+<p class="calibre9">Remember that this method shortens the key length, and thereby weakens the
+algorithm.</p>
+
+<h3 id="15.6" class="calibre7">15.6 Whitening</h3>
+
+<p class="calibre9"><b class="calibre10">Whitening</b> is the name given to the technique of XORing some key material
+with the input to a block algorithm, and XORing some other key material with
+the output. This was first done in the DESX variant developed by RSA Data
+Security, Inc., and then (presumably independently) in Khufu and Khafre.
+(Rivest named this technique; it’s a nonstandard usage of the word.)</p>
+
+<p class="calibre9">The idea is to prevent a cryptanalyst from obtaining a plaintext/ciphertext pair
+for the underlying algorithm. The technique forces a cryptanalyst to guess not
+only the algorithm key, but also one of the whitening values. Since there is an
+XOR both before and after the block algorithm, this technique is not
+susceptible to a meet-in-the-middle attack.</p>
+
+<p class="math-left"><i class="calibre12">C</i> = <i class="calibre12">K</i><sub class="calibre15">3</sub> ⊕ <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">P</i> ⊕ <i class="calibre12">K</i><sub class="calibre15">1</sub>)
+<i class="calibre12">P</i> = <i class="calibre12">K</i><sub class="calibre15">1</sub> ⊕ <i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">C</i> ⊕ <i class="calibre12">K</i><sub class="calibre15">3</sub>)
+</p>
+
+<p class="calibre9">If <i class="calibre12">K</i><sub class="calibre15">1</sub> = <i class="calibre12">K</i><sub class="calibre15">3</sub>, then a brute-force attack requires 2<sup class="calibre19"><i class="calibre22">n</i> + <i class="calibre22">m/p</i></sup> operations, where <i class="calibre12">n</i> is the key size, <i class="calibre12">m</i> is the block size, and <i class="calibre12">p</i> is the number of known plaintexts. If <i class="calibre12">K</i><sub class="calibre15">1</sub>
+and <i class="calibre12">K</i><sub class="calibre15">3</sub> are different, then a brute-force attack requires 2<sup class="calibre19"><i class="calibre22">n</i> + <i class="calibre22">m</i> + 1</sup> operations with three known plaintexts. Against differential and linear cryptanalysis,
+these measures only provide a few key bits of protection. But computationally
+this is a very cheap way to increase the security of a block algorithm.</p>
+
+<h3 id="15.7" class="calibre7">15.7 Cascading Multiple Block Algorithms</h3>
+
+<p class="calibre9">What about encrypting a message once with Algorithm A and key <i class="calibre12">K</i><sub class="calibre15">A</sub>, then
+again with Algorithm B and key <i class="calibre12">K</i><sub class="calibre15">B</sub>? Maybe Alice and Bob have different
+ideas about which algorithms are secure: Alice wants to use Algorithm A and
+Bob wants to use Algorithm B. This technique is sometimes called <b class="calibre10">cascading</b>,
+and can be extended far beyond only two algorithms and keys.</p>
+
+<p class="calibre9">Pessimists have said that there is no guarantee that the two algorithms will
+work together to increase security. There may be subtle interactions between
+the two algorithms that actually <i class="calibre12">decrease</i> security. Even triple encryption with three different algorithms may not be as secure as you think. Cryptography is a
+black art; if you don’t know what you are doing, you can easily get into
+trouble.</p>
+
+<p class="calibre9">Reality is much rosier. The previous warnings are true only if the different
+keys are related to each other. If all of the multiple keys are independent, then
+the resultant cascade is at least as difficult to break as the first algorithm in the
+cascade [<a href="Applied%20Cryptography_split_036.html#r1033" class="calibre5 pcalibre">1033</a>]. If the second algorithm is vulnerable to a chosen-plaintext
+attack, then the first algorithm might facilitate that attack and make the second
+algorithm vulnerable to a known-plaintext attack when used in a cascade. This
+potential attack is not limited to encryption algorithms: If you let someone else
+specify any algorithm which is used on your message before encryption, then
+you had better be sure that your encryption will withstand a chosen-plaintext
+attack. (Note that the most common algorithm used for compressing and
+digitizing speech to modem speeds, used before any encryption, is
+CELP — designed by the NSA.)</p>
+
+<p class="calibre9">This can be better phrased: Using a chosen-plaintext attack, a cascade of
+ciphers is at least as hard to break as any of its component ciphers [<a href="Applied%20Cryptography_split_036.html#r858" class="calibre5 pcalibre">858</a>]. A
+previous result showed that the cascade is at least as difficult to break as the
+strongest algorithm, but that result is based on some unstated assumptions
+[<a href="Applied%20Cryptography_split_035.html#r528" class="calibre5 pcalibre">528</a>]. Only if the algorithms commute, as they do in the case of cascaded
+stream ciphers (or block ciphers in OFB mode), is the cascade at least as
+strong as the strongest algorithm.</p>
+
+<p class="calibre9">If Alice and Bob do not trust each other’s algorithms, they can use a cascade.
+If these are stream algorithms, the order doesn’t matter. If they are block
+algorithms, Alice can first use Algorithm A and then use Algorithm B. Bob,
+who trusts Algorithm B more, can use Algorithm B followed by Algorithm A.
+They might even add a good stream cipher between the two algorithms; it
+can’t hurt and could very well increase security.</p>
+
+<p class="calibre9">Remember that the keys for each algorithm in the cascade must be
+independent. If Algorithm A has a 64-bit key and Algorithm B has a 128-bit
+key, then the resultant cascade must have a 192-bit key. If you don’t use
+independent keys, then the pessimists are much more likely to be right.</p>
+
+<h3 id="15.8" class="calibre7">15.8 Combining Multiple Block Algorithms</h3>
+
+<p class="calibre9">Here’s another way to combine multiple block algorithms, one that is
+guaranteed to be at least as secure as both algorithms. With two algorithms
+(and two independent keys):</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Generate a random-bit string, <i class="calibre12">R</i>, the same size as the message <i class="calibre12">M</i>.
+</li>
+<li class="calibre14">Encrypt <i class="calibre12">R</i> with the first algorithm.
+</li>
+<li class="calibre14">Encrypt <i class="calibre12">M</i> ⊕ <i class="calibre12">R</i> with the second algorithm.
+</li>
+<li class="calibre14">The ciphertext message is the results of steps (2) and (3).
+</li>
+
+</ol>
+
+<p class="calibre9">Assuming the random-bit string is indeed random, this method encrypts <i class="calibre12">M</i>
+with a one-time pad and then encrypts both the pad and the encrypted message
+with each of the two algorithms. Since both are required to reconstruct <i class="calibre12">M</i>, a
+cryptanalyst must break both algorithms. The drawback is that the ciphertext is
+twice the size of the plaintext.</p>
+
+<p class="calibre9">This method can be extended to multiple algorithms, but the ciphertext
+expands with each additional algorithm. It’s a good idea, but I don’t think it’s
+very practical.</p>
+
+<div class="calibre6" id="calibre_pb_36"></div>
+</div>
+
+
+
+
+
+
+</body></html>

@@ -1,0 +1,1530 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Applied Cryptography, Second Edition: Protocols, Algorithms, and Source Code in C</title>
+    <meta content="Bruce Schneier" name="author"/>
+    <meta content="An introduction to cryptography." name="description"/>
+    <meta content="programming,cryptography" name="keywords"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body class="calibre">
+<div id="book" class="calibre1">
+<h1 class="chapter" id="4">Chapter 4 <br class="calibre3"/>
+Intermediate Protocols</h1>
+
+<h3 id="4.1" class="calibre7">4.1 Timestamping Services</h3>
+
+<p class="calibre9">In many situations, people need to certify that a document existed on a certain
+date. Think about a copyright or patent dispute: The party that produces the
+earliest copy of the disputed work wins the case. With paper documents,
+notaries can sign and lawyers can safeguard copies. If a dispute arises, the
+notary or the lawyer testifies that the letter existed on a certain date.</p>
+
+<p class="calibre9">In the digital world, it’s far more complicated. There is no way to examine a
+digital document for signs of tampering. It can be copied and modified
+endlessly without anyone being the wiser. It’s trivial to change the date stamp
+on a computer file. No one can look at a digital document and say: “Yes, this
+document was created before November 4, 1952.”</p>
+
+<p class="calibre9">Stuart Haber and W. Scott Stornetta at Bellcore thought about the problem
+[<a href="Applied%20Cryptography_split_035.html#r682" class="calibre5 pcalibre">682</a>,<a href="Applied%20Cryptography_split_035.html#r683" class="calibre5 pcalibre">683</a>,<a href="Applied%20Cryptography_split_035.html#r92" class="calibre5 pcalibre">92</a>]. They wanted a digital timestamping protocol with the
+following properties:</p>
+
+<ul class="calibre13">
+
+<li class="calibre14">The data itself must be timestamped, without any regard to the
+physical medium on which it resides.
+</li>
+<li class="calibre14">It must be impossible to change a single bit of the document without
+that change being apparent.
+</li>
+<li class="calibre14">It must be impossible to timestamp a document with a date and time
+different from the present one.
+</li>
+
+</ul>
+
+<h4 class="calibre8">Arbitrated Solution</h4>
+
+<p class="calibre9">This protocol uses Trent, who has a trusted timestamping service, and Alice,
+who wishes to timestamp a document.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice transmits a copy of the document to Trent.
+</li>
+<li class="calibre14">Trent records the date and time he received the document and
+retains a copy of the document for safekeeping.
+</li>
+
+</ol>
+
+<p class="calibre9">Now, if anyone calls into question Alice’s claim of when the document was
+created, she just has to call up Trent. He will produce his copy of the document
+and verify that he received the document on the date and time stamped.</p>
+
+<p class="calibre9">This protocol works, but has some obvious problems. First, there is no privacy.
+Alice has to give a copy of the document to Trent. Anyone listening in on the
+communications channel could read it. She could encrypt it, but still the
+document has to sit in Trent’s database. Who knows how secure that database
+is?</p>
+
+<p class="calibre9">Second, the database itself would have to be huge. And the bandwidth
+requirements to send large documents to Trent would be unwieldy.</p>
+
+<p class="calibre9">The third problem has to do with the potential errors. An error in transmission,
+or an electromagnetic bomb detonating somewhere in Trent’s central
+computers, could completely invalidate Alice’s claim of a timestamp.</p>
+
+<p class="calibre9">And fourth, there might not be someone as honest as Trent to run the
+timestamping service. Maybe Alice is using Bob’s Timestamp and Taco Stand.
+There is nothing to stop Alice and Bob from colluding and timestamping a
+document with any time that they want.</p>
+
+<h4 class="calibre8">Improved Arbitrated Solution</h4>
+
+<p class="calibre9">One-way hash functions and digital signatures can clear up most of these
+problems easily:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice produces a one-way hash of the document.
+</li>
+<li class="calibre14">Alice transmits the hash to Trent.
+</li>
+<li class="calibre14">Trent appends the date and time he received the hash onto the hash
+and then digitally signs the result.
+</li>
+<li class="calibre14">Trent sends the signed hash with timestamp back to Alice.
+</li>
+
+</ol>
+
+<p class="calibre9">This solves every problem but the last. Alice no longer has to worry about
+revealing the contents of her document; the hash is sufficient. Trent no longer
+has to store copies of the document (or even of the hash), so the massive
+storage requirements and security problems are solved (remember, one-way
+hash functions don’t have a key). Alice can immediately examine the signed
+timestamped hash she receives in step (4), so she will immediately catch any
+transmission errors. The only problem remaining is that Alice and Trent can
+still collude to produce any timestamp they want.</p>
+
+<h4 class="calibre8">Linking Protocol</h4>
+
+<p class="calibre9">One way to solve this problem is to link Alice’s timestamp with timestamps
+previously generated by Trent. These timestamps will most probably be
+generated for people other than Alice. Since the order that Trent receives the
+different timestamp requests can’t be known in advance, Alice’s timestamp
+must have occurred after the previous one. And since the request that came
+after is linked with Alice’s timestamp, then hers must have occurred before.
+This sandwiches Alice’s request in time.</p>
+
+<p class="calibre9">If <i class="calibre12">A</i> is Alice’s name, the hash value that Alice wants timestamped is <i class="calibre12">H</i><sub class="calibre15">n</sub>, and the previous time stamp is <i class="calibre12">T</i><sub class="calibre15">n - 1</sub>, then the protocol is:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice sends Trent <i class="calibre12">H</i><sub class="calibre15">n</sub> and <i class="calibre12">A</i>.
+</li>
+<li class="calibre14">Trent sends back to Alice:
+<p class="math"><i class="calibre12">T</i><sub class="calibre15">n</sub> = <i class="calibre12">S</i><sub class="calibre15">K</sub>(<i class="calibre12">n,A,H</i><sub class="calibre15">n</sub>, <i class="calibre12">T</i><sub class="calibre15">n</sub>, <i class="calibre12">I</i><sub class="calibre15">n - 1</sub>, <i class="calibre12">H</i><sub class="calibre15">n - 1</sub>, <i class="calibre12">T</i><sub class="calibre15">n - 1</sub>, <i class="calibre12">L</i><sub class="calibre15">n</sub>)
+</p>
+where <i class="calibre12">L</i><sub class="calibre15">n</sub> consists of the following hashed linking information:
+<p class="math"><i class="calibre12">L</i><sub class="calibre15">n</sub> = <i class="calibre12">H</i>(<i class="calibre12">I</i><sub class="calibre15">n - 1</sub>, <i class="calibre12">H</i><sub class="calibre15">n - 1</sub>, <i class="calibre12">T</i><sub class="calibre15">n - 1</sub>, <i class="calibre12">L</i><sub class="calibre15">n - 1</sub>)
+</p>
+<i class="calibre12">S</i><sub class="calibre15">K</sub> indicates that the message is signed with Trent’s private key. Alice’s
+name identifies her as the originator of the request. The parameter <i class="calibre12">n</i>
+indicates the sequence of the request: This is the <i class="calibre12">n</i>th timestamp Trent
+has issued. The parameter <i class="calibre12">t</i><sub class="calibre15">n</sub> is the time. The additional information is
+the identification, original hash, time, and hashed timestamp of the
+previous document Trent stamped.
+</li>
+<li class="calibre14">After Trent stamps the next document, he sends Alice the
+identification of the originator of that document: <i class="calibre12">I</i><sub class="calibre15">n + 1</sub>.
+</li>
+
+</ol>
+
+<p class="calibre9">If someone challenges Alice’s timestamp, she just contacts the originators of
+the previous and following documents: <i class="calibre12">I</i><sub class="calibre15">n - 1</sub> and <i class="calibre12">I</i><sub class="calibre15">n + 1</sub>. If their documents are called into question, they can get in touch with <i class="calibre12">I</i><sub class="calibre15">n - 2</sub> and <i class="calibre12">I</i><sub class="calibre15">n + 2</sub>, and so on.
+Every person can show that their document was timestamped after the one that
+came before and before the one that came after.</p>
+
+<p class="calibre9">This protocol makes it very difficult for Alice and Trent to collude and
+produce a document stamped with a different time than the actual one. Trent
+cannot forward-date a document for Alice, since that would require knowing in
+advance what document request came before it. Even if he could fake that, he
+would have to know what document request came before that, and so on. He
+cannot back-date a document, because the timestamp must be embedded in the
+timestamps of the document issued immediately after, and that document has
+already been issued. The only possible way to break this scheme is to invent a
+fictitious chain of documents both before and after Alice’s document, long
+enough to exhaust the patience of anyone challenging the timestamp.</p>
+
+<h4 class="calibre8">Distributed Protocol</h4>
+
+<p class="calibre9">People die; timestamps get lost. Many things could happen between the
+timestamping and the challenge to make it impossible for Alice to get a copy
+of <i class="calibre12">I</i><sub class="calibre15">n - 1</sub>’s timestamp. This problem could be alleviated by embedding the
+previous 10 people’s timestamps into Alice’s, and then sending Alice the
+identities of the next 10 people. Alice has a greater chance of finding people
+who still have their timestamps.</p>
+
+<p class="calibre9">Along a similar line, the following protocol does away with Trent altogether.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Using <i class="calibre12">H</i><sub class="calibre15">n</sub> as input, Alice generates a string of random values using a cryptographically secure pseudo-random-number generator:
+<p class="math"><i class="calibre12">V</i><sub class="calibre15">1</sub>, <i class="calibre12">V</i><sub class="calibre15">2</sub>, <i class="calibre12">V</i><sub class="calibre15">3</sub>, ... <i class="calibre12">V</i><sub class="calibre15">k</sub>
+</p>
+</li>
+<li class="calibre14">Alice interprets each of these values as the identification, <i class="calibre12">I</i>, of another person. She sends <i class="calibre12">H</i><sub class="calibre15">n</sub> to each of these people.
+</li>
+<li class="calibre14">Each of these people attaches the date and time to the hash, signs
+the result, and sends it back to Alice.
+</li>
+<li class="calibre14">Alice collects and stores all the signatures as the timestamp.
+</li>
+
+</ol>
+
+<p class="calibre9">The cryptographically secure pseudo-random-number generator in step (1)
+prevents Alice from deliberately choosing corrupt <i class="calibre12">I</i>s as verifiers. Even if she makes trivial changes in her document in an attempt to construct a set of
+corrupt <i class="calibre12">I</i>s, her chances of getting away with this are negligible. The hash
+function randomizes the <i class="calibre12">I</i>s; Alice cannot force them.</p>
+
+<p class="calibre9">This protocol works because the only way for Alice to fake a timestamp would
+be to convince all of the <i class="calibre12">k</i> people to cooperate. Since she chose them at
+random in step (1), the odds against this are very high. The more corrupt
+society is, the higher a number <i class="calibre12">k</i> should be.</p>
+
+<p class="calibre9">Additionally, there should be some mechanism for dealing with people who
+can’t promptly return the timestamp. Some subset of <i class="calibre12">k</i> is all that would be
+required for a valid timestamp. The details depend on the implementation.</p>
+
+<h4 class="calibre8">Further Work</h4>
+
+<p class="calibre9">Further improvements to timestamping protocols are presented in [<a href="Applied%20Cryptography_split_035.html#r92" class="calibre5 pcalibre">92</a>]. The
+authors use binary trees to increase the number of timestamps that depend on a
+given timestamp, reducing even further the possibility that someone could
+create a chain of fictitious timestamps. They also recommend publishing a
+hash of the day’s timestamps in a public place, such as a newspaper. This
+serves a function similar to sending the hash to random people in the
+distributed protocol. In fact, a timestamp has appeared in every Sunday’s <i class="calibre12">New York Times</i> since 1992.</p>
+
+<p class="calibre9">These timestamping protocols are patented [<a href="Applied%20Cryptography_split_035.html#r684" class="calibre5 pcalibre">684</a>,<a href="Applied%20Cryptography_split_035.html#r685" class="calibre5 pcalibre">685</a>,<a href="Applied%20Cryptography_split_035.html#r686" class="calibre5 pcalibre">686</a>]. A Bellcore
+spin-off company called Surety Technologies owns the patents and markets a
+Digital Notary System to support these protocols. In their first version, clients
+send “certify” requests to a central coordinating server. Following Merkle’s
+technique of using hash functions to build trees [<a href="Applied%20Cryptography_split_036.html#r1066" class="calibre5 pcalibre">1066</a>], the server builds a tree
+of hash values whose leaves are all the requests received during a given
+second, and sends back to each requester the list of hash values hanging off the
+path from its leaf to the root of the tree. The client software stores this locally,
+and can issue a Digital Notary “certificate” for any file that has been certified.
+The sequence of roots of these trees comprises the “Universal Validation
+Record” that will be available electronically at multiple repository sites (and
+also published on CD-ROM). The client software also includes a “validate”
+function, allowing the user to test whether a file has been certified in exactly
+its current form (by querying a repository for the appropriate tree root and
+comparing it against a hash value appropriately recomputed from the file and
+its certificate). For information contact Surety Technologies, 1 Main St.,
+Chatham, NJ, 07928; (201) 701-0600; Fax: (201) 701-0601.</p>
+
+<h3 id="4.2" class="calibre7">4.2 Subliminal Channel</h3>
+
+<p class="calibre9">Alice and Bob have been arrested and are going to prison. He’s going to the
+men’s prison and she’s going to the women’s prison. Walter, the warden, is
+willing to let Alice and Bob exchange messages, but he won’t allow them to be
+encrypted. Walter expects them to coordinate an escape plan, so he wants to be
+able to read everything they say.</p>
+
+<p class="calibre9">Walter also hopes to deceive either Alice or Bob. He wants one of them to
+accept a fraudulent message as a genuine message from the other. Alice and
+Bob go along with this risk of deception, otherwise they cannot communicate
+at all, and they have to coordinate their plans. To do this they have to deceive
+the warden and find a way of communicating secretly. They have to set up a
+<b class="calibre10">subliminal channel</b>, a covert communications channel between them in full
+view of Walter, even though the messages themselves contain no secret
+information. Through the exchange of perfectly innocuous signed messages
+they will pass secret information back and forth and fool Walter, even though
+Walter is watching all the communications.</p>
+
+<p class="calibre9">An easy subliminal channel might be the number of words in a sentence. An
+odd number of words in a sentence might correspond to “1, ” while an even
+number of words might correspond to “0.” So, while you read this seemingly
+innocent paragraph, I have sent my operatives in the field the message “101.”
+The problem with this technique is that it is mere steganography (see <a href="Applied%20Cryptography_split_001.html#1.2" class="calibre5 pcalibre">Section 1.2</a>); 
+there is no key and security depends on the secrecy of the algorithm.</p>
+
+<p class="calibre9">Gustavus Simmons invented the concept of a subliminal channel in a
+conventional digital signature algorithm [<a href="Applied%20Cryptography_split_036.html#r1458" class="calibre5 pcalibre">1458</a>,<a href="Applied%20Cryptography_split_036.html#r1473" class="calibre5 pcalibre">1473</a>]. Since the subliminal
+messages are hidden in what looks like normal digital signatures, this is a form
+of obfuscation. Walter sees signed innocuous messages pass back and forth,
+but he completely misses the information being sent over the subliminal
+channel. In fact, the subliminal-channel signature algorithm is
+indistinguishable from a normal signature algorithm, at least to Walter. Walter
+not only cannot read the subliminal message, but he also has no idea that one is
+even present.</p>
+
+<p class="calibre9">In general the protocol looks like this:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice generates an innocuous message, pretty much at random.
+</li>
+<li class="calibre14">Using a secret key shared with Bob, Alice signs the innocuous
+message in such a way that she hides her subliminal message in the
+signature. (This is the meat of the subliminal channel protocol; see
+<a href="Applied%20Cryptography_split_026.html#23.3" class="calibre5 pcalibre">Section 23.3</a>.)
+</li>
+<li class="calibre14">Alice sends this signed message to Bob via Walter.
+</li>
+<li class="calibre14">Walter reads the innocuous message and checks the signature.
+Finding nothing amiss, he passes the signed message to Bob.
+</li>
+<li class="calibre14">Bob checks the signature on the innocuous message, confirming that
+the message came from Alice.
+</li>
+<li class="calibre14">Bob ignores the innocuous message and, using the secret key he
+shares with Alice, extracts the subliminal message.
+</li>
+
+</ol>
+
+<p class="calibre9">What about cheating? Walter doesn’t trust anyone and no one trusts him. He
+can always prevent communication, but he has no way of introducing phony
+messages. Since he can’t generate any valid signatures, Bob will detect his
+attempt in step (5). And since he does not know the shared key, he can’t read
+the subliminal messages. Even more important, he has no idea that the
+subliminal messages are there. Signed messages using a digital signature
+algorithm look no different from signed messages with subliminal messages
+embedded in the signature.</p>
+
+<p class="calibre9">Cheating between Alice and Bob is more problematic. In some
+implementations of a subliminal channel, the secret information Bob needs to
+read the subliminal message is the same information Alice needs to sign the
+innocuous message. If this is the case, Bob can impersonate Alice. He can sign
+messages purporting to come from her, and there is nothing Alice can do about
+it. If she is to send him subliminal messages, she has to trust him not to abuse
+her private key.</p>
+
+<p class="calibre9">Other subliminal channel implementations don’t have this problem. A secret
+key shared by Alice and Bob allows Alice to send Bob subliminal messages,
+but it is not the same as Alice’s private key and does not allow Bob to sign
+messages. Alice need not trust Bob not to abuse her private key.</p>
+
+<h4 class="calibre8">Applications of Subliminal Channel</h4>
+
+<p class="calibre9">The most obvious application of the subliminal channel is in a spy network. If
+everyone sends and receives signed messages, spies will not be noticed
+sending subliminal messages in signed documents. Of course, the enemy’s
+spies can do the same thing.</p>
+
+<p class="calibre9">Using a subliminal channel, Alice could safely sign a document under threat.
+She would, when signing the document, imbed the subliminal message,
+saying, “I am being coerced.” Other applications are more subtle. A company
+can sign documents and embed subliminal messages, allowing them to be
+tracked throughout the documents’ lifespans. The government can “mark”
+digital cash. A malicious signature program can leak secret information in its
+signatures. The possibilities are endless.</p>
+
+<h4 class="calibre8">Subliminal-Free Signatures</h4>
+
+<p class="calibre9">Alice and Bob are sending signed messages to each other, negotiating the
+terms of a contract. They use a digital signature protocol. However, this
+contract negotiation has been set up as a cover for Alice’s and Bob’s spying
+activities. When they use the digital signature algorithm, they don’t care about
+the messages they are signing. They are using a subliminal channel in the
+signatures to send secret information to each other. The counterespionage
+service, however, doesn’t know that the contract negotiations and the use of
+signed messages are just cover-ups. This concern has led people to create
+<b class="calibre10">subliminal-free signature schemes</b>. These digital signature schemes cannot
+be modified to contain a subliminal channel. See [<a href="Applied%20Cryptography_split_035.html#r480" class="calibre5 pcalibre">480</a>,<a href="Applied%20Cryptography_split_035.html#r481" class="calibre5 pcalibre">481</a>] for details.</p>
+
+<h3 id="4.3" class="calibre7">4.3 Undeniable Digital Signatures</h3>
+
+<p class="calibre9">Normal digital signatures can be copied exactly. Sometimes this property is
+useful, as in the dissemination of public announcements. Other times it could
+be a problem. Imagine a digitally signed personal or business letter. If many
+copies of that document were floating around, each of which could be verified
+by anyone, this could lead to embarrassment or blackmail. The best solution is
+a digital signature that can be proven valid, but that the recipient cannot show
+to a third party without the signer’s consent.</p>
+
+<p class="calibre9">The Alice Software Company distributes DEW (Do-Everything-Word). To
+ensure that their software is virus-free, they include a digital signature with
+each copy. However, they want only legitimate buyers of the software, not
+software pirates, to be able to verify the signature. At the same time, if copies
+of DEW are found to contain a virus, the Alice Software Company should be
+unable to deny a valid signature.</p>
+
+<p class="calibre9"><b class="calibre10">Undeniable signatures</b> [<a href="Applied%20Cryptography_split_035.html#r343" class="calibre5 pcalibre">343</a>,<a href="Applied%20Cryptography_split_035.html#r327" class="calibre5 pcalibre">327</a>] are suited to these sorts of tasks. Like a
+normal digital signature, an undeniable signature depends on the signed
+document and the signer’s private key. But unlike normal digital signatures, an
+undeniable signature cannot be verified without the signer’s consent. Although
+a better name for these signatures might be something like “nontransferable
+signatures, ” the name comes from the fact that if Alice is forced to either
+acknowledge or deny a signature — perhaps in court — she cannot falsely deny
+her real signature.</p>
+
+<p class="calibre9">The mathematics are complicated, but the basic idea is simple:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice presents Bob with a signature.
+</li>
+<li class="calibre14">Bob generates a random number and sends it to Alice.
+</li>
+<li class="calibre14">Alice does a calculation using the random number and her private
+key and sends Bob the result. Alice could only do this calculation if the
+signature is valid.
+</li>
+<li class="calibre14">Bob confirms this.
+</li>
+
+</ol>
+
+<p class="calibre9">There is also an additional protocol so that Alice can prove that she did not
+sign a document, and cannot falsely deny a signature.</p>
+
+<p class="calibre9">Bob can’t turn around and convince Carol that Alice’s signature is valid,
+because Carol doesn’t know that Bob’s numbers are random. He could have
+easily worked the protocol backwards on paper, without any help from Alice,
+and then shown Carol the result. Carol can be convinced that Alice’s signature
+is valid only if she completes the protocol with Alice herself. This might not
+make much sense now, but it will once you see the mathematics in <a href="Applied%20Cryptography_split_026.html#23.4" class="calibre5 pcalibre">Section 23.4</a>.</p>
+
+<p class="calibre9">This solution isn’t perfect. Yvo Desmedt and Moti Yung show that it is
+possible, in some applications, for Bob to convince Carol that Alice’s
+signature is valid [<a href="Applied%20Cryptography_split_035.html#r489" class="calibre5 pcalibre">489</a>].</p>
+
+<p class="calibre9">For instance, Bob buys a legal copy of DEW. He can validate the signature on
+the software package whenever he wants. Then, Bob convinces Carol that he’s
+a salesman from the Alice Software Company. He sells her a pirated copy of
+DEW. When Carol tries to validate the signature with Bob, he simultaneously
+validates the signature with Alice. When Carol sends him the random number,
+he then sends it on to Alice. When Alice replies, he then sends the reply on to
+Carol. Carol is convinced that she is a legitimate buyer of the software, even
+though she isn’t. This attack is an instance of the chess grandmaster problem
+and is discussed in detail in <a href="Applied%20Cryptography_split_006.html#5.2" class="calibre5 pcalibre">Section 5.2</a>.</p>
+
+<p class="calibre9">Even so, undeniable signatures have a lot of applications; in many instances
+Alice doesn’t want anyone to be able to verify her signature. She might not
+want personal correspondence to be verifiable by the press, be shown and
+verified out of context, or even to be verified after things have changed. If she
+signs a piece of information she sold, she won’t want someone who hasn’t paid
+for the information to be able to verify its authenticity. Controlling who
+verifies her signature is a way for Alice to protect her personal privacy.</p>
+
+<p class="calibre9">A variant of undeniable signatures separates the relation between signer and
+message from the relation between signer and signature [<a href="Applied%20Cryptography_split_036.html#r910" class="calibre5 pcalibre">910</a>]. In one signature
+scheme, anyone can verify that the signer actually created the signature, but
+the cooperation of the signer is required to verify that the signature is valid for
+the message.</p>
+
+<p class="calibre9">A related notion is an <b class="calibre10">entrusted undeniable signature</b> [<a href="Applied%20Cryptography_split_036.html#r1229" class="calibre5 pcalibre">1229</a>]. Imagine that
+Alice works for Toxins, Inc., and sends incriminating documents to a
+newspaper using an undeniable signature protocol. Alice can verify her
+signature to the newspaper reporter, but not to anyone else. However, CEO
+Bob suspects that Alice is the source of the documents. He demands that Alice
+run the disavowal protocol to clear her name, and Alice refuses. Bob maintains
+that the only reason Alice has to refuse is that she is guilty, and fires her.</p>
+
+<p class="calibre9">Entrusted undeniable signatures are like undeniable signatures, except that the
+disavowal protocol can only be run by Trent. Bob cannot demand that Alice
+run the disavowal protocol; only Trent can. And if Trent is the court system,
+then he will only run the protocol to resolve a formal dispute.</p>
+
+<h3 id="4.4" class="calibre7">4.4 Designated Confirmer Signatures</h3>
+
+<p class="calibre9">The Alice Software Company is doing a booming business selling DEW — so
+good, in fact, that Alice is spending more time verifying undeniable signatures
+than writing new features.</p>
+
+<p class="calibre9">Alice would like a way to designate one particular person in the company to be
+in charge of signature verification for the whole company. Alice, or any other
+programmer, would be able to sign documents with an undeniable protocol.
+But the verifications would all be handled by Carol.</p>
+
+<p class="calibre9">As it turns out, this is possible with <b class="calibre10">designated confirmer signatures</b> [<a href="Applied%20Cryptography_split_035.html#r333" class="calibre5 pcalibre">333</a>,<a href="Applied%20Cryptography_split_036.html#r1213" class="calibre5 pcalibre">1213</a>]. 
+Alice can sign a document such that Bob is convinced the signature is
+valid, but he cannot convince a third party; at the same time Alice can
+designate Carol as the future confirmer of her signature. Alice doesn’t even
+need to ask Carol’s permission beforehand; she just has to use Carol’s public
+key. And Carol can still verify Alice’s signature if Alice is out of town, has left
+the company, or just upped and died.</p>
+
+<p class="calibre9">Designated confirmer signatures are kind of a compromise between normal
+digital signatures and undeniable signatures. There are certainly instances
+where Alice might want to limit who can verify her signature. On the other
+hand, giving Alice complete control undermines the enforceability of
+signatures: Alice might refuse to cooperate in either confirming or denying,
+she might claim the loss of keys for confirming or denying, or she might just
+be unavailable. Designated confirmer signatures can give Alice the protection
+of an undeniable signature while not letting her abuse that protection. Alice
+might even prefer it that way: Designated confirmer signatures can help
+prevent false applications, protect her if she actually does lose her key, and
+step in if she is on vacation, in the hospital, or even dead.</p>
+
+<p class="calibre9">This idea has all sorts of possible applications. Carol can set herself up as a
+notary public. She can publish her public key in some directory somewhere,
+and people can designate her as a confirmer for their signatures. She can
+charge a small fee for confirming signatures for the masses and make a nice
+living.</p>
+
+<p class="calibre9">Carol can be a copyright office, a government agency, or a host of other
+things. This protocol allows organizations to separate the people who sign
+documents from the people who help verify signatures.</p>
+
+<h3 id="4.5" class="calibre7">4.5 Proxy Signatures</h3>
+
+<p class="calibre9">Designated confirmer signatures allows a signer to designate someone else to
+verify his signature. Alice, for instance, needs to go on a business trip to
+someplace which doesn’t have very good computer network access — to the
+jungles of Africa, for example. Or maybe she is incapacitated after major
+surgery. She expects to receive some important e-mail, and has instructed her
+secretary Bob to respond accordingly. How can Alice give Bob the power to
+sign messages for her, without giving him her private key?</p>
+
+<p class="calibre9"><b class="calibre10">Proxy signatures</b> is a solution [<a href="Applied%20Cryptography_split_036.html#r1001" class="calibre5 pcalibre">1001</a>]. Alice can give Bob a proxy, such that
+the following properties hold:</p>
+
+<ul class="calibre13">
+
+<li class="calibre14"><i class="calibre12"><b class="calibre10">Distinguishability</b></i>. Proxy signatures are distinguishable from normal
+signatures by anyone.
+</li>
+<li class="calibre14"><i class="calibre12"><b class="calibre10">Unforgeability</b></i>. Only the original signer and the designated proxy
+signer can create a valid proxy signature.
+</li>
+<li class="calibre14"><i class="calibre12"><b class="calibre10">Proxy signer’s deviation</b></i>. A proxy signer cannot create a valid proxy
+signature not detected as a proxy signature.
+</li>
+<li class="calibre14"><i class="calibre12"><b class="calibre10">Verifiability</b></i>. From a proxy signature, a verifier can be convinced of the original signer’s agreement on the signed message.
+</li>
+<li class="calibre14"><i class="calibre12"><b class="calibre10">Identifiability</b></i>. An original signer can determine the proxy signer’s
+identity from a proxy signature.
+</li>
+<li class="calibre14"><i class="calibre12"><b class="calibre10">Undeniability</b></i>. A proxy signer cannot disavow an accepted proxy
+signature he created.
+</li>
+
+</ul>
+
+<p class="calibre9">In some cases, a stronger form of identifiability is required — that anyone can
+determine the proxy signer’s identity from the proxy signature. Proxy
+signature schemes, based on different digital signature schemes, are in [<a href="Applied%20Cryptography_split_036.html#r1001" class="calibre5 pcalibre">1001</a>].</p>
+
+<h3 id="4.6" class="calibre7">4.6 Group Signatures</h3>
+
+<p class="calibre9">David Chaum introduces this problem in [<a href="Applied%20Cryptography_split_035.html#r330" class="calibre5 pcalibre">330</a>]:</p>
+
+<p class="quote">A company has several computers, each connected to the local
+network. Each department of that company has its own printer
+(also connected to the network) and only persons of that
+department are allowed to use their department’s printer. Before
+printing, therefore, the printer must be convinced that the user is
+working in that department. At the same time, the company wants
+privacy; the user’s name may not be revealed. If, however,
+someone discovers at the end of the day that a printer has been
+used too often, the director must be able to discover who misused
+that printer, and send him a bill.</p>
+
+<p class="calibre9">The solution to this problem is called a <b class="calibre10">group signature</b>. Group signatures
+have the following properties:</p>
+
+<ul class="calibre13">
+
+<li class="calibre14"> Only members of the group can sign messages.
+</li>
+<li class="calibre14"> The receiver of the signature can verify that it is a valid signature
+from the group.
+</li>
+<li class="calibre14"> The receiver of the signature cannot determine which member of the
+group is the signer.
+</li>
+<li class="calibre14"> In the case of a dispute, the signature can be “opened” to reveal the
+identity of the signer.
+</li>
+
+</ul>
+
+<h4 class="calibre8">Group Signatures with a Trusted Arbitrator</h4>
+
+<p class="calibre9">This protocol uses a trusted arbitrator:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Trent generates a large pile of public-key/private-key key pairs and
+gives every member of the group a different list of unique private keys.
+No keys on any list are identical. (If there are <i class="calibre12">n</i> members of the group,
+and each member gets <i class="calibre12">m</i> key pairs, then there are <i class="calibre12">n*m</i> total key pairs.)
+</li>
+<li class="calibre14"> Trent publishes the master list of all public keys for the group, in
+random order. Trent keeps a secret record of which keys belong to
+whom.
+</li>
+<li class="calibre14">When group members want to sign a document, he chooses a key at
+random from his personal list.
+</li>
+<li class="calibre14">When someone wants to verify that a signature belongs to the
+group, he looks on the master list for the corresponding public key and
+verifies the signature.
+</li>
+<li class="calibre14">In the event of a dispute, Trent knows which public key corresponds
+to which group member.
+</li>
+
+</ol>
+
+<p class="calibre9">The problem with this protocol is that it requires a trusted party. Trent knows
+everyone’s private keys and can forge signatures. Also, <i class="calibre12">m</i> must be long enough
+to preclude attempts to analyze which keys each member uses.</p>
+
+<p class="calibre9">Chaum [<a href="Applied%20Cryptography_split_035.html#r330" class="calibre5 pcalibre">330</a>] lists a number of other protocols, some in which Trent is unable
+to fake signatures and others in which Trent is not even required. Another
+protocol [<a href="Applied%20Cryptography_split_035.html#r348" class="calibre5 pcalibre">348</a>] not only hides the identity of the signer, but also allows new
+members to join the group. Yet another protocol is [<a href="Applied%20Cryptography_split_036.html#r1230" class="calibre5 pcalibre">1230</a>].</p>
+
+<h3 id="4.7" class="calibre7">4.7 Fail-Stop Digital Signatures</h3>
+
+<p class="calibre9">Let’s say Eve is a very powerful adversary. She has vast computer networks
+and rooms full of Cray computers — orders of magnitude more computing
+power than Alice. All of these computers chug away, day and night, trying to
+break Alice’s private key. Finally — success. Eve can now impersonate Alice,
+forging her signature on documents at will.</p>
+
+<p class="calibre9"><b class="calibre10">Fail-stop digital signatures</b>, introduced by Birgit Pfitzmann and Michael
+Waidner [<a href="Applied%20Cryptography_split_036.html#r1240" class="calibre5 pcalibre">1240</a>], prevent this kind of cheating. If Eve forges Alice’s signatures
+after a brute-force attack, then Alice can prove they are forgeries. If Alice
+signs a document and then disavows the signature, claiming forgery, a court
+can verify that it is not a forgery.</p>
+
+<p class="calibre9">The basic idea behind fail-stop signatures is that for every possible public key,
+many possible private keys work with it. Each of these private keys yields
+many different possible signatures. However, Alice has only one private key
+and can compute just one signature. Alice doesn’t know any of the other
+private keys.</p>
+
+<p class="calibre9">Eve wants to break Alice’s private key. (Eve could also be Alice, trying to
+compute a second private key for herself.) She collects signed messages and,
+using her array of Cray computers, tries to recover Alice’s private key. Even if
+she manages to recover a valid private key, there are so many possible private
+keys that it is far more likely that she has a different one. The probability of
+Eve’s recovering the proper private key can be made so small as to be
+negligible.</p>
+
+<p class="calibre9">Now, when Eve forges a signed document using the private key she generated,
+it will have a different signature than if Alice signs the document herself.
+When Alice is hauled off to court, she can produce two different signatures for
+the same message and public key (corresponding to her private key and to the
+private key Eve created) to prove forgery. On the other hand, if Alice cannot
+produce the two different signatures, there is no forgery and Alice is still
+bound by her signature.</p>
+
+<p class="calibre9">This signature scheme protects against Eve breaking Alice’s signature scheme
+by sheer computational power. It does nothing against Mallory’s much more
+likely attack of breaking into Alice’s house and stealing her private key or
+Alice’s attack of signing a document and then conveniently losing her private
+key. To protect against the former, Alice should buy herself a good guard dog;
+that kind of thing is beyond the scope of cryptography.</p>
+
+<p class="calibre9">Additional theory and applications of fail-stop signatures can be found in
+[<a href="Applied%20Cryptography_split_036.html#r1239" class="calibre5 pcalibre">1239</a>,<a href="Applied%20Cryptography_split_036.html#r1241" class="calibre5 pcalibre">1241</a>,<a href="Applied%20Cryptography_split_035.html#r730" class="calibre5 pcalibre">730</a>,<a href="Applied%20Cryptography_split_035.html#r731" class="calibre5 pcalibre">731</a>].</p>
+
+<h3 id="4.8" class="calibre7">4.8 Computing with Encrypted Data</h3>
+
+<p class="calibre9">Alice wants to know the solution to some function <i class="calibre12">f</i>(<i class="calibre12">x</i>), for some particular value of <i class="calibre12">x</i>. Unfortunately, her computer is broken. Bob is willing to compute
+ <i class="calibre12">f</i>(<i class="calibre12">x</i>) for her, but Alice isn’t keen on letting Bob know her <i class="calibre12">x</i>. How can Alice let Bob compute <i class="calibre12">f</i>(<i class="calibre12">x</i>) for her without telling him <i class="calibre12">x</i>?</p>
+
+<p class="calibre9">This is the general problem of <b class="calibre10">computing with encrypted data</b>, also called
+<b class="calibre10">hiding information from an oracle</b>. (Bob is the oracle; he answers
+questions.) There are ways to do this for certain functions; they are discussed
+in <a href="Applied%20Cryptography_split_026.html#23.6" class="calibre5 pcalibre">Section 23.6</a>.</p>
+
+<h3 id="4.9" class="calibre7">4.9 Bit Commitment</h3>
+
+<p class="calibre9">The Amazing Alice, magician extraordinaire, will now perform a mystifying
+feat of mental prowess. She will guess the card Bob will choose before he
+chooses it! Watch as Alice writes her prediction on a piece of paper. Marvel as
+Alice puts that piece of paper in an envelope and seals it shut. Thrill as Alice
+hands that sealed envelope to a random member of the audience. “Pick a card,
+Bob, any card.” He looks at it and shows it to Alice and the audience. It’s the
+seven of diamonds. Alice now takes the envelope back from the audience. She
+rips it open. The prediction, written before Bob chose his card, says “seven of
+diamonds”! Applause.</p>
+
+<p class="calibre9">To make this work, Alice had to switch envelopes at the end of the trick.
+However, cryptographic protocols can provide a method immune from any
+sleight of hand. Why is this useful? Here’s a more mundane story:</p>
+
+<p class="calibre9">Stockbroker Alice wants to convince investor Bob that her method of picking
+winning stocks is sound.</p>
+
+<ul class="split1">
+<li class="calibre35">Bob: “Pick five stocks for me. If they are all winners, I’ll give
+you my business.”</li>
+
+<li class="calibre35">Alice: “If I pick five stocks for you, you could invest in them
+without paying me. Why don’t I show you the stocks I picked last
+month?”</li>
+
+<li class="calibre35">Bob: “How do I know you didn’t change last month’s picks after
+you knew their outcome? If you tell me your picks now, I’ll know
+that you can’t change them. I won’t invest in those stocks until
+after I’ve purchased your method. Trust me.”</li>
+
+<li class="calibre35">Alice: “I’d rather show you my picks from last month. I didn’t
+change them. Trust me.”</li>
+
+</ul>
+
+<p class="calibre9">Alice wants to commit to a prediction (i.e., a bit or series of bits) but does not
+want to reveal her prediction until sometime later. Bob, on the other hand,
+wants to make sure that Alice cannot change her mind after she has committed
+to her prediction.</p>
+
+<h4 class="calibre8">Bit Commitment Using Symmetric Cryptography</h4>
+
+<p class="calibre9">This bit-commitment protocol uses symmetric cryptography:</p>
+
+<ol class="split">
+
+<li class="pcalibre1 calibre30">Bob generates a random-bit string, <i class="calibre32">R</i>, and sends it to Alice.
+<p class="math1"><i class="calibre32">R</i>
+</p>
+</li>
+<li class="pcalibre1 calibre30">Alice creates a message consisting of the bit she wishes to commit
+to, <i class="calibre32">b</i> (it can actually be several bits), and Bob’s random string. She
+encrypts it with some random key, <i class="calibre32">K</i>, and sends the result back to Bob.
+<p class="math1"><i class="calibre32">E</i><sub class="calibre33">K</sub>(<i class="calibre32">R,b</i>)
+</p>
+</li>
+
+</ol>
+
+<p class="calibre9">That is the commitment portion of the protocol. Bob cannot decrypt the
+message, so he does not know what the bit is.</p>
+
+<p class="calibre9">When it comes time for Alice to reveal her bit, the protocol continues:</p>
+
+<ol class="split1">
+
+<li class="pcalibre1 calibre30">Alice sends Bob the key.
+</li>
+<li class="pcalibre1 calibre30">Bob decrypts the message to reveal the bit. He checks his random
+string to verify the bit’s validity.
+</li>
+
+</ol>
+
+<p class="calibre9">If the message did not contain Bob’s random string, Alice could secretly
+decrypt the message she handed Bob with a variety of keys until she found one
+that gave her a bit other than the one she committed to. Since the bit has only
+two possible values, she is certain to find one after only a few tries. Bob’s
+random string prevents her from using this attack; she has to find a new
+message that not only has her bit inverted, but also has Bob’s random string
+exactly reproduced. If the encryption algorithm is good, the chance of her
+finding this is minuscule. Alice cannot change her bit after she commits to it.</p>
+
+<h4 class="calibre8">Bit Commitment Using One-Way Functions</h4>
+
+<p class="calibre9">This protocol uses one-way functions:</p>
+
+<ol class="split">
+
+<li class="pcalibre1 calibre30">Alice generates two random-bit strings, <i class="calibre32">R</i><sub class="calibre33">1</sub> and <i class="calibre32">R</i><sub class="calibre33">2</sub>.
+<p class="math1"><i class="calibre32">R</i><sub class="calibre33">1</sub>, <i class="calibre32">R</i><sub class="calibre33">2</sub>
+</p>
+</li>
+<li class="pcalibre1 calibre30">Alice creates a message consisting of her random strings and the bit
+she wishes to commit to (it can actually be several bits).
+<p class="math1">(<i class="calibre32">R</i><sub class="calibre33">1</sub>, <i class="calibre32">R</i><sub class="calibre33">2</sub>, <i class="calibre32">b</i>)
+</p>
+</li>
+<li class="pcalibre1 calibre30">Alice computes the one-way function on the message and sends the
+result, as well as one of the random strings, to Bob.
+<p class="math1"><i class="calibre32">H</i>(<i class="calibre32">R</i><sub class="calibre33">1</sub>, <i class="calibre32">R</i><sub class="calibre33">2</sub>, <i class="calibre32">b</i>), <i class="calibre32">R</i><sub class="calibre33">1</sub>
+</p>
+</li>
+
+</ol>
+
+<p class="calibre9">This transmission from Alice is evidence of commitment. Alice’s one-way
+function in step (3) prevents Bob from inverting the function and determining
+the bit.</p>
+
+<p class="calibre9">When it comes time for Alice to reveal her bit, the protocol continues:</p>
+
+<ol class="split1">
+
+<li class="pcalibre1 calibre30">Alice sends Bob the original message.
+<p class="math1">(<i class="calibre32">R</i><sub class="calibre33">1</sub>, <i class="calibre32">R</i><sub class="calibre33">2</sub>, <i class="calibre32">b</i>)
+</p>
+</li>
+<li class="pcalibre1 calibre30">Bob computes the one-way function on the message and compares it
+and <i class="calibre32">R</i><sub class="calibre33">1</sub>, with the value and random string he received in step (3). If they
+match, the bit is valid.
+</li>
+
+</ol>
+
+<p class="calibre9">The benefit of this protocol over the previous one is that Bob does not have to
+send any messages. Alice sends Bob one message to commit to a bit and
+another message to reveal the bit.</p>
+
+<p class="calibre9">Bob’s random string isn’t required because the result of Alice’s commitment is
+a message operated on by a one-way function. Alice cannot cheat and find
+another message (<i class="calibre12">R</i><sub class="calibre15">1</sub>, <i class="calibre12">R</i><sub class="calibre15">2</sub>´, <i class="calibre12">b´</i>), such that <i class="calibre12">H</i>(<i class="calibre12">R</i><sub class="calibre15">1</sub>, <i class="calibre12">R</i><sub class="calibre15">2</sub>´, <i class="calibre12">b´</i>) = <i class="calibre12">H</i>(<i class="calibre12">R</i><sub class="calibre15">1</sub>, <i class="calibre12">R</i><sub class="calibre15">2</sub>, <i class="calibre12">b</i>). By sending Bob <i class="calibre12">R</i><sub class="calibre15">1</sub> she is committing to the value of <i class="calibre12">b</i>. If Alice didn’t keep <i class="calibre12">R</i><sub class="calibre15">2</sub> secret, then Bob could compute both <i class="calibre12">H</i>(<i class="calibre12">R</i><sub class="calibre15">1</sub>, <i class="calibre12">R</i><sub class="calibre15">2</sub>, <i class="calibre12">b</i>) and <i class="calibre12">H</i>(<i class="calibre12">R</i><sub class="calibre15">1</sub>, <i class="calibre12">R</i><sub class="calibre15">2</sub>, <i class="calibre12">b´</i>) and see which was equal to what he received from Alice.</p>
+
+<h4 class="calibre8">Bit Commitment Using Pseudo-Random-Sequence Generators</h4>
+
+<p class="calibre9">This protocol is even easier [<a href="Applied%20Cryptography_split_036.html#r1137" class="calibre5 pcalibre">1137</a>]:</p>
+
+<ol class="split">
+
+<li class="pcalibre1 calibre30">Bob generates a random-bit string and sends it to Alice.
+<p class="math1"><i class="calibre32">R</i><sub class="calibre33">B</sub>
+</p>
+</li>
+<li class="pcalibre1 calibre30">Alice generates a random seed for a pseudo-random-bit generator.
+Then, for every bit in Bob’s random-bit string, she sends Bob either:
+<ol class="split2">
+<li class="calibre42 pcalibre1">the output of the generator if Bob’s bit is 0, or</li>
+<li class="calibre42 pcalibre1">the XOR of output of the generator and her bit, if Bob’s bit is 1.</li>
+</ol>
+</li>
+
+</ol>
+
+<p class="calibre9">When it comes time for Alice to reveal her bit, the protocol continues:</p>
+
+<ol class="split1">
+
+<li class="pcalibre1 calibre30">Alice sends Bob her random seed.
+</li>
+<li class="pcalibre1 calibre30">Bob completes step (2) to confirm that Alice was acting fairly.
+</li>
+
+</ol>
+
+<p class="calibre9">If Bob’s random-bit string is long enough, and the pseudo-random-bit
+generator is unpredictable, then there is no practical way Alice can cheat.</p>
+
+<h4 class="calibre8">Blobs</h4>
+
+<p class="calibre9">These strings that Alice sends to Bob to commit to a bit are sometimes called
+<b class="calibre10">blobs</b>. A blob is a sequence of bits, although there is no reason in the protocols why it has to be. As Gilles Brassard said, “They could be made out of fairy
+dust if this were useful” [<a href="Applied%20Cryptography_split_035.html#r236" class="calibre5 pcalibre">236</a>]. Blobs have these four properties:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice can commit to blobs. By committing to a blob, she is
+committing to a bit.
+</li>
+<li class="calibre14">Alice can open any blob she has committed to. When she opens a
+blob, she can convince Bob of the value of the bit she committed to
+when she committed to the blob. Thus, she cannot choose to open any
+blob as either a zero or a one.
+</li>
+<li class="calibre14">Bob cannot learn how Alice is able to open any unopened blob she
+has committed to. This is true even after Alice has opened other blobs.
+</li>
+<li class="calibre14">Blobs do not carry any information other than the bit Alice
+committed to. The blobs themselves, as well as the process by which
+Alice commits to and opens them, are uncorrelated to anything else that
+Alice might wish to keep secret from Bob.
+</li>
+
+</ol>
+
+<h3 id="4.10" class="calibre7">4.10 Fair Coin Flips</h3>
+
+<p class="calibre9">It’s story time with Joe Kilian [<a href="Applied%20Cryptography_split_036.html#r831" class="calibre5 pcalibre">831</a>]:</p>
+
+<ul class="split1">
+
+<li class="calibre35">Alice and Bob wanted to flip a fair coin, but had no physical coin
+to flip. Alice offered a simple way of flipping a fair coin mentally.</li>
+
+<li class="calibre35">“First, you think up a random bit, then I’ll think up a random bit.
+We’ll then exclusive-or the two bits together, ” she suggested.</li>
+
+<li class="calibre35">“But what if one of us doesn’t flip a coin at random?” Bob asked.</li>
+
+<li class="calibre35">“It doesn’t matter. As long as one of the bits is truly random, the
+exclusive-or of the bits should be truly random, ” Alice replied,
+and after a moment’s reflection, Bob agreed.</li>
+
+<li class="calibre35">A short while later, Alice and Bob happened upon a book on
+artificial intelligence, lying abandoned by the roadside. A good
+citizen, Alice said, “One of us must pick this book up and find a
+suitable waste receptacle.” Bob agreed, and suggested they use
+their coin-flipping protocol to determine who would have to
+throw the book away.</li>
+
+<li class="calibre35">“If the final bit is a 0, then you will pick the book up, and if it is a
+1, then I will, ” said Alice. “What is your bit?”</li>
+
+<li class="calibre35">Bob replied, “1.”</li>
+
+<li class="calibre35">“Why, so is mine, ” said Alice, slyly, “I guess this isn’t your
+lucky day.”</li>
+
+<li class="calibre35">Needless to say, this coin-flipping protocol had a serious bug.
+While it is true that a truly random bit, <i class="calibre12">x</i>, exclusive <i class="calibre12">-OR</i> ed with
+any independently distributed bit, <i class="calibre12">y</i>, will yield a truly random bit,
+Alice’s protocol did not ensure that the two bits were distributed
+independently. In fact, it is not hard to verify that no mental
+protocol can allow two infinitely powerful parties to flip a fair
+coin. Alice and Bob were in trouble until they received a letter
+from an obscure graduate student in cryptography. The
+information in the letter was too theoretical to be of any earthly
+use to anyone, but the envelope the letter came in was extremely
+handy.</li>
+
+<li class="calibre35">The next time Alice and Bob wished to flip a coin, they played a
+modified version of the original protocol. First, Bob decided on a
+bit, but instead of announcing it immediately, he wrote it down on
+a piece of paper and placed the paper in the envelope. Next, Alice
+announced her bit. Finally, Alice and Bob took Bob’s bit out of
+the envelope and computed the random bit. This bit was indeed
+truly random whenever at least one of them played honestly.
+Alice and Bob had a working protocol, the cryptographer’s dream
+of social relevance was fulfilled, and they all lived happily ever
+after.</li>
+
+</ul>
+
+<p class="calibre9">Those envelopes sound a lot like bit-commitment blobs. When Manuel Blum
+introduced the problem of flipping a fair coin over a modem [<a href="Applied%20Cryptography_split_035.html#r194" class="calibre5 pcalibre">194</a>], he solved it
+using a bit-commitment protocol:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice commits to a random bit, using any of the bit-commitment
+schemes listed in <a href="#4.9" class="calibre5 pcalibre">Section 4.9</a>.
+</li>
+<li class="calibre14">Bob tries to guess the bit.
+</li>
+<li class="calibre14">Alice reveals the bit to Bob. Bob wins the flip if he correctly
+guessed the bit.
+</li>
+
+</ol>
+
+<p class="calibre9">In general, we need a protocol with these properties:</p>
+
+<ul class="calibre13">
+
+<li class="calibre14"> Alice must flip the coin before Bob guesses.
+</li>
+<li class="calibre14"> Alice must not be able to re-flip the coin after hearing Bob’s guess.
+</li>
+<li class="calibre14"> Bob must not be able to know how the coin landed before making
+his guess.
+</li>
+
+</ul>
+
+<p class="calibre9">There are several ways in which we can do this.</p>
+
+<h4 class="calibre8">Coin Flipping Using One-Way Functions</h4>
+
+<p class="calibre9">If Alice and Bob can agree on a one-way function, this protocol is simple:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses a random number, <i class="calibre12">x</i>. She computes <i class="calibre12">y</i> = <i class="calibre12">f</i>(<i class="calibre12">x</i>), where <i class="calibre12">f</i>(<i class="calibre12">x</i>) is the one-way function.
+</li>
+<li class="calibre14">Alice sends <i class="calibre12">y</i> to Bob.
+</li>
+<li class="calibre14">Bob guesses whether <i class="calibre12">x</i> is even or odd and sends his guess to Alice.
+</li>
+<li class="calibre14">If Bob’s guess is correct, the result of the coin flip is heads. If Bob’s
+guess is incorrect, the result of the coin flip is tails. Alice announces the
+result of the coin flip and sends <i class="calibre12">x</i> to Bob.
+</li>
+<li class="calibre14">Bob confirms that <i class="calibre12">y</i> = <i class="calibre12">f</i>(<i class="calibre12">x</i>).
+</li>
+
+</ol>
+
+<p class="calibre9">The security of this protocol rests in the one-way function. If Alice can find <i class="calibre12">x</i>
+and <i class="calibre12">x´</i>, such that <i class="calibre12">x</i> is even and <i class="calibre12">x´</i> is odd, and <i class="calibre12">y</i> = <i class="calibre12">f</i>(<i class="calibre12">x</i>) = <i class="calibre12">f</i>(<i class="calibre12">x´</i>), then she can cheat Bob every time. The least significant bit of <i class="calibre12">f</i>(<i class="calibre12">x</i>) must also be uncorrelated with <i class="calibre12">x</i>. If not, Bob can cheat Alice at least some of the time. For example, if <i class="calibre12">f</i>(<i class="calibre12">x</i>) produces even numbers 75 percent of the time if <i class="calibre12">x</i> is even, Bob has an
+advantage. (Sometimes the least significant bit is not the best one to use in this
+application, because it can be easier to compute.)</p>
+
+<h4 class="calibre8">Coin Flipping Using Public-Key Cryptography</h4>
+
+<p class="calibre9">This protocol works with either public-key cryptography or symmetric
+cryptography. The only requirement is that the algorithm commute. That is:</p>
+
+<p class="math"><i class="calibre12">D</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">1</sub></sub>(<i class="calibre12">M</i>))) = <i class="calibre12">E</i><sub class="calibre15">K<sub class="calibre16">2</sub></sub>(<i class="calibre12">M</i>)
+</p>
+
+<p class="calibre9">In general, this property is not true for symmetric algorithms, but it is true for
+some public-key algorithms (RSA with identical moduli, for example). This is
+the protocol:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice and Bob each generate a public-key/private-key key pair.
+</li>
+<li class="calibre14">Alice generates two messages, one indicating heads and the other
+indicating tails. These messages should contain some unique random
+string, so that she can verify their authenticity later in the protocol. Alice
+encrypts both messages with her public key and sends them to Bob in a
+random order.
+<p class="math"><i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i><sub class="calibre15">1</sub>), <i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i><sub class="calibre15">2</sub>)
+</p>
+</li>
+<li class="calibre14">Bob, who cannot read either message, chooses one at random. (He
+can sing “eeny meeny miney moe, ” engage a malicious computer intent
+on subverting the protocol, or consult the <i class="calibre12">I Ching</i> — it doesn’t matter.)
+He encrypts it with his public key and sends it back to Alice.
+<p class="math"><i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i>))
+</p>
+<p class="calibre9"><i class="calibre12">M</i> is either <i class="calibre12">M</i><sub class="calibre15">1</sub> or <i class="calibre12">M</i><sub class="calibre15">2</sub>.</p>
+</li>
+<li class="calibre14">Alice, who cannot read the message sent back to her, decrypts it
+with her private key and then sends it back to Bob.
+<p class="math"><i class="calibre12">D</i><sub class="calibre15">A</sub>(<i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i>))) = <i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">M</i><sub class="calibre15">1</sub>) if <i class="calibre12">M</i> = <i class="calibre12">M</i><sub class="calibre15">1</sub>, or<br class="calibre3"/> <i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">M</i><sub class="calibre15">2</sub>) if <i class="calibre12">M</i> = <i class="calibre12">M</i><sub class="calibre15">2</sub>
+</p>
+</li>
+<li class="calibre14">Bob decrypts the message with his private key to reveal the result of
+the coin flip. He sends the decrypted message to Alice.
+<p class="math"><i class="calibre12">D</i><sub class="calibre15">B</sub>(<i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">M</i><sub class="calibre15">1</sub>)) = <i class="calibre12">M</i><sub class="calibre15">1</sub> or <i class="calibre12">D</i><sub class="calibre15">B</sub>(<i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">M</i><sub class="calibre15">2</sub>)) = <i class="calibre12">M</i><sub class="calibre15">2</sub>
+</p>
+</li>
+<li class="calibre14">Alice reads the result of the coin flip and verifies that the random
+string is correct.
+</li>
+<li class="calibre14">Both Alice and Bob reveal their key pairs so that both can verify
+that the other did not cheat.
+</li>
+
+</ol>
+
+<p class="calibre9">This protocol is self-enforcing. Either party can immediately detect cheating
+by the other, and no trusted third party is required to participate in either the
+actual protocol or any adjudication after the protocol has been completed. To
+see how this works, let’s try to cheat.</p>
+
+<p class="calibre9">If Alice wanted to cheat and force heads, she has three potential ways of
+affecting the outcome. First, she could encrypt two “heads” messages in step
+(2). Bob would discover this when Alice revealed her keys at step (7). Second,
+she could use some other key to decrypt the message in step (4). This would
+result in gibberish, which Bob would discover in step (5). Third, she could lie
+about the validity of the message in step (6). Bob would also discover this in
+step (7), when Alice could not prove that the message was not valid. Of
+course, Alice could refuse to participate in the protocol at any step, at which
+point Alice’s attempted deception would be obvious to Bob.</p>
+
+<p class="calibre9">If Bob wanted to cheat and force “tails, ” his options are just as poor. He could
+incorrectly encrypt a message at step (3), but Alice would discover this when
+she looked at the final message at step (6). He could improperly perform step
+(5), but this would also result in gibberish, which Alice would discover at step
+(6). He could claim that he could not properly perform step (5) because of
+some cheating on the part of Alice, but this form of cheating would be
+discovered at step (7). Finally, he could send a “tails” message to Alice at step
+(5), regardless of the message he decrypted, but Alice would immediately be
+able to check the message for authenticity at step (6).</p>
+
+<h4 class="calibre8">Flipping Coins into a Well</h4>
+
+<p class="calibre9">It is interesting to note that in all these protocols, Alice and Bob don’t learn the
+result of the coin flip at the same time. Each protocol has a point where one of
+the parties (Alice in the first two protocols and Bob in the last one) knows the
+result of the coin flip but cannot change it. That party can, however, delay
+disclosing the result to the other party. This is known as <b class="calibre10">flipping coins into a</b>
+<b class="calibre10">well</b>. Imagine a well. Alice is next to the well and Bob is far away. Bob throws the coin and it lands in the well. Alice can now look into the well and see the
+result, but she cannot reach down to change it. Bob cannot see the result until
+Alice lets him come close enough to look.</p>
+
+<h4 class="calibre8">Key Generation Using Coin Flipping</h4>
+
+<p class="calibre9">A real application for this protocol is session-key generation. Coin-flipping
+protocols allow Alice and Bob to generate a random session key such that
+neither can influence what the session key will be. And assuming that Alice
+and Bob encrypt their exchanges, this key generation is secure from
+eavesdropping as well.</p>
+
+<h3 id="4.11" class="calibre7">4.11 Mental Poker</h3>
+
+<p class="calibre9">A protocol similar to the public-key fair coin flip protocol allows Alice and
+Bob to play poker with each other via electronic mail. Instead of Alice making
+and encrypting two messages, one for heads and one for tails, she makes 52
+messages, <i class="calibre12">M</i><sub class="calibre15">1</sub>, <i class="calibre12">M</i><sub class="calibre15">2</sub>,..., <i class="calibre12">M</i><sub class="calibre15">52</sub>, one for each card in the deck. Bob chooses five messages at random, encrypts them with his public key, and then sends them
+back to Alice. Alice decrypts the messages and sends them back to Bob, who
+decrypts them to determine his hand. He then chooses five more messages at
+random and sends them back to Alice as he received them; she decrypts these
+and they become her hand. During the game, additional cards can be dealt to
+either player by repeating the procedure. At the end of the game, Alice and
+Bob both reveal their cards and key pairs so that each can be assured that the
+other did not cheat.</p>
+
+<h4 class="calibre8">Mental Poker with Three Players</h4>
+
+<p class="calibre9">Poker is more fun with more players. The basic mental poker protocol can
+easily be extended to three or more players. In this case, too, the cryptographic
+algorithm must be commutative.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice, Bob, and Carol each generate a public-key/private-key key
+pair.
+</li>
+<li class="calibre14">Alice generates 52 messages, one for each card in the deck. These
+messages should contain some unique random string, so that she can
+verify their authenticity later in the protocol. Alice encrypts all the
+messages with her public key and sends them to Bob.
+<p class="math"><i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i><sub class="calibre15">n</sub>)
+</p>
+</li>
+<li class="calibre14">Bob, who cannot read any of the messages, chooses five at random.
+He encrypts them with his public key and sends them back to Alice.
+<p class="math"><i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i><sub class="calibre15">n</sub>))
+</p>
+</li>
+<li class="calibre14">Bob sends the other 47 messages to Carol.
+<p class="math"><i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i><sub class="calibre15">n</sub>)
+</p>
+</li>
+<li class="calibre14">Carol, who cannot read any of the messages, chooses five at
+random. She encrypts them with her public key and sends them to Alice.
+<p class="math"><i class="calibre12">E</i><sub class="calibre15">C</sub>(<i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i><sub class="calibre15">n</sub>))
+</p>
+</li>
+<li class="calibre14">Alice, who cannot read any of the messages sent back to her,
+decrypts them with her private key and then sends them back to Bob or
+Carol (depending on where they came from).
+<p class="math"><i class="calibre12">D</i><sub class="calibre15">A</sub>(<i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i><sub class="calibre15">n</sub>))) = <i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">M</i><sub class="calibre15">n</sub>) <br class="calibre3"/>
+<i class="calibre12">D</i><sub class="calibre15">A</sub>(<i class="calibre12">E</i><sub class="calibre15">C</sub>(<i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i><sub class="calibre15">n</sub>))) = <i class="calibre12">E</i><sub class="calibre15">C</sub>(<i class="calibre12">M</i><sub class="calibre15">n</sub>)
+</p>
+</li>
+<li class="calibre14">Bob and Carol decrypt the messages with their keys to reveal their
+hands.
+<p class="math"><i class="calibre12">D</i><sub class="calibre15">B</sub>(<i class="calibre12">E</i><sub class="calibre15">B</sub>(<i class="calibre12">M</i><sub class="calibre15">n</sub>)) = <i class="calibre12">M</i><sub class="calibre15">n</sub> <br class="calibre3"/>
+<i class="calibre12">D</i><sub class="calibre15">C</sub>(<i class="calibre12">E</i><sub class="calibre15">C</sub>(<i class="calibre12">M</i><sub class="calibre15">n</sub>)) = <i class="calibre12">M</i><sub class="calibre15">n</sub>
+</p>
+</li>
+<li class="calibre14">Carol chooses five more messages at random from the remaining
+42. She sends them to Alice.
+<p class="math"><i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i><sub class="calibre15">n</sub>)
+</p>
+</li>
+<li class="calibre14">Alice decrypts the messages with her private key to reveal her hand.
+<p class="math"><i class="calibre12">D</i><sub class="calibre15">A</sub>(<i class="calibre12">E</i><sub class="calibre15">A</sub>(<i class="calibre12">M</i><sub class="calibre15">n</sub>)) = <i class="calibre12">M</i><sub class="calibre15">n</sub>
+</p>
+</li>
+<li class="calibre14">At the end of the game Alice, Bob, and Carol all reveal their hands
+and all of their keys so that everyone can make sure that no one has
+cheated.
+</li>
+
+</ol>
+
+<p class="calibre9">Additional cards can be dealt in the same manner. If Bob or Carol wants a
+card, either one can take the encrypted deck and go through the protocol with
+Alice. If Alice wants a card, whoever currently has the deck sends her a
+random card.</p>
+
+<p class="calibre9">Ideally, step (10) would not be necessary. All players shouldn’t be required to
+reveal their hands at the end of the protocol; only those who haven’t folded.
+Since step (10) is part of the protocol designed only to catch cheaters, perhaps
+there are improvements.</p>
+
+<p class="calibre9">In poker, one is only interested in whether the winner cheated. Everyone else
+can cheat as much as they want, as long as they still lose. (Actually, this is not
+really true. Someone can, while losing, collect data on another player’s poker
+style.) So, let’s look at cases in which different players win.</p>
+
+<p class="calibre9">If Alice wins, she reveals her hand and her keys. Bob can use Alice’s private
+key to confirm that Alice performed step (2) correctly — that each of the 52
+messages corresponded to a different card. Carol can confirm that Alice is not
+lying about her hand by encrypting the cards with Alice’s public key and
+verifying that they are the same as the encrypted messages she sent to her in
+step (8).</p>
+
+<p class="calibre9">If either Bob or Carol wins, the winner reveals his hand and keys. Alice can
+confirm that the cards are legitimate by checking her random strings. She can
+also confirm that the cards are the ones dealt by encrypting the cards with the
+winner’s public key and verifying that they are the same as the encrypted
+messages she received in step (3) or (5).</p>
+
+<p class="calibre9">This protocol isn’t secure against collusion among malicious players. Alice
+and another player can effectively gang up on the third and together swindle
+that player out of everything without raising suspicion. Therefore, it is
+important to check all the keys and random strings every time the players
+reveal their hands. And if you’re sitting around the virtual table with two
+people who never reveal their hands whenever one of them is the dealer (Alice,
+in the previous protocol), stop playing.</p>
+
+<p class="calibre9">Understand that while this is all interesting theory, actually implementing it on
+a computer is an arduous task. A Sparc implementation with three players on
+separate workstations takes eight hours to shuffle a deck of cards, let alone
+play an actual game [<a href="Applied%20Cryptography_split_035.html#r513" class="calibre5 pcalibre">513</a>].</p>
+
+<h4 class="calibre8">Attacks against Poker Protocols</h4>
+
+<p class="calibre9">Cryptographers have shown that a small amount of information is leaked by
+these poker protocols if the RSA public-key algorithm is used [<a href="Applied%20Cryptography_split_035.html#r453" class="calibre5 pcalibre">453</a>,<a href="Applied%20Cryptography_split_035.html#r573" class="calibre5 pcalibre">573</a>].
+Specifically, if the binary representation of the card is a quadratic residue (see
+<a href="Applied%20Cryptography_split_014.html#11.3" class="calibre5 pcalibre">Section 11.3</a>), then the encryption of the card is also a quadratic residue. This
+property can be used to “mark” some cards — all the aces, for example. This
+does not reveal much about the hands, but in a game such as poker even a tiny
+bit of information can be an advantage in the long run.</p>
+
+<p class="calibre9">Shafi Goldwasser and Silvio Micali [<a href="Applied%20Cryptography_split_035.html#r624" class="calibre5 pcalibre">624</a>] developed a two-player
+mental-poker protocol that fixes this problem, although its complexity makes it
+far more theoretical than practical. A general <i class="calibre12">n-</i> player poker protocol that
+eliminates the problem of information leakage was developed in [<a href="Applied%20Cryptography_split_035.html#r389" class="calibre5 pcalibre">389</a>].</p>
+
+<p class="calibre9">Other research on poker protocols can be found in [<a href="Applied%20Cryptography_split_035.html#r573" class="calibre5 pcalibre">573</a>,<a href="Applied%20Cryptography_split_036.html#r1634" class="calibre5 pcalibre">1634</a>,<a href="Applied%20Cryptography_split_035.html#r389" class="calibre5 pcalibre">389</a>]. A
+complicated protocol that allows players to not reveal their hands can be found
+in [<a href="Applied%20Cryptography_split_035.html#r390" class="calibre5 pcalibre">390</a>]. Don Coppersmith discusses two ways to cheat at mental poker using
+the RSA algorithm [<a href="Applied%20Cryptography_split_035.html#r370" class="calibre5 pcalibre">370</a>].</p>
+
+<h4 class="calibre8">Anonymous Key Distribution</h4>
+
+<p class="calibre9">While it is unlikely that anyone is going to use this protocol to play poker via
+modem, Charles Pfleeger discusses a situation in which this type of protocol
+would come in handy [<a href="Applied%20Cryptography_split_036.html#r1244" class="calibre5 pcalibre">1244</a>].</p>
+
+<p class="calibre9">Consider the problem of key distribution. If we assume that people cannot
+generate their own keys (they might have to be of a certain form, or have to be
+signed by some organization, or something similar), we have to set up a Key
+Distribution Center to generate and distribute keys. The problem is that we
+have to figure out some way of distributing keys such that no one, including
+the server, can figure out who got which key.</p>
+
+<p class="calibre9">This protocol solves the problem:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice generates a public-key/private-key key pair. For this protocol,
+she keeps both keys secret.
+</li>
+<li class="calibre14">The KDC generates a continuous stream of keys.
+</li>
+<li class="calibre14">The KDC encrypts the keys, one by one, with its own public key.
+</li>
+<li class="calibre14">The KDC transmits the encrypted keys, one by one, onto the
+network.
+</li>
+<li class="calibre14">Alice chooses a key at random.
+</li>
+<li class="calibre14">Alice encrypts the chosen key with her public key.
+</li>
+<li class="calibre14">Alice waits a while (long enough so the server has no idea which
+key she has chosen) and sends the double-encrypted key back to the
+KDC.
+</li>
+<li class="calibre14">The KDC decrypts the double-encrypted key with its private key,
+leaving a key encrypted with Alice’s public key.
+</li>
+<li class="calibre14">The server sends the encrypted key back to Alice.
+</li>
+<li class="calibre14">Alice decrypts the key with her private key.
+</li>
+
+</ol>
+
+<p class="calibre9">Eve, sitting in the middle of this protocol, has no idea what key Alice chose.
+She sees a continuous stream of keys go by in step (4). When Alice sends the
+key back to the server in step (7), it is encrypted with her public key, which is
+also secret during this protocol. Eve has no way of correlating it with the
+stream of keys. When the server sends the key back to Alice in step (9), it is
+also encrypted with Alice’s public key. Only when Alice decrypts the key in
+step (10) is the key revealed.</p>
+
+<p class="calibre9">If you use RSA, this protocol leaks information at the rate of one bit per
+message. It’s the quadratic residues again. If you’re going to distribute keys in
+this manner, make sure this leakage isn’t enough to matter. Also, the stream of
+keys from the KDC must be great enough to preclude a brute-force attack. Of
+course, if Alice can’t trust the KDC, then she shouldn’t be getting keys from it.
+A malicious KDC could presumably keep records of every key it generates.
+Then, it could search them all to determine which is Alice’s.</p>
+
+<p class="calibre9">This protocol also assumes that Alice is going to act fairly. There are things
+she can do, using RSA, to get more information than she might otherwise. This
+is not a problem in our scenario, but can be in other circumstances.</p>
+
+<h3 id="4.12" class="calibre7">4.12 One-Way Accumulators</h3>
+
+<p class="calibre9">Alice is a member of Cabal, Inc. Occasionally she has to meet with other
+members in dimly lit restaurants and whisper secrets back and forth. The
+problem is that the restaurants are so dimly lit that she has trouble knowing if
+the person across the table from her is also a member.</p>
+
+<p class="calibre9">Cabal Inc. can choose from several solutions. Every member can carry a
+membership list. This has two problems. One, everyone now has to carry a
+large database, and two, they have to guard that membership list pretty
+carefully. Alternatively, a trusted secretary could issue digitally signed ID
+cards. This has the added advantage of allowing outsiders to verify members
+(for discounts at the local grocery store, for example), but it requires a trusted
+secretary. Nobody at Cabal, Inc. can be trusted to that degree.</p>
+
+<p class="calibre9">A novel solution is to use something called a <b class="calibre10">one-way accumulator</b> [<a href="Applied%20Cryptography_split_035.html#r116" class="calibre5 pcalibre">116</a>].
+This is sort of like a one-way hash function, except that it is commutative. That
+is, it is possible to hash the database of members in any order and get the same
+value. Moreover, it is possible to add members into the hash and get a new
+hash, again without regard to order.</p>
+
+<p class="calibre9">So, here’s what Alice does. She calculates the accumulation of every
+member’s name other than herself. Then she saves that single value along with
+her own name. Bob, and every other member, does the same. Now, when Alice
+and Bob meet in the dimly lit restaurant, they simply trade accumulations and
+names with each other. Alice confirms that Bob’s name added to his
+accumulation is equal to Alice’s name added to her accumulation. Bob does
+the same. Now they both know that the other is a member. And at the same
+time, neither can figure out the identities of any other member.</p>
+
+<p class="calibre9">Even better, nonmembers can be given the accumulation of everybody. Now
+Alice can verify her membership to a nonmember (for membership discounts
+at their local counterspy shop, perhaps) without the nonmember being able to
+figure out the entire membership list.</p>
+
+<p class="calibre9">New members can be added just by sending around the new names.
+Unfortunately, the only way to delete a member is to send everyone a new list
+and have them recompute their accumulations. But Cabal, Inc. only has to do
+that if a member resigns; dead members can remain on the list. (Oddly enough,
+this has never been a problem.)</p>
+
+<p class="calibre9">This is a clever idea, and has applications whenever you want the same effect
+as digital signatures without a centralized signer.</p>
+
+<h3 id="4.13" class="calibre7">4.13 All-or-Nothing Disclosure of Secrets</h3>
+
+<p class="calibre9">Imagine that Alice is a former agent of the former Soviet Union, now
+unemployed. In order to make money, Alice sells secrets. Anyone who is
+willing to pay the price can buy a secret. She even has a catalog. All her
+secrets are listed by number, with tantalizing titles: “Where is Jimmy Hoffa?”,
+“Who is secretly controlling the Trilateral Commission?”, “Why does Boris
+Yeltsin always look like he swallowed a live frog?”, and so on.</p>
+
+<p class="calibre9">Alice won’t give away two secrets for the price of one or even partial
+information about any of the secrets. Bob, a potential buyer, doesn’t want to
+pay for random secrets. He also doesn’t want to tell Alice which secrets he
+wants. It’s none of Alice’s business, and besides, Alice could then add “what
+secrets Bob is interested in” to her catalog.</p>
+
+<p class="calibre9">A poker protocol won’t work in this case, because at the end of the protocol
+Alice and Bob have to reveal their hands to each other. There are also tricks
+Bob can do to learn more than one secret.</p>
+
+<p class="calibre9">The solution is called <b class="calibre10">all-or-nothing disclosure of secrets (ANDOS)</b> [<a href="Applied%20Cryptography_split_035.html#r246" class="calibre5 pcalibre">246</a>]
+because, as soon as Bob has gained any information whatsoever about one of
+Alice’s secrets, he has wasted his chance to learn anything about any of the
+other secrets.</p>
+
+<p class="calibre9">There are several ANDOS protocols in the cryptographic literature. Some of
+them are discussed in <a href="Applied%20Cryptography_split_026.html#23.9" class="calibre5 pcalibre">Section 23.9</a>.</p>
+
+<h3 id="4.14" class="calibre7">4.14 Key Escrow</h3>
+
+<p class="calibre9">This excerpt is from Silvio Micali’s introduction to the topic [<a href="Applied%20Cryptography_split_036.html#r1084" class="calibre5 pcalibre">1084</a>]:</p>
+
+<p class="quote">Currently, court-authorized line tapping is an effective method for
+securing criminals to justice. More importantly, in our opinion, it
+also prevents the further spread of crime by deterring the use of
+ordinary communication networks for unlawful purposes. Thus,
+there is a legitimate concern that widespread use of public-key
+cryptography may be a big boost for criminal and terrorist
+organizations. Indeed, many bills propose that a proper
+governmental agency, under circumstances allowed by law,
+should be able to obtain the clear text of any communication over
+a public network. At the present time, this requirement would
+translate into coercing citizens to either (1) <i class="calibre12">using weak</i>
+ <i class="calibre12">cryptosystems</i> — i.e., cryptosystems that the proper authorities (but
+also everybody else!) could crack with a moderate effort — or (2)
+ <i class="calibre12">surrendering</i>, a priori, <i class="calibre12">their secret key</i> to the authority. It is not
+surprising that such alternatives have legitimately alarmed many
+concerned citizens, generating as reaction the feeling that privacy
+should come before national security and law enforcement.</p>
+
+<p class="calibre9">Key escrow is the heart of the U.S. government’s Clipper program and its
+Escrowed Encryption Standard. The challenge here is to develop a
+cryptosystem that both protects individual privacy but at the same time allows
+for court-authorized wiretaps.</p>
+
+<p class="calibre9">The Escrowed Encryption Standard gets its security from tamperproof
+hardware. Each encryption chip has a unique ID number and secret key. This
+key is split into two pieces and stored, along with the ID number, by two
+different escrow agencies. Every time the chip encrypts a data file, it first
+encrypts the session key with this unique secret key. Then it transmits this
+encrypted session key and its ID number over the communications channel.
+When some law enforcement agency wants to decrypt traffic encrypted with
+one of these chips, it listens for the ID number, collects the appropriate keys
+from the escrow agencies, XORs them together, decrypts the session key, and
+then uses the session key to decrypt the message traffic. There are more
+complications to make this scheme work in the face of cheaters; see <a href="Applied%20Cryptography_split_028.html#24.16" class="calibre5 pcalibre">Section 24.16</a> 
+for details. The same thing can be done in software, using public-key
+cryptography [<a href="Applied%20Cryptography_split_035.html#r77" class="calibre5 pcalibre">77</a>,<a href="Applied%20Cryptography_split_036.html#r1579" class="calibre5 pcalibre">1579</a>,<a href="Applied%20Cryptography_split_036.html#r1580" class="calibre5 pcalibre">1580</a>,<a href="Applied%20Cryptography_split_036.html#r1581" class="calibre5 pcalibre">1581</a>].</p>
+
+<p class="calibre9">Micali calls his idea <b class="calibre10">fair cryptosystems</b> [<a href="Applied%20Cryptography_split_036.html#r1084" class="calibre5 pcalibre">1084</a>,<a href="Applied%20Cryptography_split_036.html#r1085" class="calibre5 pcalibre">1085</a>]. (The U.S. government
+reportedly paid Micali $1,000,000 for the use of his patents [<a href="Applied%20Cryptography_split_036.html#r1086" class="calibre5 pcalibre">1086</a>,<a href="Applied%20Cryptography_split_036.html#r1087" class="calibre5 pcalibre">1087</a>] in
+their Escrowed Encryption Standard; Banker’s Trust then bought Micali’s
+patent.) In these cryptosystems, the private key is broken up into pieces and
+distributed to different authorities. Like a secret sharing scheme, the authorities
+can get together and reconstruct the private key. However, the pieces have the
+additional property that they can be individually verified to be correct, without
+reconstructing the private key.</p>
+
+<p class="calibre9">Alice can create her own private key and give a piece to each of <i class="calibre12">n</i> trustees.
+None of these trustees can recover Alice’s private key. However, each trustee
+can verify that his piece is a valid piece of the private key; Alice cannot send
+one of the trustees a random-bit string and hope to get away with it. If the
+courts authorize a wiretap, the relevant law enforcement authorities can serve a
+court order on the <i class="calibre12">n</i> trustees to surrender their pieces. With all <i class="calibre12">n</i> pieces, the authorities reconstruct the private key and can wiretap Alice’s communications
+lines. On the other hand, Mallory has to corrupt all <i class="calibre12">n</i> trustees in order to be
+able to reconstruct Alice’s key and violate her privacy.</p>
+
+<p class="calibre9">Here’s how the protocol works:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice creates her private-key/public-key key pair. She splits the
+private key into several public pieces and private pieces.
+</li>
+<li class="calibre14">Alice sends a public piece and corresponding private piece to each
+of the trustees. These messages must be encrypted. She also sends the
+public key to the KDC.
+</li>
+<li class="calibre14">Each trustee, independently, performs a calculation on its public
+piece and its private piece to confirm that they are correct. Each trustee
+stores the private piece somewhere secure and sends the public piece to
+the KDC.
+</li>
+<li class="calibre14">The KDC performs another calculation on the public pieces and the
+public key. Assuming that everything is correct, it signs the public key
+and either sends it back to Alice or posts it in a database somewhere.
+</li>
+
+</ol>
+
+<p class="calibre9">If the courts order a wiretap, then each of the trustees surrenders his or her
+piece to the KDC, and the KDC can reconstruct the private key. Before this
+surrender, neither the KDC nor any individual trustee can reconstruct the
+private key; all the trustees are required to reconstruct the key.</p>
+
+<p class="calibre9">Any public-key cryptography algorithm can be made fair in this manner. Some
+particular algorithms are discussed in <a href="Applied%20Cryptography_split_026.html#23.10" class="calibre5 pcalibre">Section 23.10</a>. Micali’s paper [<a href="Applied%20Cryptography_split_036.html#r1084" class="calibre5 pcalibre">1084</a>,<a href="Applied%20Cryptography_split_036.html#r1085" class="calibre5 pcalibre">1085</a>] 
+discusses ways to combine this with a threshold scheme, so that a subset
+of the trustees (e.g., three out of five) is required to reconstruct the private key.
+He also shows how to combine this with oblivious transfer (see <a href="Applied%20Cryptography_split_006.html#5.5" class="calibre5 pcalibre">Section 5.5</a>) so
+that the trustees do not know whose private key is being reconstructed.</p>
+
+<p class="calibre9">Fair cryptosystems aren’t perfect. A criminal can exploit the system, using a
+subliminal channel (see <a href="#4.2" class="calibre5 pcalibre">Section 4.2</a>) to embed another secret key into his
+piece. This way, he can communicate securely with someone else using this
+subliminal key without having to worry about court-authorized wiretapping.
+Another protocol, called <b class="calibre10">failsafe key escrowing</b>, solves this problem [<a href="Applied%20Cryptography_split_036.html#r946" class="calibre5 pcalibre">946</a>,<a href="Applied%20Cryptography_split_036.html#r833" class="calibre5 pcalibre">833</a>]. 
+<a href="Applied%20Cryptography_split_026.html#23.10" class="calibre5 pcalibre">Section 23.10</a> describes the algorithm and protocol.</p>
+
+<h4 class="calibre8">The Politics of Key Escrow</h4>
+
+<p class="calibre9">Aside from the government’s key-escrow plans, several commercial
+key-escrow proposals are floating around. This leads to the obvious question:
+What are the advantages of key-escrow for the user?</p>
+
+<p class="calibre9">Well, there really aren’t any. The user gains nothing from key escrow that he
+couldn’t provide himself. He can already back up his keys if he wants (see
+<a href="Applied%20Cryptography_split_010.html#8.8" class="calibre5 pcalibre">Section 8.8</a>). Key-escrow guarantees that the police can eavesdrop on his
+conversations or read his data files even though they are encrypted. It
+guarantees that the NSA can eavesdrop on his international phone
+calls — without a warrant — even though they are encrypted. Perhaps he will be
+allowed to use cryptography in countries that now ban it, but that seems to be
+the only advantage.</p>
+
+<p class="calibre9">Key escrow has considerable disadvantages. The user has to trust the escrow
+agents’ security procedures, as well as the integrity of the people involved. He
+has to trust the escrow agents not to change their policies, the government not
+to change its laws, and those with lawful authority to get his keys to do so
+lawfully and responsibly. Imagine a major terrorist attack in New York; what
+sorts of limits on the police would be thrown aside in the aftermath?</p>
+
+<p class="calibre9">It is hard to imagine escrowed encryption schemes working as their advocates
+imagine without some kind of legal pressure. The obvious next step is a ban on
+the use of non-escrowed encryption. This is probably the only way to make a
+commercial system pay, and it’s certainly the only way to get technologically
+sophisticated criminals and terrorists to use it. It’s not clear how difficult
+outlawing non-escrowed cryptography will be, or how it will affect
+cryptography as an academic discipline. How can I research software-oriented
+cryptography algorithms without having software non-escrowed encryption
+devices in my possession; will I need a special license?</p>
+
+<p class="calibre9">And there are legal questions. How do escrowed keys affect users’ liability,
+should some encrypted data get out? If the U.S. government is trying to protect
+the escrow agencies, will there be the implicit assumption that if the secret was
+compromised by either the user or the escrow agency, then it must have been
+the user?</p>
+
+<p class="calibre9">What if a major key-escrow service, either government or commercial, had its
+entire escrowed key database stolen? What if the U.S. government tried to
+keep this quiet for a while? Clearly, this would have an impact on users’
+willingness to use key escrow. If it’s not voluntary, a couple of scandals like
+this would increase political pressure to either make it voluntary, or to add
+complex new regulations to the industry.</p>
+
+<p class="calibre9">Even more dangerous is a scandal where it becomes public that political
+opponent of the current administration, or some outspoken critic of some
+intelligence or police agencies has been under surveillance for years. This
+could raise public sentiment strongly against escrowed encryption.</p>
+
+<p class="calibre9">If signature keys are escrowed as well as encryption keys, there are additional
+issues. Is it acceptable for the authorities to use signature keys to run
+operations against suspected criminals? Will the authenticity of signatures
+based on escrowed keys be accepted in courts? What recourse do users have if
+the authorities actually do use their signature keys to sign some unfavorable
+contract, to help out a state-supported industry, or just to steal money?</p>
+
+<p class="calibre9">The globalization of cryptography raises an additional set of questions. Will
+key-escrow policies be compatible across national borders? Will multi-national
+corporations have to keep separate escrowed keys in every country to stay in
+compliance with the various local laws? Without some kind of compatibility,
+one of the supposed advantages of key-escrow schemes (international use of
+strong encryption) falls apart.</p>
+
+<p class="calibre9">What if some countries don’t accept the security of escrow agencies on faith?
+How do users do business there? Are their digital contracts upheld by their
+courts, or is the fact that their signature key is held in escrow in the U.S. going
+to allow them to claim in Switzerland that someone else could have signed this
+electronic contract? Or will there be special waivers for people who do
+business in such countries?</p>
+
+<p class="calibre9">And what about industrial espionage? There is no reason to believe that
+countries which currently conduct industrial espionage for their important or
+state-run companies will refrain from doing so on key-escrowed encryption
+systems. Indeed, since virtually no country is going to allow other countries to
+oversee its intelligence operations, widespread use of escrowed encryption will
+probably increase the use of wiretaps.</p>
+
+<p class="calibre9">Even if countries with good civil rights records use key escrow only for the
+legitimate pursuit of criminals and terrorists, it’s certain to be used elsewhere
+to keep track of dissidents, blackmail political opponents, and so on. Digital
+communications offer the opportunity to do a much more thorough job of
+monitoring citizens’ actions, opinions, purchases, and associations than is
+possible in an analog world.</p>
+
+<p class="calibre9">It’s not clear how this will affect commercial key escrow, except that 20 years
+from now, selling Turkey or China a ready-made key-escrow system may look
+a lot like selling shock batons to South Africa in 1970, or building a chemical
+plant for Iraq in 1980. Even worse, effortless and untraceable tapping of
+communications may tempt a number of governments into tracking many of
+their citizens’ communications, even those which haven’t generally tried to do
+so before. And there’s no guarantee that liberal democracies will be immune to
+this temptation.
+</p>
+
+<div class="calibre6" id="calibre_pb_10"></div>
+</div>
+
+
+
+
+
+
+</body></html>

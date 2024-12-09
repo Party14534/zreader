@@ -1,0 +1,1198 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Applied Cryptography, Second Edition: Protocols, Algorithms, and Source Code in C</title>
+    <meta content="Bruce Schneier" name="author"/>
+    <meta content="An introduction to cryptography." name="description"/>
+    <meta content="programming,cryptography" name="keywords"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body class="calibre">
+<div id="book" class="calibre1">
+<h1 class="chapter" id="16">Chapter 16 <br class="calibre3"/>
+Pseudo-Random-Sequence Generators and Stream Ciphers</h1>
+
+<h3 id="16.1" class="calibre7">16.1 Linear Congruential Generators</h3>
+
+<p class="calibre9"><b class="calibre10">Linear congruential generators</b> are pseudo-random-sequence generators of the form</p>
+
+<p class="math"><i class="calibre12">X</i><sub class="calibre15">n</sub> = (<i class="calibre12">aX</i><sub class="calibre15">n-1</sub> + <i class="calibre12">b</i>) mod <i class="calibre12">m</i>
+</p>
+
+<p class="calibre9">in which <i class="calibre12">X</i><sub class="calibre15">n</sub> is the <i class="calibre12">n</i> th number of the sequence, and <i class="calibre12">X</i><sub class="calibre15">n-1</sub> is the previous number of the sequence. The variables <i class="calibre12">a, b</i>, and <i class="calibre12">m</i> are constants: <i class="calibre12">a</i> is the <b class="calibre10">multiplier</b>, <i class="calibre12">b</i> is the <b class="calibre10">increment</b>, and <i class="calibre12">m</i> is the modulus. The key, or seed, is the value of <i class="calibre12">X</i><sub class="calibre15">0</sub>.</p>
+
+<p class="calibre9">This generator has a period no greater than <i class="calibre12">m</i>. If <i class="calibre12">a, b</i>, and <i class="calibre12">m</i> are properly chosen, then the generator will be a <b class="calibre10">maximal period generator</b> (sometimes
+called maximal length) and have period of <i class="calibre12">m</i>. (For example, <i class="calibre12">b</i> should be relatively prime to <i class="calibre12">m</i>.) Details on choosing constants to ensure maximal period can be found in [<a href="Applied%20Cryptography_split_036.html#r863" class="calibre5 pcalibre">863</a>,<a href="Applied%20Cryptography_split_036.html#r942" class="calibre5 pcalibre">942</a>]. Another good article on linear congruential
+generators and their theory is [<a href="Applied%20Cryptography_split_036.html#r1446" class="calibre5 pcalibre">1446</a>].</p>
+
+<p class="calibre9">Table 16.1, taken from [<a href="Applied%20Cryptography_split_036.html#r1272" class="calibre5 pcalibre">1272</a>], gives a list of good constants for linear
+congruential generators. They all produce maximal period generators and even
+more important, pass the spectral test for randomness for dimensions 2, 3, 4, 5,
+and 6 [<a href="Applied%20Cryptography_split_035.html#r385" class="calibre5 pcalibre">385</a>,<a href="Applied%20Cryptography_split_036.html#r863" class="calibre5 pcalibre">863</a>]. They are organized by the largest product that does not
+overflow a specific word length.</p>
+
+<table class="data-table1" id="table-16-1">
+<caption class="calibre67">Table 16.1 - Constants for Linear Congruential Generators</caption>
+<tbody class="calibre24"><tr class="calibre68">
+<th class="calibre26">Overflow At:</th>
+<th class="calibre26">a</th>
+<th class="calibre26">b</th>
+<th class="calibre26">m</th>
+</tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">20</sup></td><td class="calibre70">106</td><td class="calibre70">1283</td><td class="calibre70">6075</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">21</sup></td><td class="calibre70">211</td><td class="calibre70">1663</td><td class="calibre70">7875</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">22</sup></td><td class="calibre70">421</td><td class="calibre70">1663</td><td class="calibre70">7875</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">23</sup></td><td class="calibre70">430</td><td class="calibre70">2531</td><td class="calibre70">11979</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">936</td><td class="calibre70">1399</td><td class="calibre70">6655</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">1366</td><td class="calibre70">1283</td><td class="calibre70">6075</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">24</sup></td><td class="calibre70">171</td><td class="calibre70">11213</td><td class="calibre70">53125</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">859</td><td class="calibre70">2531</td><td class="calibre70">11979</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">419</td><td class="calibre70">6173</td><td class="calibre70">29282</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">967</td><td class="calibre70">3041</td><td class="calibre70">14406</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">25</sup></td><td class="calibre70">141</td><td class="calibre70">28411</td><td class="calibre70">134456</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">625</td><td class="calibre70">6571</td><td class="calibre70">31104</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">1541</td><td class="calibre70">2957</td><td class="calibre70">14000</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">1741</td><td class="calibre70">2731</td><td class="calibre70">12960</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">1291</td><td class="calibre70">4621</td><td class="calibre70">21870</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">205</td><td class="calibre70">29573</td><td class="calibre70">139968</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">26</sup></td><td class="calibre70">421</td><td class="calibre70">17117</td><td class="calibre70">81000</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">1255</td><td class="calibre70">6173</td><td class="calibre70">29282</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">281</td><td class="calibre70">28411</td><td class="calibre70">134456</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">27</sup></td><td class="calibre70">1093</td><td class="calibre70">18257</td><td class="calibre70">86436</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">421</td><td class="calibre70">54773</td><td class="calibre70">259200</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">1021</td><td class="calibre70">24631</td><td class="calibre70">116640</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">1021</td><td class="calibre70">25673</td><td class="calibre70">121500</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">28</sup></td><td class="calibre70">1277</td><td class="calibre70">24749</td><td class="calibre70">117128</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">741</td><td class="calibre70">66037</td><td class="calibre70">312500</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">2041</td><td class="calibre70">25673</td><td class="calibre70">121500</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">29</sup></td><td class="calibre70">2311</td><td class="calibre70">25367</td><td class="calibre70">120050</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">1807</td><td class="calibre70">45289</td><td class="calibre70">214326</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">1597</td><td class="calibre70">51749</td><td class="calibre70">244944</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">1861</td><td class="calibre70">49297</td><td class="calibre70">233280</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">2661</td><td class="calibre70">36979</td><td class="calibre70">175000</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">4081</td><td class="calibre70">25673</td><td class="calibre70">121500</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">3661</td><td class="calibre70">30809</td><td class="calibre70">145800</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">30</sup></td><td class="calibre70">3877</td><td class="calibre70">29573</td><td class="calibre70">139968</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">3613</td><td class="calibre70">45289</td><td class="calibre70">214326</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">1366</td><td class="calibre70">150889</td><td class="calibre70">714025</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">31</sup></td><td class="calibre70">8121</td><td class="calibre70">28411</td><td class="calibre70">134456</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">4561</td><td class="calibre70">51349</td><td class="calibre70">243000</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">7141</td><td class="calibre70">54773</td><td class="calibre70">259200</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">32</sup></td><td class="calibre70">9301</td><td class="calibre70">49297</td><td class="calibre70">233280</td></tr>
+<tr class="calibre25"><td class="calibre77"/><td class="calibre70">4096</td><td class="calibre70">150889</td><td class="calibre70">714025</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">33</sup></td><td class="calibre70">2416</td><td class="calibre70">374441</td><td class="calibre70">1771875</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">34</sup></td><td class="calibre70">17221</td><td class="calibre70">107839</td><td class="calibre70">510300</td></tr>
+<tr class="calibre71"><td class="calibre79"/><td class="calibre72">36261</td><td class="calibre72">66037</td><td class="calibre72">312500</td></tr>
+<tr class="calibre25"><td class="calibre77">2<sup class="calibre47">35</sup></td><td class="calibre70">84589</td><td class="calibre70">45989</td><td class="calibre70">217728</td></tr>
+</tbody></table>
+
+<p class="calibre39">The advantage of linear congruential generators is that they are fast, requiring
+few operations per bit.</p>
+
+<p class="calibre9">Unfortunately, linear congruential generators cannot be used for cryptography;
+they are predictable. Linear congruential generators were first broken by Jim
+Reeds [<a href="Applied%20Cryptography_split_036.html#r1294" class="calibre5 pcalibre">1294</a>,<a href="Applied%20Cryptography_split_036.html#r1295" class="calibre5 pcalibre">1295</a>,<a href="Applied%20Cryptography_split_036.html#r1296" class="calibre5 pcalibre">1296</a>] and then by Joan Boyar [<a href="Applied%20Cryptography_split_036.html#r1251" class="calibre5 pcalibre">1251</a>]. She also broke
+quadratic generators:</p>
+
+<p class="math">n = (<i class="calibre12">aX</i><sub class="calibre15">n-1</sub><sup class="calibre19">2</sup> + <i class="calibre12">bX</i><sub class="calibre15">n-1</sub> + <i class="calibre12">c</i>) mod <i class="calibre12">m</i>
+</p>
+
+<p class="calibre9">and cubic generators:</p>
+
+<p class="math">n = (<i class="calibre12">aX</i><sub class="calibre15">n-1</sub><sup class="calibre19">3</sup> + <i class="calibre12">bX</i><sub class="calibre15">n-1</sub><sup class="calibre19">2</sup> + <i class="calibre12">cX</i><sub class="calibre15">n-1</sub> + <i class="calibre12">d</i>) mod <i class="calibre12">m</i>
+</p>
+
+<p class="calibre9">Other researchers extended Boyar’s work to break any polynomial
+congruential generator [<a href="Applied%20Cryptography_split_036.html#r923" class="calibre5 pcalibre">923</a>,<a href="Applied%20Cryptography_split_036.html#r899" class="calibre5 pcalibre">899</a>,<a href="Applied%20Cryptography_split_036.html#r900" class="calibre5 pcalibre">900</a>]. Truncated linear congruential generators
+were also broken [<a href="Applied%20Cryptography_split_035.html#r581" class="calibre5 pcalibre">581</a>,<a href="Applied%20Cryptography_split_035.html#r705" class="calibre5 pcalibre">705</a>,<a href="Applied%20Cryptography_split_035.html#r580" class="calibre5 pcalibre">580</a>], as were truncated linear congruential
+generators with unknown parameters [<a href="Applied%20Cryptography_split_036.html#r1500" class="calibre5 pcalibre">1500</a>,<a href="Applied%20Cryptography_split_035.html#r212" class="calibre5 pcalibre">212</a>]. The preponderance of
+evidence is that congruential generators aren’t useful for cryptography.</p>
+
+
+<p class="calibre9">Linear congruential generators remain useful for noncryptographic applications, however, such as simulations. They are efficient and show good statistical behavior with respect to most reasonable empirical tests. Considerable information on linear congruential generators and their implementations can be found in [<a href="Applied%20Cryptography_split_036.html#r942" class="calibre5 pcalibre">942</a>].</p>
+
+<h4 class="calibre8">Combining Linear Congruential Generators</h4>
+
+<p class="calibre9">Various people examined the combination of linear congruential generators [<a href="Applied%20Cryptography_split_036.html#r1595" class="calibre5 pcalibre">1595</a>,<a href="Applied%20Cryptography_split_036.html#r941" class="calibre5 pcalibre">941</a>]. The results are no more cryptographically secure, but the combinations have longer periods and perform better in some randomness tests.</p>
+
+<p class="calibre9">Use this generator for 32-bit computers [<a href="Applied%20Cryptography_split_036.html#r941" class="calibre5 pcalibre">941</a>]:</p>
+
+<pre class="calibre20">static long s1 = 1 ; /* A "long" must be 32 bits long. */
+static long s2 = 1 ;
+
+#define MODMULT(a,b,c,m,s) q = s/a; s = b*(s-a*q) - c*q; if (s&lt;0) s+=m  ;
+/* MODMULT(a,b,c,m,s) computes s*b mod m, 
+   provided that m=a*b+c and 0 &lt;= c &lt; m. */
+
+/* combinedLCG returns a pseudorandom real value in the range
+ * (0,1). It combines linear congruential generators with
+ *             31         31
+ * periods of 2  -85 and 2  -249, and has a period that is the
+ * product of these two prime numbers. */
+
+double combinedLCG ( void )
+{
+    long q ;
+    long z ;
+
+    MODMULT ( 53668, 40014, 12211, 2147483563L, s1 )
+    MODMULT ( 52774, 40692, 3791,  2147483399L, s2 )
+    z = s1 - s2 ;
+    if ( z &lt; 1 )
+        z += 2147483562 ;
+    return z * 4.656613e-10 ;
+}
+
+/* In general, call initLCG before using combinedLCG. */
+void initLCG ( long InitS1, long InitS2 )
+{
+    s1 = InitS1 ;
+    s2 = InitS2 ;
+}
+</pre>
+
+<p class="calibre9">This generator works as long as the machine can represent all integers between -2<sup class="calibre19">31</sup> + 85 and 2<sup class="calibre19">31</sup> - 85. The variables, <i class="calibre12">s</i><sub class="calibre15">1</sub>
+and <i class="calibre12">s</i><sub class="calibre15">2</sub>, are global; they hold the current state of the generator. Before the first call, they must be initialized. The variable <i class="calibre12">s</i><sub class="calibre15">1</sub>
+needs an initial value between 1 and 2147483562; the variable <i class="calibre12">s</i><sub class="calibre15">2</sub> needs an initial value between 1 and 2147483398. The generator has a period somewhere in the neighborhood of 10<sup class="calibre19">18</sup>.</p>
+
+<p class="calibre9">If you only have a 16-bit computer, use this generator instead:</p>
+
+<pre class="calibre20">static int s1 = 1 ; /* An "int" must be 16 bits long. */
+static int s2 = 1 ;
+static int s3 = 1 ;
+
+#define MODMULT(a,b,c,m,s) q = s/a; s = b*(s-a*q) - c*q; if (s&lt;0) s+=m  ;
+
+/* combined LCG returns a pseudorandom real value in the range
+ * (0,1). It combines linear congruential generators with
+ *             15       15            15
+ * periods of 2  -405, 2  -1041, and 2  -1111, and has a period
+ * that is the product of these three prime numbers. */
+double combinedLCG ( void )
+{
+    int q ;
+    int z ;
+
+    MODMULT ( 206, 157, 21, 32363, s1 )
+    MODMULT ( 217, 146, 45, 31727, s2 )
+    MODMULT ( 222, 142, 133, 31657, s3 )
+    z = s1 - s2 ;
+    if ( z &gt; 706 )
+        z -= 32362 ;
+    z += s3 ;
+    if ( z &lt; 1 )
+        z += 32362 ;
+    return z * 3.0899e-5 ;
+}
+
+/* In general, call initLCG before using combinedLCG. */
+void initLCG ( int InitS1, int InitS2, InitS3 )
+{
+    s1 = InitS1 ;
+    s2 = InitS2 ;
+    s3 = InitS3 ;
+}
+</pre>
+
+<p class="calibre9">This generator works as long as the machine can represent all integers between -32363 and 32363. The variables, <i class="calibre12">s</i><sub class="calibre15">1</sub>, <i class="calibre12">s</i><sub class="calibre15">2</sub>, and <i class="calibre12">s</i><sub class="calibre15">3</sub>, are global; they hold the current state of the generator. Before the first call, they must be initialized. The variable <i class="calibre12">s</i><sub class="calibre15">1</sub>
+needs an initial value between 1 and 32362. The variable <i class="calibre12">s</i><sub class="calibre15">2</sub> needs an initial value between 1 and 31726. The variable <i class="calibre12">s</i><sub class="calibre15">3</sub>
+needs an initial value between 1 and 31656. This generator has a period of 1.6*10<sup class="calibre19">13</sup>.</p>
+
+<p class="calibre9">For both of these generators, the constant term <i class="calibre12">b</i> in the linear congruence is 0.</p>
+
+<h3 id="16.2" class="calibre7">16.2 Linear Feedback Shift Registers</h3>
+
+<p class="calibre9">Shift register sequences are used in both cryptography and coding theory. There is a wealth of theory about them; stream ciphers based on shift registers have been the workhorse of military cryptography since the beginnings of electronics.</p>
+
+<p class="calibre9">A <b class="calibre10">feedback shift register</b> is made up of two parts: a shift register and a <b class="calibre10">feedback function</b> (see Figure 16.1). The shift register is a sequence of bits. (The <b class="calibre10">length</b> of a shift register is figured in bits; if it is <i class="calibre12">n</i> bits long, it is called an <i class="calibre12">n-</i>bit shift register.) Each time a bit is needed, all of the bits in the shift register are shifted 1 bit to the right. The new left-most bit is computed as a function of the other bits in the register. The output of the shift register is 1 bit, often the least significant bit. The <b class="calibre10">period</b> of a shift register is the length of the output sequence before it starts repeating.</p>
+
+<div class="figure" id="figure-16-1">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-1.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.1</b> Feedback shift register.</i></p>
+</div>
+
+<p class="calibre9">Cryptographers have liked stream ciphers made up of shift registers: They are easily implemented in digital hardware. I will only touch on the mathematical theory. Ernst Selmer, the Norwegian government’s chief cryptographer, worked out the theory of shift register sequences in 1965 [<a href="Applied%20Cryptography_split_036.html#r1411" class="calibre5 pcalibre">1411</a>]. Solomon Golomb, an NSA mathematician, wrote a book with Selmer’s results and some of his own [<a href="Applied%20Cryptography_split_035.html#r643" class="calibre5 pcalibre">643</a>]. See also [<a href="Applied%20Cryptography_split_036.html#r970" class="calibre5 pcalibre">970</a>,<a href="Applied%20Cryptography_split_036.html#r971" class="calibre5 pcalibre">971</a>,<a href="Applied%20Cryptography_split_036.html#r1647" class="calibre5 pcalibre">1647</a>].</p>
+
+<p class="calibre9">The simplest kind of feedback shift register is a <b class="calibre10">linear feedback shift register</b>, or LFSR (see Figure 16.2). The feedback function is simply the XOR of certain bits in the register; the list of these bits is called a <b class="calibre10">tap sequence</b>. Sometimes this is called a <b class="calibre10">Fibonacci configuration</b>. Because of the simple feedback sequence, a large body of mathematical theory can be
+applied to analyzing LFSRs. Cryptographers like to analyze sequences to convince themselves that they are random enough to be secure. LFSRs are the most common type of shift registers used in cryptography.</p>
+
+<div class="figure" id="figure-16-2">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-2.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.2</b> Linear feedback shift register.</i></p>
+</div>
+
+<p class="calibre9">Figure 16.3 is a 4-bit LFSR tapped at the first and fourth bit. If it is initialized with the value 1111, it produces the following sequence of internal states before repeating:</p>
+
+<pre class="calibre20">1 1 1 1
+0 1 1 1
+1 0 1 1
+0 1 0 1
+1 0 1 0
+1 1 0 1
+0 1 1 0
+0 0 1 1
+1 0 0 1
+0 1 0 0
+0 0 1 0
+0 0 0 1
+1 0 0 0
+1 1 0 0
+1 1 1 0
+</pre>
+
+<div class="figure" id="figure-16-3">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-3.png" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.3</b> 4-bit LFSR.</i></p>
+</div>
+
+<p class="calibre9">The output sequence is the string of least significant bits:</p>
+
+<pre class="calibre20">1 1 1 1 0 1 0 1 1 0 0 1 0 0 0 ....
+</pre>
+
+<p class="calibre9">An <i class="calibre12">n-</i>bit LFSR can be in one of 2<sup class="calibre19">n</sup> - 1 internal states. This means that it can, in theory, generate a 2<sup class="calibre19">n</sup> - 1 bit-long pseudo-random sequence before repeating. (It’s 2<sup class="calibre19">n</sup> - 1 and not 2<sup class="calibre19">n</sup> because a shift register filled with zeros will cause the LFSR to output a neverending stream of zeros — this is not particularly useful.) Only LFSRs with certain tap sequences will cycle through all 2<sup class="calibre19">n</sup> - 1 internal states; these are the maximal-period LFSRs. The resulting output sequence is called an <b class="calibre10">m-sequence</b>.</p>
+
+<p class="calibre9">In order for a particular LFSR to be a maximal-period LFSR, the polynomial
+formed from a tap sequence plus the constant 1 must be a primitive polynomial
+mod 2. The <b class="calibre10">degree</b> of the polynomial is the length of the shift register. A
+primitive polynomial of degree <i class="calibre12">n</i> is an irreducible polynomial that divides <i class="calibre12">x</i><sup class="calibre19">2<sup class="calibre66">n</sup>-1</sup> + 1, 
+but not <i class="calibre12">x</i><sup class="calibre19">d</sup> + 1 for any <i class="calibre12">d</i> that divides 2<sup class="calibre19">n</sup> - 1 (see <a href="Applied%20Cryptography_split_014.html#11.3" class="calibre5 pcalibre">Section 11.3</a>). For the mathematical theory behind all this, consult [<a href="Applied%20Cryptography_split_035.html#r643" class="calibre5 pcalibre">643</a>,<a href="Applied%20Cryptography_split_036.html#r1649" class="calibre5 pcalibre">1649</a>,<a href="Applied%20Cryptography_split_036.html#r1648" class="calibre5 pcalibre">1648</a>].</p>
+
+<p class="calibre9">In general, there is no easy way to generate primitive polynomials mod 2 for a
+given degree. The easiest way is to choose a random polynomial and test
+whether it is primitive. This is complicated — something like testing random
+numbers for primality — but many mathematical software packages do this. See
+[<a href="Applied%20Cryptography_split_036.html#r970" class="calibre5 pcalibre">970</a>,<a href="Applied%20Cryptography_split_036.html#r971" class="calibre5 pcalibre">971</a>] for some methods.</p>
+
+<p class="calibre9">Table 16.2 lists some, but by no means all, primitive polynomials mod 2 of
+varying degrees [<a href="Applied%20Cryptography_split_036.html#r1583" class="calibre5 pcalibre">1583</a>,<a href="Applied%20Cryptography_split_035.html#r643" class="calibre5 pcalibre">643</a>,<a href="Applied%20Cryptography_split_036.html#r1649" class="calibre5 pcalibre">1649</a>,<a href="Applied%20Cryptography_split_036.html#r1648" class="calibre5 pcalibre">1648</a>,<a href="Applied%20Cryptography_split_036.html#r1272" class="calibre5 pcalibre">1272</a>,<a href="Applied%20Cryptography_split_035.html#r691" class="calibre5 pcalibre">691</a>]. For example, the listing (32,
+7, 5, 3, 2, 1, 0) means that the following polynomial is primitive modulo 2:</p>
+
+<p class="math"><i class="calibre12">x</i><sup class="calibre19">32</sup> + <i class="calibre12">x</i><sup class="calibre19">7</sup> + <i class="calibre12">x</i><sup class="calibre19">5</sup> + <i class="calibre12">x</i><sup class="calibre19">3</sup> + <i class="calibre12">x</i><sup class="calibre19">2</sup> + <i class="calibre12">x</i> + 1
+</p>
+
+<p class="calibre9">It’s easy to turn this into a maximal-period LFSR. The first number is the
+length of the LFSR. The last number is always 0 and can be ignored. All the
+numbers, except the 0, specify the tap sequence, counting from the left of the
+shift register. That is, low degree terms in the polynomial correspond to taps
+near the left-hand side of the register.</p>
+
+<p class="calibre9">To continue the example, the listing (32, 7, 5, 3, 2, 1, 0) means that if you take
+a 32-bit shift register and generate the new bit by XORing the thirty-second,
+seventh, fifth, third, second, and first bits together (see Figure 16.4), the
+resultant LFSR will be maximal length; it will cycle through 2<sup class="calibre19">32</sup> - 1 values
+before repeating.</p>
+
+<div class="figure" id="figure-16-4">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-4.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.4</b> 32-bit long maximal-length LFSR.</i></p>
+</div>
+
+<p class="calibre9">The C code for this LFSR looks like:</p>
+
+<pre class="calibre20">int LFSR () {
+    static unsigned long ShiftRegister = 1; /* Anything but 0. */
+    ShiftRegister = ((((ShiftRegister &gt;&gt; 31)
+               ^ (ShiftRegister &gt;&gt; 6)
+               ^ (ShiftRegister &gt;&gt; 4)
+               ^ (ShiftRegister &gt;&gt; 2)
+               ^ (ShiftRegister &gt;&gt; 1)
+               ^ ShiftRegister))
+               &amp; 0x00000001)
+               &lt;&lt; 31)
+               | (ShiftRegister &gt;&gt; 1) ;
+    return ShiftRegister &amp; 0x00000001;
+}
+</pre>
+
+<table class="data-table1" id="table-16-2">
+<caption class="calibre67">Table 16.2 - Some Primitive Polynomials Mod 2</caption>
+<tbody class="calibre24"><tr class="calibre68"><td class="calibre89">(1, 0)</td><td class="calibre89">(36, 11, 0)</td><td class="calibre89">(68, 9, 0)</td><td class="calibre89">(97, 6, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(2, 1, 0)</td><td class="calibre61">(36, 6, 5, 4, 2, 1, 0) </td><td class="calibre61">(68, 7, 5, 1, 0)</td><td class="calibre61">(98, 11, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(3, 1, 0)</td><td class="calibre61">(37, 6, 4, 1, 0)</td><td class="calibre61">(69, 6, 5, 2, 0)</td><td class="calibre61">(98, 7, 4, 3, 1, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(4, 1, 0)</td><td class="calibre61">(37, 5, 4, 3, 2, 1, 0) </td><td class="calibre61">(70, 5, 3, 1, 0)</td><td class="calibre61">(99, 7, 5, 4, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(5, 2, 0)</td><td class="calibre61">(38, 6, 5, 1, 0)</td><td class="calibre61">(71, 6, 0)</td><td class="calibre61">(100, 37, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(6, 1, 0)</td><td class="calibre61">(39, 4, 0)</td><td class="calibre61">(71, 5, 3, 1, 0)</td><td class="calibre61">(100, 8, 7, 2, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(7, 1, 0)</td><td class="calibre61">(40, 5, 4, 3, 0)</td><td class="calibre61">(72, 10, 9, 3, 0)</td><td class="calibre61">(101, 7, 6, 1, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(7, 3, 0)</td><td class="calibre61">(41, 3, 0)</td><td class="calibre61">(72, 6, 4, 3, 2, 1, 0) </td><td class="calibre61">(102, 6 5 3 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(8, 4, 3, 2, 0)</td><td class="calibre61">(42, 7, 4, 3, 0)</td><td class="calibre61">(73, 25, 0)</td><td class="calibre61">(103, 9, 9)</td></tr>
+<tr class="calibre25"><td class="calibre61">(9, 4, 0)</td><td class="calibre61">(42, 5, 4, 3, 2, 1, 0) </td><td class="calibre61">(73, 4, 3, 2, 0)</td><td class="calibre61">(104, 11, 10, 1, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(10, 3, 0)</td><td class="calibre61">(43, 6, 4, 3, 0)</td><td class="calibre61">(74, 7, 4, 3, 0)</td><td class="calibre61">(105, 16, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(11, 2, 0)</td><td class="calibre61">(44, 6, 5, 2, 0)</td><td class="calibre61">(75, 6, 3, 1, 0)</td><td class="calibre61">(106, 15, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(12, 6, 4, 1, 0)</td><td class="calibre61">(45, 4, 3, 1, 0)</td><td class="calibre61">(76, 5, 4, 2, 0)</td><td class="calibre61">(107, 9, 7, 4, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(13, 4, 3, 1, 0)</td><td class="calibre61">(46, 8, 7, 6, 0)</td><td class="calibre61">(77, 6, 5, 2, 0)</td><td class="calibre61">(108, 31, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(14, 5, 3, 1, 0)</td><td class="calibre61">(46, 8, 5, 3, 2, 1, 0) </td><td class="calibre61">(78, 7, 2, 1, 0)</td><td class="calibre61">(109, 5, 4, 2, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(15, 1, 0)</td><td class="calibre61">(47, 5, 0)</td><td class="calibre61">(79, 9, 0)</td><td class="calibre61">(110, 6, 4, 1, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(16, 5, 3, 2, 0)</td><td class="calibre61">(48, 9, 7, 4, 0)</td><td class="calibre61">(79, 4, 3, 2, 0)</td><td class="calibre61">(111, 10, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(17, 3, 0)</td><td class="calibre61">(48, 7, 5, 4, 2, 1, 0) </td><td class="calibre61">(80, 9, 4, 2, 0)</td><td class="calibre61">(111, 49, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(17, 5, 0)</td><td class="calibre61">(49, 9, 0)</td><td class="calibre61">(80, 7, 5, 3, 2, 1, 0) </td><td class="calibre61">(113, 9, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(17, 6, 0)</td><td class="calibre61">(49, 6, 5, 4, 0)</td><td class="calibre61">(81, 4, 0)</td><td class="calibre61">(113, 15, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(18, 7, 0)</td><td class="calibre61">(50, 4, 3, 2, 0)</td><td class="calibre61">(82, 9, 6, 4, 0)</td><td class="calibre61">(113, 30, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(18, 5, 2, 1, 0)</td><td class="calibre61">(51, 6, 3, 1, 0)</td><td class="calibre61">(82, 8, 7, 6, 1, 0)</td><td class="calibre61">(114, 11, 2, 1, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(19, 5, 2, 1, 0)</td><td class="calibre61">(52, 3, 0)</td><td class="calibre61">(83, 7, 4, 2, 0)</td><td class="calibre61">(115, 8, 7, 5, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(20, 3, 0)</td><td class="calibre61">(53, 6, 2, 1, 0)</td><td class="calibre61">(84, 13, 0)</td><td class="calibre61">(116, 6, 5, 2, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(21, 2, 0)</td><td class="calibre61">(54, 8, 6, 3, 0)</td><td class="calibre61">(84, 8, 7, 5, 3, 1, 0) </td><td class="calibre61">(117, 5, 2, 1, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(22, 1, 0)</td><td class="calibre61">(54, 6, 5, 4, 3, 2, 0) </td><td class="calibre61">(85, 8, 2, 1, 0)</td><td class="calibre61">(118, 33, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(23, 5, 0)</td><td class="calibre61">(55, 24, 0)</td><td class="calibre61">(86, 6, 5, 2, 0)</td><td class="calibre61">(119, 8, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(24, 4, 3, 1, 0)</td><td class="calibre61">(55, 6, 2, 1, 0)</td><td class="calibre61">(87, 13, 0)</td><td class="calibre61">(119, 45, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(25, 3, 0)</td><td class="calibre61">(56, 7, 4, 2, 0)</td><td class="calibre61">(87, 7, 5, 1, 0)</td><td class="calibre61">(120, 9, 6, 2, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(26, 6, 2, 1, 0)</td><td class="calibre61">(57, 7, 0)</td><td class="calibre61">(88, 11, 9, 8, 0)</td><td class="calibre61">(121, 18, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(27, 5, 2, 1, 0)</td><td class="calibre61">(57, 5, 3, 2, 0)</td><td class="calibre61">(88, 8, 5, 4, 3, 1, 0) </td><td class="calibre61">(122, 6, 2, 1, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(28, 3, 0)</td><td class="calibre61">(58, 19, 0)</td><td class="calibre61">(89, 38, 0)</td><td class="calibre61">(123, 2, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(29, 2, 0)</td><td class="calibre61">(58, 6, 5, 1, 0)</td><td class="calibre61">(89, 51, 0)</td><td class="calibre61">(124, 37, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(30, 6, 4, 1, 0)</td><td class="calibre61">(59, 7, 4, 2, 0)</td><td class="calibre61">(89, 6, 5, 3, 0)</td><td class="calibre61">(125, 7, 6, 5, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(31, 3, 0)</td><td class="calibre61">(59, 6, 5, 4, 3, 1, 0) </td><td class="calibre61">(90, 5, 3, 2, 0)</td><td class="calibre61">(126, 7, 4, 2, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(31, 6, 0)</td><td class="calibre61">(60, 1, 0)</td><td class="calibre61">(91, 8, 5, 1, 0)</td><td class="calibre61">(127, 1, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(31, 7, 0)</td><td class="calibre61">(61, 5, 2, 1, 0)</td><td class="calibre61">(91, 7, 6, 5, 3, 2, 0) </td><td class="calibre61">(127, 7, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(31, 13, 0)</td><td class="calibre61">(62, 6, 5, 3, 0)</td><td class="calibre61">(92, 6, 5, 2, 0)</td><td class="calibre61">(127, 63, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(32, 7, 6, 2, 0)</td><td class="calibre61">(63, 1, 0)</td><td class="calibre61">(93, 2, 0)</td><td class="calibre61">(128, 7, 2, 1, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(32, 7, 5, 3, 2, 1, 0) </td><td class="calibre61">(64, 4, 3, 1, 0)</td><td class="calibre61">(94, 21, 0)</td><td class="calibre61">(129, 5, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(33, 13, 0)</td><td class="calibre61">(65, 18, 0)</td><td class="calibre61">(94, 6, 5, 1, 0)</td><td class="calibre61">(130, 3, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(33, 16, 4, 1, 0)</td><td class="calibre61">(65, 4, 3, 1, 0)</td><td class="calibre61">(95, 11, 0)</td><td class="calibre61">(131, 8, 3, 2, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(34, 8, 4, 3, 0)</td><td class="calibre61">(66, 9, 8, 6, 0)</td><td class="calibre61">(95, 6, 5, 4, 2, 1, 0) </td><td class="calibre61">(132, 29, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(34, 7, 6, 5, 2, 1, 0) </td><td class="calibre61">(66, 8, 6, 5, 3, 2, 0) </td><td class="calibre61">(96, 10, 9, 6, 0)</td><td class="calibre61">(133, 9, 8, 2, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(35, 2, 0)</td><td class="calibre61">(67, 5, 2, 1, 0)</td><td class="calibre61">(96, 7, 6, 4, 3, 2, 0) </td><td class="calibre61">(134, 57, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(135, 11, 0)</td><td class="calibre61">(152, 6, 3, 2, 0)</td><td class="calibre61">(178, 87, 0)</td><td class="calibre61">(270, 133, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(135, 16, 0)</td><td class="calibre61">(153, 1, 0)</td><td class="calibre61">(183, 56, 0)</td><td class="calibre61">(282, 35, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(135, 22, 0)</td><td class="calibre61">(153, 8, 0)</td><td class="calibre61">(194, 87, 0)</td><td class="calibre61">(282, 43, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(136, 8, 3, 2, 0)</td><td class="calibre61">(154, 9, 5, 1, 0)</td><td class="calibre61">(198, 65, 0)</td><td class="calibre61">(286, 69, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(137, 21, 0)</td><td class="calibre61">(155, 7, 5, 4, 0)</td><td class="calibre61">(201, 14, 0)</td><td class="calibre61">(286, 73, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(138, 8, 7, 1, 0)</td><td class="calibre61">(156, 9, 5, 3, 0)</td><td class="calibre61">(201, 17, 0)</td><td class="calibre61">(294, 61, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(139, 8, 5, 3, 0)</td><td class="calibre61">(157, 6, 5, 2, 0)</td><td class="calibre61">(201, 59, 0)</td><td class="calibre61">(322, 67, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(140, 29, 0)</td><td class="calibre61">(158, 8, 6, 5, 0)</td><td class="calibre61">(201, 79, 0)</td><td class="calibre61">(333, 2, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(141, 13, 6, 1, 0)</td><td class="calibre61">(159, 31, 0)</td><td class="calibre61">(202, 55, 0)</td><td class="calibre61">(350, 53, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(142, 21, 0)</td><td class="calibre61">(159, 34, 0)</td><td class="calibre61">(207, 43, 0)</td><td class="calibre61">(366, 29, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(143, 5, 3, 2, 0)</td><td class="calibre61">(159, 40, 0)</td><td class="calibre61">(212, 105, 0)</td><td class="calibre61">(378, 43, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(144, 7, 4, 2, 0)</td><td class="calibre61">(160, 5, 3, 2, 0)</td><td class="calibre61">(218, 11, 0)</td><td class="calibre61">(378, 107, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(145, 52, 0)</td><td class="calibre61">(161, 18, 0)</td><td class="calibre61">(218, 15, 0)</td><td class="calibre61">(390, 89, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(145, 69, 0)</td><td class="calibre61">(161, 39, 0)</td><td class="calibre61">(218, 71, 0)</td><td class="calibre61">(462, 73, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(146, 5, 3, 2, 0)</td><td class="calibre61">(161, 60, 0)</td><td class="calibre61">(218, 83, 0)</td><td class="calibre61">(521, 32, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(147, 11, 4, 2, 0)</td><td class="calibre61">(162, 8, 7, 4, 0)</td><td class="calibre61">(225, 32, 0)</td><td class="calibre61">(521, 48, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(148, 27, 0)</td><td class="calibre61">(163, 7, 6, 3, 0)</td><td class="calibre61">(225, 74, 0)</td><td class="calibre61">(521, 158, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(149, 10, 9, 7, 0)</td><td class="calibre61">(164, 12, 6, 5, 0)</td><td class="calibre61">(225, 88, 0)</td><td class="calibre61">(521, 168, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(150, 53, 0)</td><td class="calibre61">(165, 9, 8, 3, 0)</td><td class="calibre61">(225, 97, 0)</td><td class="calibre61">(607, 105, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(151, 3, 0)</td><td class="calibre61">(166, 10, 3, 2, 0)</td><td class="calibre61">(225, 109, 0)</td><td class="calibre61">(607, 147, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(151, 9, 0)</td><td class="calibre61">(167, 6, 0)</td><td class="calibre61">(231, 26, 0)</td><td class="calibre61">(607, 273, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(151, 15, 0)</td><td class="calibre61">(170, 23, 0)</td><td class="calibre61">(231, 34, 0)</td><td class="calibre61">(1279, 216, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(151, 31, 0)</td><td class="calibre61">(172, 2, 0)</td><td class="calibre61">(234, 31, 0)</td><td class="calibre61">(1279, 418, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(151, 39, 0)</td><td class="calibre61">(174, 13, 0)</td><td class="calibre61">(234, 103, 0)</td><td class="calibre61">(2281, 715, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(151, 43, 0)</td><td class="calibre61">(175, 6, 0)</td><td class="calibre61">(236, 5, 0)</td><td class="calibre61">(2281, 915, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(151, 46, 0)</td><td class="calibre61">(175, 16, 0)</td><td class="calibre61">(250, 103, 0)</td><td class="calibre61">(2281, 1029, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(151, 51, 0)</td><td class="calibre61">(175, 18, 0)</td><td class="calibre61">(255, 52, 0)</td><td class="calibre61">(3217, 67, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(151, 63, 0)</td><td class="calibre61">(175, 57, 0)</td><td class="calibre61">(255, 56, 0)</td><td class="calibre61">(3217, 576, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(151, 66, 0)</td><td class="calibre61">(177, 8, 0)</td><td class="calibre61">(255, 82, 0)</td><td class="calibre61">(4423, 271, 0)</td></tr>
+<tr class="calibre71"><td class="calibre78">(151, 67, 0)</td><td class="calibre78">(177, 22, 0)</td><td class="calibre78">(258, 83, 0)</td><td class="calibre78">(9689, 84, 0)</td></tr>
+<tr class="calibre25"><td class="calibre61">(151, 70, 0)</td><td class="calibre61">(177, 88, 0)</td><td class="calibre61">(266, 47, 0)</td><td class="calibre61"/></tr>
+</tbody></table>
+
+<p class="calibre39">The code is a little more complicated when the shift register is longer than the
+computer’s word size, but not significantly so.</p>
+
+<p class="calibre9">Note that all of these listings have an odd number of coefficients. I have provided
+such a large table because LFSRs are often used for stream-cipher cryptography
+and I wanted many examples so that different people would pick different primitive
+polynomials. Since, if <i class="calibre12">p</i>(<i class="calibre12">x</i>) is primitive, then so is <i class="calibre12">x<sup class="calibre19">n</sup></i>(1/<i class="calibre12">x</i>); each entry on the table is actually two primitive polynomials.</p>
+
+<p class="calibre9">For example, if (<i class="calibre12">a, b</i>, 0) is primitive, then (<i class="calibre12">a, a</i> - <i class="calibre12">b</i>, 0) is also primitive. If (<i class="calibre12">a, b, c, d</i>, 0) is primitive, then (<i class="calibre12">a, a</i> - <i class="calibre12">d, a</i> - <i class="calibre12">c, a</i> - <i class="calibre12">b</i>, 0) is also primitive. Mathematically:</p>
+
+<p class="math-left">if <i class="calibre12">x<sup class="calibre19">a</sup></i> + <i class="calibre12">x<sup class="calibre19">b</sup></i> + 1 is primitive, so is <i class="calibre12">x<sup class="calibre19">a</sup></i> + <i class="calibre12">x<sup class="calibre19">a-b</sup></i> + 1
+if <i class="calibre12">x<sup class="calibre19">a</sup></i> + <i class="calibre12">x<sup class="calibre19">b</sup></i> + <i class="calibre12">x<sup class="calibre19">c</sup></i> + <i class="calibre12">x<sup class="calibre19">d</sup></i> + 1 is primitive, so is <i class="calibre12">x<sup class="calibre19">a</sup></i> + <i class="calibre12">x<sup class="calibre19">a-d</sup></i> + <i class="calibre12">x<sup class="calibre19">a-c</sup></i> + <i class="calibre12">x<sup class="calibre19">a-b</sup></i> + 1
+</p>
+
+<p class="calibre9">Primitive trinomials are fastest in software, because only two bits of the shift
+register have to be XORed to generate each new bit. Actually, all the feedback
+polynomials listed in Table 16.2 are <b class="calibre10">sparse</b>, meaning that they only have a few
+coefficients. Sparseness is always a source of weakness, sometimes enough to
+break the algorithm. It is far better to use <b class="calibre10">dense</b> primitive polynomials, those with a lot of coefficients, for cryptographic applications. If you use dense polynomials,
+and especially if you make them part of the key, you can live with much shorter
+LFSRs.</p>
+
+<p class="calibre9">Generating dense primitive polynomials modulo 2 is not easy. In general, to
+generate primitive polynomials of degree <i class="calibre12">k</i> you need to know the factorization of 2<sup class="calibre19">k</sup> - 1. 
+Three good references for finding primitive polynomials are [<a href="Applied%20Cryptography_split_035.html#r652" class="calibre5 pcalibre">652</a>,<a href="Applied%20Cryptography_split_036.html#r1285" class="calibre5 pcalibre">1285</a>,<a href="Applied%20Cryptography_split_036.html#r1287" class="calibre5 pcalibre">1287</a>].</p>
+
+<p class="calibre9">LFSRs are competent pseudo-random-sequence generators all by themselves, but
+they have some annoying nonrandom properties. Sequential bits are linear, which
+makes them useless for encryption. For an LFSR of length <i class="calibre12">n</i>, the internal state is the next <i class="calibre12">n</i> output bits of the generator. Even if the feedback scheme is unknown, it
+can be determined from only 2<i class="calibre12">n</i> output bits of the generator, by using the highly efficient Berlekamp-Massey algorithm [<a href="Applied%20Cryptography_split_036.html#r1082" class="calibre5 pcalibre">1082</a>,<a href="Applied%20Cryptography_split_036.html#r1083" class="calibre5 pcalibre">1083</a>]: see <a href="#16.3" class="calibre5 pcalibre">Section 16.3</a>.</p>
+
+<p class="calibre9">Also, large random numbers generated from sequential bits of this sequence are
+highly correlated and, for certain types of applications, not very random at all. Even so, LFSRs are often used as building blocks in encryption algorithms.</p>
+
+<h4 class="calibre8">LFSRs in Software</h4>
+
+<p class="calibre9">LFSRs are slow in software, but they’re faster in assembly language than in C. One
+solution is to run 16 LFSRs (or 32, depending on your computer’s word size) in
+parallel. This scheme uses an array of words that is the length of the LFSR, with
+each bit position in the words representing a different LFSR. Assuming all the
+feedback polynomials are the same, this can run pretty quickly. In general, the best
+way to update shift registers is to multiply the current state by suitable binary
+matrices [<a href="Applied%20Cryptography_split_036.html#r901" class="calibre5 pcalibre">901</a>].</p>
+
+<p class="calibre9">It is also possible to modify the LFSR’s feedback scheme. The resultant generator
+is no better cryptographically, but it still has a maximal period and is easy to
+implement in software [<a href="Applied%20Cryptography_split_036.html#r1272" class="calibre5 pcalibre">1272</a>]. Instead of using the bits in the tap sequence to
+generate the new left-most bit, each bit in the tap sequence is XORed with the
+output of the generator and replaced; then the output of the generator becomes the
+new left-most bit (see Figure 16.5). This is sometimes called a <b class="calibre10">Galois</b>
+<b class="calibre10">configuration</b>.</p>
+
+<div class="figure" id="figure-16-5">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-5.png" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.5</b> Galois LFSR.</i></p>
+</div>
+
+<p class="calibre9">In C, this looks like:</p>
+
+<pre class="calibre20">#define mask 0x80000057
+
+static unsigned long ShiftRegister=1;
+
+void seed_LFSR (unsigned long seed)
+{
+    if (seed == 0) /* avoid calamity */
+        seed = 1;
+    ShiftRegister = seed;
+}
+
+int modified_LFSR (void)
+{
+    if (ShiftRegister &amp; 0x00000001) {
+        ShiftRegister = ((ShiftRegister ^ mask &gt;&gt; 1) | 0x8000000;
+        return 1;
+    } else {
+        ShiftRegister &gt;&gt;= 1;
+        return 0;
+    }
+}
+</pre>
+
+<p class="calibre9">The savings here is that all the XORs can be done as a single operation. This can
+also be parallelized, and the different feedback polynomials can be different. The
+Galois configuration can also be faster in hardware, especially in custom VLSI
+implementations. In general, if you are using hardware that is good at shifts, use a
+Fibonacci configuration; if you can exploit parallelism, use a Galois configuration.</p>
+
+<h3 id="16.3" class="calibre7">16.3 Design and Analysis of Stream Ciphers</h3>
+
+<p class="calibre9">Most practical stream-cipher designs center around LFSRs. In the early days of
+electronics, they were very easy to build. A shift register is nothing more than an
+array of bit memories and the feedback sequence is just a series of XOR gates.
+Even in VLSI circuitry, a LFSR-based stream cipher can give you a lot of security
+with only a few logic gates.</p>
+
+<p class="calibre9">The problem with LFSRs is that they are very inefficient in software. You want to
+avoid sparse feedback polynomials — they facilitate correlation attacks
+[<a href="Applied%20Cryptography_split_036.html#r1051" class="calibre5 pcalibre">1051</a>,<a href="Applied%20Cryptography_split_036.html#r1090" class="calibre5 pcalibre">1090</a>,<a href="Applied%20Cryptography_split_035.html#r350" class="calibre5 pcalibre">350</a>] — and dense feedback polynomials are inefficient. Any stream
+cipher outputs a bit at a time; you have to iterate the algorithm 64 times to encrypt
+what a single iteration of DES can encrypt. In fact, a simple LFSR algorithm like
+the shrinking generator described later is no faster in software than DES.</p>
+
+<p class="calibre9">This branch of cryptography is fast-paced and very politically charged. Most
+designs are secret; a majority of military encryptions systems in use today are based
+on LFSRs. In fact, most Cray computers (Cray 1, Cray X-MP, Cray Y-MP) have a
+rather curious instruction generally known as “population count.” It counts the 1
+bits in a register and can be used both to efficiently calculate the Hamming distance
+between two binary words and to implement a vectorized version of a LFSR. I’ve
+heard this called the canonical NSA instruction, demanded by almost all computer
+contracts.</p>
+
+<p class="calibre9">On the other hand, an astonishingly large number of seemingly complex
+shift-register-based generators have been cracked. And certainly military
+cryptanalysis institutions such as the NSA have cracked a lot more. Sometimes it’s
+amazing to see the simple ones proposed again and again.</p>
+
+<h4 class="calibre8">Linear Complexity</h4>
+
+<p class="calibre9">Analyzing stream ciphers is often easier than analyzing block ciphers. For example,
+one important metric used to analyze LFSR-based generators is <b class="calibre10">linear complexity</b>, or linear span. This is defined as the length, <i class="calibre12">n</i>, of the shortest LFSR that can mimic the generator output. Any sequence generated by a finite-state machine over a finite
+field has a finite linear complexity [<a href="Applied%20Cryptography_split_036.html#r1006" class="calibre5 pcalibre">1006</a>]. Linear complexity is important because
+a simple algorithm, called the <b class="calibre10">Berlekamp-Massey</b> algorithm, can generate this
+LFSR after examining only 2<i class="calibre12">n</i> bits of the keystream [<a href="Applied%20Cryptography_split_036.html#r1005" class="calibre5 pcalibre">1005</a>]. Once you’ve generated this LFSR, you’ve broken the stream cipher.</p>
+
+<p class="calibre9">This idea has extensions from fields to rings [<a href="Applied%20Cryptography_split_036.html#r1298" class="calibre5 pcalibre">1298</a>], and when the output
+sequence is viewed as numbers over fields of odd characteristic [<a href="Applied%20Cryptography_split_036.html#r842" class="calibre5 pcalibre">842</a>]. A
+further enhancement is the notion of a <b class="calibre10">linear complexity profile</b>, which
+measures the linear complexity of the sequence as it gets longer and longer
+[<a href="Applied%20Cryptography_split_036.html#r1357" class="calibre5 pcalibre">1357</a>,<a href="Applied%20Cryptography_split_036.html#r1168" class="calibre5 pcalibre">1168</a>,<a href="Applied%20Cryptography_split_035.html#r411" class="calibre5 pcalibre">411</a>,<a href="Applied%20Cryptography_split_036.html#r1582" class="calibre5 pcalibre">1582</a>]. Another algorithm for computing linear complexity is
+useful only in very specialized circumstances [<a href="Applied%20Cryptography_split_035.html#r597" class="calibre5 pcalibre">597</a>,<a href="Applied%20Cryptography_split_035.html#r595" class="calibre5 pcalibre">595</a>,<a href="Applied%20Cryptography_split_035.html#r596" class="calibre5 pcalibre">596</a>,<a href="Applied%20Cryptography_split_036.html#r1333" class="calibre5 pcalibre">1333</a>]. A
+generalization of linear complexity is in [<a href="Applied%20Cryptography_split_035.html#r776" class="calibre5 pcalibre">776</a>]. There is also the notion of
+sphere complexity [<a href="Applied%20Cryptography_split_035.html#r502" class="calibre5 pcalibre">502</a>] and 2-adic complexity [<a href="Applied%20Cryptography_split_036.html#r844" class="calibre5 pcalibre">844</a>].</p>
+
+<p class="calibre9">In any case, remember that a high linear complexity does not necessarily
+indicate a secure generator, but a low linear complexity indicates an insecure
+one [<a href="Applied%20Cryptography_split_036.html#r1357" class="calibre5 pcalibre">1357</a>,<a href="Applied%20Cryptography_split_036.html#r1249" class="calibre5 pcalibre">1249</a>].</p>
+
+<h4 class="calibre8">Correlation Immunity</h4>
+
+<p class="calibre9">Cryptographers try to get a high linear complexity by combining the output of
+several output sequences in some nonlinear manner. The danger here is that
+one or more of the internal output sequences — often just outputs of individual
+LFSRs — can be correlated with the combined keystream and attacked using
+linear algebra. Often this is called a <b class="calibre10">correlation attack</b> or a
+divide-and-conquer attack. Thomas Siegenthaler has shown that <b class="calibre10">correlation</b>
+<b class="calibre10">immunity</b> can be precisely defined, and that there is a trade-off between
+correlation immunity and linear complexity [<a href="Applied%20Cryptography_split_036.html#r1450" class="calibre5 pcalibre">1450</a>].</p>
+
+<p class="calibre9">The basic idea behind a correlation attack is to identify some correlation
+between the output of the generator and the output of one of its internal pieces.
+Then, by observing the output sequence, you can obtain information about that
+internal output. Using that information and other correlations, collect
+information about the other internal outputs until the entire generator is
+broken.</p>
+
+<p class="calibre9">Correlation attacks and variations such as fast correlation attacks — these offer
+a trade-off between computational complexity and effectiveness — have been
+successfully applied to a number of LFSR-based keystream generators
+[<a href="Applied%20Cryptography_split_036.html#r1451" class="calibre5 pcalibre">1451</a>, <a href="Applied%20Cryptography_split_035.html#r278" class="calibre5 pcalibre">278</a>, <a href="Applied%20Cryptography_split_036.html#r1452" class="calibre5 pcalibre">1452</a>, <a href="Applied%20Cryptography_split_035.html#r572" class="calibre5 pcalibre">572</a>, <a href="Applied%20Cryptography_split_036.html#r1636" class="calibre5 pcalibre">1636</a>, <a href="Applied%20Cryptography_split_036.html#r1051" class="calibre5 pcalibre">1051</a>, <a href="Applied%20Cryptography_split_036.html#r1090" class="calibre5 pcalibre">1090</a>, <a href="Applied%20Cryptography_split_035.html#r350" class="calibre5 pcalibre">350</a>, <a href="Applied%20Cryptography_split_035.html#r633" class="calibre5 pcalibre">633</a>, <a href="Applied%20Cryptography_split_036.html#r1054" class="calibre5 pcalibre">1054</a>, <a href="Applied%20Cryptography_split_036.html#r1089" class="calibre5 pcalibre">1089</a>, <a href="Applied%20Cryptography_split_036.html#r995" class="calibre5 pcalibre">995</a>]. Some
+interesting new ideas along these lines are in [<a href="Applied%20Cryptography_split_035.html#r46" class="calibre5 pcalibre">46</a>, <a href="Applied%20Cryptography_split_036.html#r1641" class="calibre5 pcalibre">1641</a>].</p>
+
+<h4 class="calibre8">Other Attacks</h4>
+
+<p class="calibre9">There are other general attacks against keystream generators. The <b class="calibre10">linear</b>
+<b class="calibre10">consistency test</b> attempts to identify some subset of the encryption key using
+matrix techniques [<a href="Applied%20Cryptography_split_036.html#r1638" class="calibre5 pcalibre">1638</a>]. There is also the <b class="calibre10">meet-in-the-middle consistency</b>
+<b class="calibre10">attack</b> [<a href="Applied%20Cryptography_split_035.html#r39" class="calibre5 pcalibre">39</a>,<a href="Applied%20Cryptography_split_035.html#r41" class="calibre5 pcalibre">41</a>]. The <b class="calibre10">linear syndrome algorithm</b> relies on being able to write a fragment of the output sequence as a linear equation [<a href="Applied%20Cryptography_split_036.html#r1636" class="calibre5 pcalibre">1636</a>,<a href="Applied%20Cryptography_split_036.html#r1637" class="calibre5 pcalibre">1637</a>]. There is the
+<b class="calibre10">best affine approximation attack</b> [<a href="Applied%20Cryptography_split_035.html#r502" class="calibre5 pcalibre">502</a>] and the <b class="calibre10">derived sequence attack</b>
+[<a href="Applied%20Cryptography_split_035.html#r42" class="calibre5 pcalibre">42</a>]. The techniques of differential cryptanalysis have even been applied to
+stream ciphers [<a href="Applied%20Cryptography_split_035.html#r501" class="calibre5 pcalibre">501</a>], as has linear cryptanalysis [<a href="Applied%20Cryptography_split_035.html#r631" class="calibre5 pcalibre">631</a>].</p>
+
+<h3 id="16.4" class="calibre7">16.4 Stream Ciphers Using LFSRs</h3>
+
+<p class="calibre9">The basic approach to designing a keystream generator using LFSRs is simple.
+First you take one or more LFSRs, generally of different lengths and with
+different feedback polynomials. (If the lengths are all relatively prime and the
+feedback polynomials are all primitive, the whole generator is maximal
+length.) The key is the initial state of the LFSRs. Every time you want a bit,
+shift the LFSRs once (this is sometimes called <b class="calibre10">clocking</b>). The output bit is a
+function, preferably a nonlinear function, of some of the bits of the LFSRs.
+This function is called the <b class="calibre10">combining function</b>, and the whole generator is
+called a <b class="calibre10">combination generator</b>. (If the output bit is a function of a single
+LFSR, the generator is called a <b class="calibre10">filter generator</b>.) Much of the theoretical
+background for this kind of thing was laid down by Selmer and Neal Zierler
+[<a href="Applied%20Cryptography_split_036.html#r1647" class="calibre5 pcalibre">1647</a>].</p>
+
+<p class="calibre9">Complications have been added. Some generators have LFSRs clocked at
+different rates; sometimes the clocking of one generator depends on the output
+of another. These are all electronic versions of pre-WWII cipher machine
+ideas, and are called <b class="calibre10">clock-controlled generators</b> [<a href="Applied%20Cryptography_split_035.html#r641" class="calibre5 pcalibre">641</a>]. Clock control can be
+feedforward, where the output of one LFSR controls the clocking of another,
+or feedback, where the output of one LFSR controls its own clocking.</p>
+
+<p class="calibre9">Although these generators are, at least in theory, susceptible to embedding and
+probabilistic correlation attacks [<a href="Applied%20Cryptography_split_035.html#r634" class="calibre5 pcalibre">634</a>,<a href="Applied%20Cryptography_split_035.html#r632" class="calibre5 pcalibre">632</a>], many are secure for now.
+Additional theory on clock-controlled shift registers is in [<a href="Applied%20Cryptography_split_035.html#r89" class="calibre5 pcalibre">89</a>].</p>
+
+<p class="calibre9">Ian Cassells, once the head of pure mathematics at Cambridge and a former
+Bletchly Park cryptanalyst, said that “cryptography is a mixture of
+mathematics and muddle, and without the muddle the mathematics can be used
+against you.” What he meant was that in stream ciphers, you need some kind
+of mathematical structure — such as a LFSR — to guarantee maximal-length and
+other properties, and then some complicated nonlinear muddle to stop
+someone from getting at the register and solving it. This advice also holds true
+for block algorithms.</p>
+
+<p class="calibre9">What follows is a smattering of LFSR-based keystream generators that have
+appeared in the literature. I don’t know if any of them have been used in actual
+cryptographic products. Most of them are of theoretical interest only. Some
+have been broken; some may still be secure.</p>
+
+<p class="calibre9">Since LFSR-based ciphers are generally implemented in hardware, electronics
+logic symbols will be used in the figures. In the text, ⊕ is XOR, ∧ is AND, ∨ is
+OR, and ¬ is NOT.</p>
+
+<h4 class="calibre8">Geffe Generator</h4>
+
+<p class="calibre9">This keystream generator uses three LFSRs, combined in a nonlinear manner
+(see Figure 16.6) [<a href="Applied%20Cryptography_split_035.html#r606" class="calibre5 pcalibre">606</a>]. Two of the LFSRs are inputs into a multiplexer, and
+the third LFSR controls the output of the multiplexer. If <i class="calibre12">a</i><sub class="calibre15">1</sub>, <i class="calibre12">a</i><sub class="calibre15">2</sub>, and <i class="calibre12">a</i><sub class="calibre15">3</sub> are the outputs of the three LFSRs, the output of the Geffe generator can be described by:</p>
+
+<div class="figure" id="figure-16-6">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-6.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.6</b> Geffe generator.</i></p>
+</div>
+
+<p class="math"><i class="calibre12">b</i> = (<i class="calibre12">a</i><sub class="calibre15">1</sub> ∧ <i class="calibre12">a</i><sub class="calibre15">2</sub>) ⊕ ((¬<i class="calibre12">a</i><sub class="calibre15">1</sub>) ∧ <i class="calibre12">a</i><sub class="calibre15">3</sub>)
+</p>
+
+<p class="calibre9">If the LFSRs have lengths <i class="calibre12">n</i><sub class="calibre15">1</sub>, <i class="calibre12">n</i><sub class="calibre15">2</sub>, and <i class="calibre12">n</i><sub class="calibre15">3</sub>, respectively, then the linear complexity of the generator is</p>
+
+<p class="math">(<i class="calibre12">n</i><sub class="calibre15">1</sub> + 1)<i class="calibre12">n</i><sub class="calibre15">2</sub> + <i class="calibre12">n</i><sub class="calibre15">1</sub><i class="calibre12">n</i><sub class="calibre15">3</sub>
+</p>
+
+<p class="calibre9">The period of the generator is the least common multiple of the periods of the
+three generators. Assuming the degrees of the three primitive feedback
+polynomials are relatively prime, the period of this generator is the product of
+the periods of the three LFSRs.</p>
+
+<p class="calibre9">Although this generator looks good on paper, it is cryptographically weak and
+falls to a correlation attack [<a href="Applied%20Cryptography_split_036.html#r829" class="calibre5 pcalibre">829</a>,<a href="Applied%20Cryptography_split_036.html#r1638" class="calibre5 pcalibre">1638</a>]. The output of the generator equals the
+output of LFSR-2 75 percent of the time. So, if the feedback taps are known,
+you can guess the initial value for LFSR-2 and generate the output sequence of
+that register. Then you can count the number of times the output of the
+LFSR-2 agrees with the output of the generator. If you guessed wrong, the two
+sequences will agree about 50 percent of the time; if you guessed right, the two
+sequences will agree about 75 percent of the time.</p>
+
+<p class="calibre9">Similarly, the output of the generator equals the output of LFSR-3 about 75
+percent of the time. With those correlations, the keystream generator can be
+easily cracked. For example, if the primitive polynomials only have three
+terms each, and the largest LFSR is of length <i class="calibre12">n</i>, it only takes a segment of the output sequence 37 <i class="calibre12">n-</i>bits long to reconstruct the internal states of all three LFSRs [<a href="Applied%20Cryptography_split_036.html#r1639" class="calibre5 pcalibre">1639</a>].</p>
+
+<h4 class="calibre8">Generalized Geffe Generator</h4>
+
+<p class="calibre9">Instead of choosing between two LFSRs, this scheme chooses between <i class="calibre12">k</i>
+LFSRs, as long as <i class="calibre12">k</i> is a power of 2. There are <i class="calibre12">k</i> + 1 LFSRs total (see Figure 16.7). LFSR-1 must be clocked <i class="calibre12">log</i><sub class="calibre15">2</sub><i class="calibre12">k</i> times faster than the other <i class="calibre12">k</i> LFSRs.</p>
+
+<div class="figure" id="figure-16-7">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-7.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.7</b> Generalized Geffe generator.</i></p>
+</div>
+
+<p class="calibre9">Even though this scheme is more complex than the Geffe generator, the same
+kind of correlation attack is possible. I don’t recommend this generator.</p>
+
+<h4 class="calibre8">Jennings Generator</h4>
+
+<p class="calibre9">This scheme uses a multiplexer to combine two LFSRs [<a href="Applied%20Cryptography_split_035.html#r778" class="calibre5 pcalibre">778</a>,<a href="Applied%20Cryptography_split_035.html#r779" class="calibre5 pcalibre">779</a>,<a href="Applied%20Cryptography_split_035.html#r780" class="calibre5 pcalibre">780</a>]. The
+multiplexer, controlled by LFSR-1, selects 1 bit of LFSR-2 for each output bit.
+There is also a function that maps the output of LFSR-2 to the input of the
+multiplexer (see Figure 16.8).</p>
+
+<div class="figure" id="figure-16-8">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-8.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.8</b> Jennings generator.</i></p>
+</div>
+
+<p class="calibre9">The key is the initial state of the two LFSRs and the mapping function.
+Although this generator has great statistical properties, it fell to Ross
+Anderson’s meet-in-the-middle consistency attack [<a href="Applied%20Cryptography_split_035.html#r39" class="calibre5 pcalibre">39</a>] and the linear
+consistency attack [<a href="Applied%20Cryptography_split_036.html#r1638" class="calibre5 pcalibre">1638</a>,<a href="Applied%20Cryptography_split_035.html#r442" class="calibre5 pcalibre">442</a>]. Don’t use this generator.</p>
+
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Beth-Piper Stop-and-Go Generator</b></i></p>
+
+<p class="calibre9">This generator, shown in Figure 16.9, uses the output of one LFSR to control
+the clock of another LFSR [<a href="Applied%20Cryptography_split_035.html#r151" class="calibre5 pcalibre">151</a>]. The clock input of LFSR-2 is controlled by
+the output of LFSR-1, so that LFSR-2 can change its state at time <i class="calibre12">t</i> only if the
+output of LFSR-1 was 1 at time <i class="calibre12">t</i> - 1.</p>
+
+<div class="figure" id="figure-16-9">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-9.png" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.9</b> Beth-Piper stop-and-go generator.</i></p>
+</div>
+
+<p class="calibre9">No one has been able to prove results about this generator’s linear complexity
+in the general case. However, it falls to a correlation attack [<a href="Applied%20Cryptography_split_036.html#r1639" class="calibre5 pcalibre">1639</a>].</p>
+
+<h4 class="calibre8">Alternating Stop-and-Go Generator</h4>
+
+<p class="calibre9">This generator uses three LFSRs of different length. LFSR-2 is clocked when
+the output of LFSR-1 is 1; LFSR-3 is clocked when the output of LFSR-1 is 0.
+The output of the generator is the XOR of LFSR-2 and LFSR-3 (see Figure
+16.10) [<a href="Applied%20Cryptography_split_035.html#r673" class="calibre5 pcalibre">673</a>].</p>
+
+<div class="figure" id="figure-16-10">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-10.png" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.10</b> Alternating stop-and-go generator.</i></p>
+</div>
+
+<p class="calibre9">This generator has a long period and large linear complexity. The authors
+found a correlation attack against LFSR-1, but it does not substantially weaken
+the generator. There have been other attempts at keystream generators along
+these lines [<a href="Applied%20Cryptography_split_036.html#r1534" class="calibre5 pcalibre">1534</a>,<a href="Applied%20Cryptography_split_036.html#r1574" class="calibre5 pcalibre">1574</a>,<a href="Applied%20Cryptography_split_036.html#r1477" class="calibre5 pcalibre">1477</a>].</p>
+
+<h4 class="calibre8">Bilateral Stop-and-Go Generator</h4>
+
+<p class="calibre9">This generator uses two LFSRs, both of length <i class="calibre12">n</i> (see Figure 16.11) [<a href="Applied%20Cryptography_split_036.html#r1638" class="calibre5 pcalibre">1638</a>].
+The output of the generator is the XOR of the outputs of each LFSR. If the
+output of LFSR-2 at time <i class="calibre12">t</i> – 1 is 0 and the output at time <i class="calibre12">t</i> – 2 is 1, then LFSR-2 does not clock at time <i class="calibre12">t</i>. Conversely, if the output of LFSR-1 at time <i class="calibre12">t</i>
+– 1 is 0 and the output at <i class="calibre12">t</i> – 2 is 1, and if LFSR-1 clocked at time <i class="calibre12">t</i>, then LFSR-2 does not clock at time <i class="calibre12">t</i>.</p>
+
+<div class="figure" id="figure-16-11">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-11.png" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.11</b> Bilateral stop-and-go generator.</i></p>
+</div>
+
+<p class="calibre9">The linear complexity of this system is roughly equal to the period. According
+to [<a href="Applied%20Cryptography_split_036.html#r1638" class="calibre5 pcalibre">1638</a>], “no evident key redundancy has been observed in this system.”</p>
+
+<h4 class="calibre8">Threshold Generator</h4>
+
+<p class="calibre9">This generator tries to get around the security problems of the previous
+generators by using a variable number of LFSRs [<a href="Applied%20Cryptography_split_035.html#r277" class="calibre5 pcalibre">277</a>]. The theory is that if
+you use a lot of LFSRs, it’s harder to break the cipher.</p>
+
+<p class="calibre9">This generator is illustrated in Figure 16.12. Take the output of a large number
+of LFSRs (use an odd number of them). Make sure the lengths of all the
+LFSRs are relatively prime and all the feedback polynomials are primitive:
+maximize the period. If more than half the output bits are 1, then the output of
+the generator is 1. If more than half the output bits are 0, then the output of the
+generator is 0.</p>
+
+<div class="figure" id="figure-16-12">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-12.png" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.12</b> Threshold generator.</i></p>
+</div>
+
+<p class="calibre9">With three LFSRs, the output generator can be written as:</p>
+
+<p class="math"><i class="calibre12">b</i> = (<i class="calibre12">a</i><sub class="calibre15">1</sub> ∧ <i class="calibre12">a</i><sub class="calibre15">2</sub>) ⊕ (<i class="calibre12">a</i><sub class="calibre15">1</sub> ∧ <i class="calibre12">a</i><sub class="calibre15">3</sub>) ⊕ (<i class="calibre12">a</i><sub class="calibre15">2</sub> ∧ <i class="calibre12">a</i><sub class="calibre15">3</sub>)
+</p>
+
+<p class="calibre9">This is very similar to the Geffe generator, except that it has a larger linear
+complexity of</p>
+
+<p class="math"><i class="calibre12">n</i><sub class="calibre15">1</sub><i class="calibre12">n</i><sub class="calibre15">2</sub> + <i class="calibre12">n</i><sub class="calibre15">1</sub><i class="calibre12">n</i><sub class="calibre15">3</sub> + <i class="calibre12">n</i><sub class="calibre15">2</sub><i class="calibre12">n</i><sub class="calibre15">3</sub>
+</p>
+
+<p class="calibre9">where <i class="calibre12">n</i><sub class="calibre15">1</sub>, <i class="calibre12">n</i><sub class="calibre15">2</sub>, and <i class="calibre12">n</i><sub class="calibre15">3</sub> are the lengths of the first, second, and third LFSRs.</p>
+
+<p class="calibre9">This generator isn’t great. Each output bit of the generator yields some
+information about the state of the LFSRs — 0.189 bit to be exact — and the
+whole thing falls to a correlation attack. I don’t recommend using it.</p>
+
+<h4 class="calibre8">Self-Decimated Generators</h4>
+
+<p class="calibre9">Self-decimated generators are generators that control their own clock. Two
+have been proposed, one by Rainer Rueppel (see Figure 16.13) [<a href="Applied%20Cryptography_split_036.html#r1359" class="calibre5 pcalibre">1359</a>] and
+another by Bill Chambers and Dieter Gollmann [<a href="Applied%20Cryptography_split_035.html#r308" class="calibre5 pcalibre">308</a>] (see Figure 16.14). In
+Rueppel’s generator, when the output of the LFSR is 0, the LFSR is clocked <i class="calibre12">d</i>
+times. When the output of the LFSR is 1, the LFSR is clocked <i class="calibre12">k</i> times.
+Chambers’s and Gollmann’s generator is more complicated, but the idea is the
+same. Unfortunately, both generators are insecure [<a href="Applied%20Cryptography_split_036.html#r1639" class="calibre5 pcalibre">1639</a>], although some
+modifications have been proposed that may correct the problems [<a href="Applied%20Cryptography_split_036.html#r1362" class="calibre5 pcalibre">1362</a>].</p>
+
+<div class="figure" id="figure-16-13">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-13.png" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.13</b> Rueppel’s self-decimated generator.</i></p>
+</div>
+
+<div class="figure" id="figure-16-14">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-14.png" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.14</b> Chambers’s and Gollmann’s self-decimated generator.</i></p>
+</div>
+
+<h4 class="calibre8">Multispeed Inner-Product Generator</h4>
+
+<p class="calibre9">This generator, by Massey and Rueppel [<a href="Applied%20Cryptography_split_036.html#r1014" class="calibre5 pcalibre">1014</a>], uses two LFSRs clocked at
+two different speeds (see Figure 16.15). LFSR-2 is clocked <i class="calibre12">d</i> times as fast as
+LFSR-1. The individual bits of the two LFSRs are ANDed together and then
+XORed with each other to produce the final output bit of the generator.</p>
+
+<div class="figure" id="figure-16-15">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-15.png" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.15</b> Multispeed inner-product generator.</i></p>
+</div>
+
+<p class="calibre9">Although this generator has high linear complexity and it possesses excellent
+statistical properties, it still falls to a linear consistency attack [<a href="Applied%20Cryptography_split_036.html#r1639" class="calibre5 pcalibre">1639</a>]. If <i class="calibre12">n</i><sub class="calibre15">1</sub> is the length of LFSR-1, <i class="calibre12">n</i><sub class="calibre15">2</sub> is the length of the LFSR-2, and <i class="calibre12">d</i> is the speed multiple between the two, then the internal state of the generator can be
+recovered from an output sequence of length</p>
+
+<p class="math"><i class="calibre12">n</i><sub class="calibre15">1</sub> + <i class="calibre12">n</i><sub class="calibre15">2</sub> + <i class="calibre12">log</i><sub class="calibre15">2</sub><i class="calibre12">d</i></p>
+
+<h4 class="calibre8">Summation Generator</h4>
+
+<p class="calibre9">More work by Rainer Rueppel, this generator adds the output of two LFSRs
+(with carry) [<a href="Applied%20Cryptography_split_036.html#r1358" class="calibre5 pcalibre">1358</a>,<a href="Applied%20Cryptography_split_036.html#r1357" class="calibre5 pcalibre">1357</a>]. This operation is highly nonlinear. Through the late
+1980s, this generator was the security front-runner, but it fell to a correlation
+attack [<a href="Applied%20Cryptography_split_036.html#r1053" class="calibre5 pcalibre">1053</a>,<a href="Applied%20Cryptography_split_036.html#r1054" class="calibre5 pcalibre">1054</a>,<a href="Applied%20Cryptography_split_036.html#r1091" class="calibre5 pcalibre">1091</a>]. And it has been shown that this is an example of a
+feedback with carry shift register (see <a href="Applied%20Cryptography_split_020.html#17.4" class="calibre5 pcalibre">Section 17.4</a>), and can be broken [<a href="Applied%20Cryptography_split_036.html#r844" class="calibre5 pcalibre">844</a>].</p>
+
+<h4 class="calibre8">DNRSG</h4>
+
+<p class="calibre9">That stands for “dynamic random-sequence generator” [<a href="Applied%20Cryptography_split_036.html#r1117" class="calibre5 pcalibre">1117</a>]. The idea is to
+have two different filter generators — threshold, summation, or whatever — fed
+by a single set of LFSRs and controlled by another LFSR.</p>
+
+<p class="calibre9">First clock all the LFSRs. If the output of LFSR-0 is 1, then compute the
+output of the first filter generator. If the output of LFSR-0 is 0, then compute
+the output of the second filter generator. The final output is the first output
+XOR the second.</p>
+
+<h4 class="calibre8">Gollmann Cascade</h4>
+
+<p class="calibre9">The Gollmann cascade (see Figure 16.16), described in [<a href="Applied%20Cryptography_split_035.html#r636" class="calibre5 pcalibre">636</a>,<a href="Applied%20Cryptography_split_035.html#r309" class="calibre5 pcalibre">309</a>], is a
+strengthened version of a stop-and-go generator. It consists of a series of
+LFSRs, with the clock of each controlled by the previous LFSR. If the output
+of LFSR-1 is 1 at time <i class="calibre12">t</i> - 1, then LFSR-2 clocks. If the output of LFSR-2 is 1
+at time <i class="calibre12">t</i> - 1, then LFSR-3 clocks, and so on. The output of the final LFSR is
+the output of the generator. If all the LFSRs have the same length, <i class="calibre12">n</i>, the linear complexity of a system with <i class="calibre12">k</i> LFSRs is</p>
+
+<p class="math"><i class="calibre12">n</i>(2<sup class="calibre19">n</sup> - 1)<sup class="calibre19">k-1</sup>
+</p>
+
+<div class="figure" id="figure-16-16">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-16.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.16</b> Gollmann cascade.</i></p>
+</div>
+
+<p class="calibre9">Cascades are a cool idea: They are conceptually very simple and they can be
+used to generate sequences with huge periods, huge linear complexities, and
+good statistical properties. They are vulnerable to an attack called <b class="calibre10">lock-in</b>
+[<a href="Applied%20Cryptography_split_035.html#r640" class="calibre5 pcalibre">640</a>]. This is a technique by which a cryptanalyst reconstructs the input to the
+last shift register in the cascade, then proceeds to break the cascade register by
+register. This is a serious problem in some situations and weakens the effective
+key length of the algorithm, but precautions can be taken to minimize the
+attack.</p>
+
+<p class="calibre9">Further analysis has indicated that the sequence approaches random as <i class="calibre12">k</i> gets
+larger [<a href="Applied%20Cryptography_split_035.html#r637" class="calibre5 pcalibre">637</a>,<a href="Applied%20Cryptography_split_035.html#r638" class="calibre5 pcalibre">638</a>,<a href="Applied%20Cryptography_split_035.html#r642" class="calibre5 pcalibre">642</a>,<a href="Applied%20Cryptography_split_035.html#r639" class="calibre5 pcalibre">639</a>]. Based on recent attacks on short Gollmann cascades
+[<a href="Applied%20Cryptography_split_036.html#r1063" class="calibre5 pcalibre">1063</a>], I recommend using a <i class="calibre12">k</i> of at least 15. You’re better off using more
+LFSRs of shorter length than fewer LFSRs of longer length.</p>
+
+<h4 class="calibre8">Shrinking Generator</h4>
+
+<p class="calibre9">The shrinking generator [<a href="Applied%20Cryptography_split_035.html#r378" class="calibre5 pcalibre">378</a>] uses a different form of clock control than the
+previous generators. Take two LFSRs: LFSR-1 and LFSR-2. Clock both of
+them. If the output of LFSR-1 is 1, then the output of the generator is LFSR-2.
+If the output of LFSR-1 is 0, discard the two bits, clock both LFSRs, and try
+again.</p>
+
+<p class="calibre9">This idea is simple, reasonably efficient, and looks secure. If the feedback
+polynomials are sparse, the generator is vulnerable, but no other problems
+have been found. Even so, it’s new. One implementation problem is that the
+output rate is not regular; if LFSR-1 has a long string of zeros then the
+generator outputs nothing. The authors suggest buffering to solve this problem
+[<a href="Applied%20Cryptography_split_035.html#r378" class="calibre5 pcalibre">378</a>]. Practical implementation of the shrinking generator is discussed in
+[<a href="Applied%20Cryptography_split_036.html#r901" class="calibre5 pcalibre">901</a>].</p>
+
+<h4 class="calibre8">Self-Shrinking Generator</h4>
+
+<p class="calibre9">The self-shrinking generator [<a href="Applied%20Cryptography_split_036.html#r1050" class="calibre5 pcalibre">1050</a>] is a variant of the shrinking generator.
+Instead of using two LFSRs, use pairs of bits from a single LFSR. Clock a
+LFSR twice. If the first bit in the pair is 1, the output of the generator is the
+second bit. If the first bit is 0, discard both bits and try again. While the
+self-shrinking generator requires about half the memory space as the shrinking
+generator, it is also half the speed.</p>
+
+<p class="calibre9">While the self-shrinking generator also seems secure, it still has some
+unexplained behavior and unknown properties. This is a very new generator;
+give it some time.</p>
+
+<h3 id="16.5" class="calibre7">16.5 A5</h3>
+
+<p class="calibre9">A5 is the stream cipher used to encrypt GSM (Group Special Mobile). That’s
+the non-American standard for digital cellular mobile telephones. It is used to
+encrypt the link from the telephone to the base station. The rest of the link is
+unencrypted; the telephone company can easily eavesdrop on your
+conversations.</p>
+
+<p class="calibre9">A lot of strange politics surrounds this one. Originally it was thought that
+GSM’s cryptography would prohibit export of the phones to some countries.
+Now some officials are discussing whether A5 might harm export sales,
+implying that it is so weak as to be an embarrassment. Rumor has it that the
+various NATO intelligence agencies had a catfight in the mid-1980s over
+whether GSM encryption should be strong or weak. The Germans wanted
+strong cryptography, as they were sitting near the Soviet Union. The other
+countries overruled them, and A5 is a French design.</p>
+
+<p class="calibre9">We know most of the details. A British telephone company gave all the
+documentation to Bradford University without remembering to get them to
+sign a nondisclosure agreement. It leaked here and there, and was eventually
+posted to the Internet. A paper describing A5 is [<a href="Applied%20Cryptography_split_036.html#r1622" class="calibre5 pcalibre">1622</a>]; there is also code at
+the back of this book.</p>
+
+<p class="calibre9">A5 consists of three LFSRs; the register lengths are 19, 22, and 23; all the
+feedback polynomials are sparse. The output is the XOR of the three LFSRs.
+A5 uses variable clock control. Each register is clocked based on its own
+middle bit, XORed with the inverse threshold function of the middle bits of all
+three registers. Usually, two of the LFSRs clock in each round.</p>
+
+<p class="calibre9">There is a trivial attack requiring 240 encryptions: Guess the contents of the
+first two LFSRs, then try to determine the third LFSR from the keystream.
+(Whether this attack is actually feasible is under debate, but a hardware key
+search machine currently under design should resolve the matter soon [<a href="Applied%20Cryptography_split_035.html#r45" class="calibre5 pcalibre">45</a>].)</p>
+
+<p class="calibre9">Nonetheless, it is becoming clear that the basic ideas behind A5 are good. It is
+very efficient. It passes all known statistical tests; its only known weakness is
+that its registers are short enough to make exhaustive search feasible. Variants
+of A5 with longer shift registers and denser feedback polynomials should be
+secure.</p>
+
+<h3 id="16.6" class="calibre7">16.6 Hughes XPD/KPD</h3>
+
+<p class="calibre9">This algorithm is brought to you by Hughes Aircraft Corp. They put it in army
+tactical radios and direction-finding equipment for sale to foreign militaries. It
+was designed in 1986 and called XPD, for Exportable Protection Device. Later
+it was renamed KPD — Kinetic Protection Device — and declassified
+[<a href="Applied%20Cryptography_split_036.html#r1037" class="calibre5 pcalibre">1037</a>,<a href="Applied%20Cryptography_split_036.html#r1036" class="calibre5 pcalibre">1036</a>].</p>
+
+<p class="calibre9">The algorithm uses a 61-bit LFSR. There are 2<sup class="calibre19">10</sup> different primitive feedback
+polynomials, which were approved by the NSA. The key selects one of these
+polynomials (they are all stored in ROM somewhere), as well as the initial
+state of the LFSR.</p>
+
+<p class="calibre9">It has eight different nonlinear filters, each of which has six taps from the
+LFSR and which produces 1 bit. The bits combine to generate a byte, which is
+used to encrypt or decrypt the datastream.</p>
+
+<p class="calibre9">This algorithm looks pretty impressive, but I doubt it is. The NSA allows
+export, so there must be some attack on the order of 2<sup class="calibre19">40</sup> or less. What is it?</p>
+
+<h3 id="16.7" class="calibre7">16.7 Nanoteq</h3>
+
+<p class="calibre9">Nanoteq is a South African electronics company. This is their algorithm that
+has been fielded by the South African police to encrypt their fax transmissions,
+and presumably for other uses as well.</p>
+
+<p class="calibre9">The algorithm is described, more or less, in [<a href="Applied%20Cryptography_split_036.html#r902" class="calibre5 pcalibre">902</a>,<a href="Applied%20Cryptography_split_036.html#r903" class="calibre5 pcalibre">903</a>]. It uses a 127-bit LFSR
+with a fixed feedback polynomial; the key is the initial state of the feedback
+register. The 127 bits of the register are reduced to a single keystream bit using
+25 primitive cells. Each cell has five inputs and one output:</p>
+
+<p class="math">f(<i class="calibre12">x</i><sub class="calibre15">1</sub>, <i class="calibre12">x</i><sub class="calibre15">2</sub>, <i class="calibre12">x</i><sub class="calibre15">3</sub>, <i class="calibre12">x</i><sub class="calibre15">4</sub>, <i class="calibre12">x</i><sub class="calibre15">5</sub>) = <i class="calibre12">x</i><sub class="calibre15">1</sub> + <i class="calibre12">x</i><sub class="calibre15">2</sub> + (<i class="calibre12">x</i><sub class="calibre15">1</sub> + <i class="calibre12">x</i><sub class="calibre15">3</sub>) (<i class="calibre12">x</i><sub class="calibre15">2</sub> + <i class="calibre12">x</i><sub class="calibre15">4</sub> + <i class="calibre12">x</i><sub class="calibre15">5</sub>) + (<i class="calibre12">x</i><sub class="calibre15">1</sub> + <i class="calibre12">x</i><sub class="calibre15">4</sub>) (<i class="calibre12">x</i><sub class="calibre15">2</sub> + <i class="calibre12">x</i><sub class="calibre15">3</sub>) + <i class="calibre12">x</i><sub class="calibre15">5</sub>
+</p>
+
+<p class="calibre9">Each input of the function is XORed with some bit of the key. There is also a
+secret permutation that depends on the particular implementation, and is not
+detailed in the papers. This algorithm is only available in hardware.</p>
+
+<p class="calibre9">Is this algorithm secure? I doubt it. During the transition to majority rule,
+embarrassing faxes from one police station to another would sometimes turn
+up in the liberal newspapers. These could easily have been the results of U.S.,
+U.K., or Soviet intelligence efforts. Ross Anderson took some initial steps
+towards cryptanalyzing this algorithm in [<a href="Applied%20Cryptography_split_035.html#r46" class="calibre5 pcalibre">46</a>]; I expect more results to come
+soon.</p>
+
+<h3 id="16.8" class="calibre7">16.8 Rambutan</h3>
+
+<p class="calibre9">Rambutan is a British algorithm, designed by the Communications Electronics
+Security Group (one of the aliases used by GCHQ). It is only sold as a
+hardware module and is approved for the protection of classified material up to
+“Confidential.” The algorithm itself is secret, and the chip is not generally
+commercially available.</p>
+
+<p class="calibre9">Rambutan has a 112-bit key (plus parity bits) and can operate in three modes:
+ECB, CBC, and 8-bit CFB. This strongly indicates that it is a block algorithm,
+but rumors point elsewhere. Supposedly, it is a LFSR stream cipher. It has five
+shift registers, each one of a different length around 80 bits. The feedback
+polynomials are fairly sparse, with only about 10 taps each. Each shift register
+provides four inputs to a very large and complex nonlinear function which
+eventually spits out a single bit.</p>
+
+<p class="calibre9">Why call it Rambutan? Perhaps, like the fruit, it’s spiny and forbidding on the
+outside but soft and yielding inside. On the other hand, maybe that’s not the
+reason.</p>
+
+<h3 id="16.9" class="calibre7">16.9 Additive Generators</h3>
+
+<p class="calibre9"><b class="calibre10">Additive generators</b> (sometimes called lagged Fibonacci generators) are
+extremely efficient because they produce random words instead of random bits
+[<a href="Applied%20Cryptography_split_036.html#r863" class="calibre5 pcalibre">863</a>]. They are not secure on their own, but can be used as building blocks for
+secure generators.</p>
+
+<p class="calibre9">The initial state of the generator is an array of <i class="calibre12">n-</i> bit words: 8-bit words, 16-bit words, 32-bit words, whatever: <i class="calibre12">X</i><sub class="calibre15">1</sub>, <i class="calibre12">X</i><sub class="calibre15">2</sub>, <i class="calibre12">X</i><sub class="calibre15">3</sub>, ..., <i class="calibre12">X</i><sub class="calibre15">m</sub>. This initial state is the key.
+The <i class="calibre12">i</i>th word of the generator is</p>
+
+<p class="math"><i class="calibre12">X</i><sub class="calibre15">i</sub> = (<i class="calibre12">X</i><sub class="calibre15">i-a</sub> + <i class="calibre12">X</i><sub class="calibre15">i-b</sub> + <i class="calibre12">X</i><sub class="calibre15">i-c</sub> + ... + <i class="calibre12">X</i><sub class="calibre15">i-m</sub>) mod 2n
+</p>
+
+<p class="calibre9">If the coefficients <i class="calibre12">a, b, c, ..., m</i> are chosen right, the period of this generator is at least 2<sup class="calibre19">n</sup> - 1. One of the requirements on the coefficients is that the least significant bit forms a maximal-length LFSR.</p>
+
+<p class="calibre9">For example, (55,24,0) is a primitive polynomial mod 2 from Table 16.2. This
+means that the following additive generator is maximal length.</p>
+
+<p class="math"><i class="calibre12">X</i><sub class="calibre15">i</sub> = (<i class="calibre12">X</i><sub class="calibre15">i-55</sub> + <i class="calibre12">X</i><sub class="calibre15">i-24</sub>) mod 2<sup class="calibre19">n</sup>
+</p>
+
+<p class="calibre9">This works because the primitive polynomial has three coefficients. If it has
+more than three, you need some additional requirements to make it maximal
+length. See [<a href="Applied%20Cryptography_split_035.html#r249" class="calibre5 pcalibre">249</a>] for details.</p>
+
+<h4 class="calibre8">Fish</h4>
+
+<p class="calibre9">Fish is an additive generator based on techniques used in the shrinking
+generator [<a href="Applied%20Cryptography_split_035.html#r190" class="calibre5 pcalibre">190</a>]. It produces a stream of 32-bit words which can be XORed
+with a plaintext stream to produce ciphertext, or XORed with a ciphertext
+stream to produce plaintext. The algorithm is named as it is because it is a
+Fibonacci shrinking generator.</p>
+
+<p class="calibre9">First, use these two additive generators. The key is the initial values of these
+generators.</p>
+
+<p class="math-left"><i class="calibre12">A</i><sub class="calibre15">i</sub> = (<i class="calibre12">A</i><sub class="calibre15">i-55</sub> + <i class="calibre12">A</i><sub class="calibre15">i-24</sub>) mod 2<sup class="calibre19">32</sup>
+<i class="calibre12">B</i><sub class="calibre15">i</sub> = (<i class="calibre12">B</i><sub class="calibre15">i-52</sub> + <i class="calibre12">B</i><sub class="calibre15">i-19</sub>) mod 2<sup class="calibre19">32</sup>
+</p>
+
+<p class="calibre9">These sequences are shrunk, as a pair, depending on the least significant bit of
+<i class="calibre12">B</i><sub class="calibre15">i</sub>: if it is 1, use the pair; if it is 0, ignore the pair. <i class="calibre12">C</i><sub class="calibre15">j</sub> is the sequence of used words from <i class="calibre12">A</i><sub class="calibre15">i</sub>, and <i class="calibre12">D</i><sub class="calibre15">j</sub> is the sequence of used words from <i class="calibre12">B</i><sub class="calibre15">i</sub>. These words are used in pairs — <i class="calibre12">C</i><sub class="calibre15">2j</sub>, <i class="calibre12">C</i><sub class="calibre15">2j+1</sub>, <i class="calibre12">D</i><sub class="calibre15">2j</sub>, and <i class="calibre12">D</i><sub class="calibre15">2j+1</sub> — to generate two 32-bit output words: <i class="calibre12">K</i><sub class="calibre15">2j</sub> and <i class="calibre12">K</i><sub class="calibre15">2j+1</sub>.</p>
+
+<p class="math-left"><i class="calibre12">E</i><sub class="calibre15">2j</sub> = <i class="calibre12">C</i><sub class="calibre15">2j</sub> ⊕ (<i class="calibre12">D</i><sub class="calibre15">2j</sub> ∧ <i class="calibre12">D</i><sub class="calibre15">2j+1</sub>)
+<i class="calibre12">F</i><sub class="calibre15">2j</sub> = <i class="calibre12">D</i><sub class="calibre15">2j+1</sub> ∧ (<i class="calibre12">E</i><sub class="calibre15">2j</sub> ∧ <i class="calibre12">C</i><sub class="calibre15">2j+1</sub>)
+<i class="calibre12">K</i><sub class="calibre15">2j</sub> = <i class="calibre12">E</i><sub class="calibre15">2j</sub> ⊕ <i class="calibre12">F</i><sub class="calibre15">2j</sub>
+<i class="calibre12">K</i><sub class="calibre15">2i+1</sub> = <i class="calibre12">C</i><sub class="calibre15">2i+1</sub> ⊕ <i class="calibre12">F</i><sub class="calibre15">2j</sub>
+</p>
+
+<p class="calibre9">This algorithm is fast. On a 33 megahertz 486, a C implementation of Fish
+encrypts data at 15 megabits per second. Unfortunately, it is also insecure; an
+attack has a work factor of about 2<sup class="calibre19">40</sup> [<a href="Applied%20Cryptography_split_035.html#r45" class="calibre5 pcalibre">45</a>].</p>
+
+<h4 class="calibre8">Pike</h4>
+
+<p class="calibre9">Pike is a leaner, meaner version of Fish, brought to you by Ross Anderson, the
+man who broke Fish [<a href="Applied%20Cryptography_split_035.html#r45" class="calibre5 pcalibre">45</a>]. It uses three additive generators. For example:</p>
+
+<p class="math-left"><i class="calibre12">A</i><sub class="calibre15">i</sub> = (<i class="calibre12">A</i><sub class="calibre15">i-55</sub> + <i class="calibre12">A</i><sub class="calibre15">i-24</sub>) mod 2<sup class="calibre19">32</sup>
+<i class="calibre12">B</i><sub class="calibre15">i</sub> = (<i class="calibre12">B</i><sub class="calibre15">i-57</sub> + <i class="calibre12">B</i><sub class="calibre15">i-7</sub>) mod 2<sup class="calibre19">32</sup>
+<i class="calibre12">C</i><sub class="calibre15">i</sub> = (<i class="calibre12">C</i><sub class="calibre15">i-58</sub> + <i class="calibre12">C</i><sub class="calibre15">i-19</sub>) mod 2<sup class="calibre19">32</sup>
+</p>
+
+<p class="calibre9">To generate the keystream word, look at the addition carry bits. If all three
+agree (all are 0 or all are 1), then clock all three generators. If they do not, just
+clock the two generators that agree. Save the carry bits for next time. The final
+output is the XOR of the three generators.</p>
+
+<p class="calibre9">Pike is faster than Fish, since on the average 2.75 steps will be required per
+output rather than 3. It is far too new to trust, but looks good so far.</p>
+
+<h4 class="calibre8">Mush</h4>
+
+<p class="calibre9">Mush is a mutual shrinking generator. It’s easy to explain [<a href="Applied%20Cryptography_split_036.html#r1590" class="calibre5 pcalibre">1590</a>]. Take two
+additive generators: <i class="calibre12">A</i> and <i class="calibre12">B</i>. If the carry bit of <i class="calibre12">A</i> is set, clock <i class="calibre12">B</i>. If the carry bit of <i class="calibre12">B</i> is set, clock <i class="calibre12">A</i>. Clock <i class="calibre12">A</i>, and set the carry bit if there is a carry. Clock <i class="calibre12">B</i>, and set the carry bit if there is a carry. The final output is the XOR of the
+output of <i class="calibre12">A</i> and <i class="calibre12">B</i>.</p>
+
+<p class="calibre9">The easiest generators to use are the ones from Fish:</p>
+
+<p class="math-left"><i class="calibre12">A</i><sub class="calibre15">i</sub> = (<i class="calibre12">A</i><sub class="calibre15">i-55</sub> + <i class="calibre12">A</i><sub class="calibre15">i-24</sub>) mod 2<sup class="calibre19">32</sup>
+<i class="calibre12">B</i><sub class="calibre15">i</sub> = (<i class="calibre12">B</i><sub class="calibre15">i-52</sub> + <i class="calibre12">B</i><sub class="calibre15">i-19</sub>) mod 2<sup class="calibre19">32</sup>
+</p>
+
+<p class="calibre9">On the average, three generator iterations are required to produce one output
+word. And if the coefficients of the additive generators are chosen correctly
+and are relatively prime, the output sequence will be maximal length. I know
+of no successful attacks, but remember that this algorithm is very new.</p>
+
+<h3 id="16.10" class="calibre7">16.10 Gifford</h3>
+
+<p class="calibre9">David Gifford invented a stream cipher and used it to encrypt news wire reports in the Boston area from 1984 until 1988 [<a href="Applied%20Cryptography_split_035.html#r608" class="calibre5 pcalibre">608</a>,<a href="Applied%20Cryptography_split_035.html#r607" class="calibre5 pcalibre">607</a>,<a href="Applied%20Cryptography_split_035.html#r609" class="calibre5 pcalibre">609</a>]. The algorithm has a single 8-byte register: <i class="calibre12">b</i><sub class="calibre15">0</sub>, <i class="calibre12">b</i><sub class="calibre15">1</sub>, ..., <i class="calibre12">b</i><sub class="calibre15">7</sub>. The key is the initial state of the register. The algorithm works in OFB; the plaintext does not affect the algorithm at all. (See Figure 16.17).</p>
+
+<div class="figure" id="figure-16-17">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-16-17.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 16.17</b> Gifford.</i></p>
+</div>
+
+<p class="calibre9">To generate a key byte <i class="calibre12">k</i><sub class="calibre15">i</sub>, concatenate <i class="calibre12">b</i><sub class="calibre15">0</sub> and <i class="calibre12">b</i><sub class="calibre15">2</sub> and concatenate <i class="calibre12">b</i><sub class="calibre15">4</sub> and <i class="calibre12">b</i><sub class="calibre15">7</sub>. Multiply the two together to get a 32-bit number. The third byte from the left is <i class="calibre12">k</i><sub class="calibre15">i</sub>.</p>
+
+<p class="calibre9">To update the register, take <i class="calibre12">b</i><sub class="calibre15">1</sub> and sticky right shift it 1 bit. This means the left-most bit is both shifted and also remains in place. Take <i class="calibre12">b</i><sub class="calibre15">7</sub> and shift it 1 bit to the left; there should be a 0 in the right-most bit position. Take the XOR of the modified <i class="calibre12">b</i><sub class="calibre15">1</sub>, the modified <i class="calibre12">b</i><sub class="calibre15">7</sub>, and <i class="calibre12">b</i><sub class="calibre15">0</sub>.
+Shift the original register 1 byte to the right and put this byte in the left-most position.</p>
+
+<p class="calibre9">This algorithm remained secure throughout its life, but was broken in 1994 [<a href="Applied%20Cryptography_split_035.html#r287" class="calibre5 pcalibre">287</a>]. It turns out that the feedback polynomial isn’t primitive and can be attacked that way — oops.</p>
+
+<h3 id="16.11" class="calibre7">16.11 Algorithm M</h3>
+
+<p class="calibre9">The name is from Knuth [<a href="Applied%20Cryptography_split_036.html#r863" class="calibre5 pcalibre">863</a>]. It’s a method for combining multiple pseudo-random
+streams that increases their security. One generator’s output is used to select a delayed output from the other generator [<a href="Applied%20Cryptography_split_036.html#r996" class="calibre5 pcalibre">996</a>,<a href="Applied%20Cryptography_split_036.html#r1003" class="calibre5 pcalibre">1003</a>]. In C:</p>
+
+<pre class="calibre20">#define ARR_SIZE (8192) /* for example — the larger the better */
+
+static unsigned char delay[ ARR_SIZE ] ;
+
+unsigned char prngA( void ) ;
+long prngB( void ) ;
+
+void init_algM( void )
+{
+    long i ;
+
+    for ( i = 0 ; i &lt; ARR_SIZE ; i++ )
+        delay = prngA() ;
+} /* init_algM */
+
+unsigned char algM( void )
+{
+    long j,v ;
+
+    j = prngB() % ARR_SIZE ;    /* get the delay[] index */
+    v = delay[j] ;         /* get the value to return */
+    delay[j] = prngA() ;        /* replace it */
+
+    return ( v ) ;
+} /* algM */
+</pre>
+
+<p class="calibre9">This has strength in that if prngA were truly random, one could not learn anything about prngB (and could therefore not cryptanalyze it). If prngA were of the form that it could be cryptanalyzed only if its output were available in order (i.e., only if prngB were
+cryptanalyzed first) and otherwise it was effectively truly random, then the combination would be secure.</p>
+
+<h3 id="16.12" class="calibre7">16.12 PKZIP</h3>
+
+<p class="calibre9">Roger Schlafly designed the encryption algorithm built into the PKZIP data compression program. It’s a stream cipher that encrypts data one byte at a time. At least, this is the algorithm in version 2.04g. I can’t speak for later versions, but unless there is some announcement you can probably assume that they are identical.</p>
+
+<p class="calibre9">The algorithm uses three 32-bit variables, initialized as follows:</p>
+
+<p class="math-left"><i class="calibre12">K</i><sub class="calibre15">0</sub> = 305419896
+<i class="calibre12">K</i><sub class="calibre15">1</sub> = 591751049
+<i class="calibre12">K</i><sub class="calibre15">2</sub> = 878082192
+</p>
+
+<p class="calibre9">It has an 8-bit key, <i class="calibre12">K</i><sub class="calibre15">3</sub>, derived from <i class="calibre12">K</i><sub class="calibre15">2</sub>. Here is the algorithm (all symbols are standard C
+notation):</p>
+
+<p class="math-left"><i class="calibre12">C</i><sub class="calibre15">i</sub> = <i class="calibre12">P</i><sub class="calibre15">i</sub> ^ <i class="calibre12">K</i><sub class="calibre15">3</sub>
+<i class="calibre12">K</i><sub class="calibre15">0</sub> = crc32(<i class="calibre12">K</i><sub class="calibre15">0</sub>, <i class="calibre12">P</i><sub class="calibre15">i</sub>)
+<i class="calibre12">K</i><sub class="calibre15">1</sub> = <i class="calibre12">K</i><sub class="calibre15">1</sub> + (<i class="calibre12">K</i><sub class="calibre15">0</sub> &amp; 0x000000ff)
+<i class="calibre12">K</i><sub class="calibre15">1</sub> = <i class="calibre12">K</i><sub class="calibre15">1</sub> * 134775813 + 1
+<i class="calibre12">K</i><sub class="calibre15">2</sub> = crc32(<i class="calibre12">K</i><sub class="calibre15">2</sub>, <i class="calibre12">K</i><sub class="calibre15">1</sub> &gt;&gt; 24)
+<i class="calibre12">K</i><sub class="calibre15">3</sub> = ((<i class="calibre12">K</i><sub class="calibre15">2</sub>|2) * ((<i class="calibre12">K</i><sub class="calibre15">2</sub>|2) ^ 1)) &gt;&gt; 8
+</p>
+
+<p class="calibre9">The function crc32 takes the previous value and a byte, XORs them, and calculates the next value by the CRC polynomial denoted by <code class="calibre18">0xedb88320</code>. In practice, a 256-entry table can be precomputed and the crc32 calculation becomes:</p>
+
+<p class="math">crc32(<i class="calibre12">a, b</i>) = (<i class="calibre12">a</i> &gt;&gt; 8) ^ table[(<i class="calibre12">a</i> &amp; 0×ff) ⊕ <i class="calibre12">b</i>]
+</p>
+
+<p class="calibre9">The table is precomputed by the original definition of crc32:</p>
+
+<p class="math">table[<i class="calibre12">i</i>] = crc32(<i class="calibre12">i</i>, 0)
+</p>
+
+<p class="calibre9">To encrypt a plaintext stream, first loop the key bytes through the encryption algorithm to update the keys. Ignore the ciphertext output in this step. Then encrypt the plaintext, one byte at a time. Twelve random bytes are prepended to the plaintext, but that’s not really important. Decryption is similar to encryption, except that <i class="calibre12">C</i><sub class="calibre15">i</sub> is used in the second step of the algorithm instead of <i class="calibre12">P</i><sub class="calibre15">i</sub>.</p>
+
+<h4 class="calibre8">Security of PKZIP</h4>
+
+<p class="calibre9">Unfortunately, it’s not that great. An attack requires 40 to 200 bytes of known plaintext and has a time complexity of about 2<sup class="calibre19">27</sup> [<a href="Applied%20Cryptography_split_035.html#r166" class="calibre5 pcalibre">166</a>]. You can do it in a few hours on your personal computer. If the compressed file has any standard headers, getting the known plaintext is no problem. Don’t use the built-in encryption in PKZIP.</p>
+
+<div class="calibre6" id="calibre_pb_38"></div>
+</div>
+
+
+
+
+
+
+</body></html>

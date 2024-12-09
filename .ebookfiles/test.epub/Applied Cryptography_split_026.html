@@ -1,0 +1,1816 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Applied Cryptography, Second Edition: Protocols, Algorithms, and Source Code in C</title>
+    <meta content="Bruce Schneier" name="author"/>
+    <meta content="An introduction to cryptography." name="description"/>
+    <meta content="programming,cryptography" name="keywords"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body class="calibre">
+<div id="book" class="calibre1">
+<h1 class="chapter" id="23">Chapter 23 <br class="calibre3"/>
+Special Algorithms for Protocols</h1>
+
+<h3 id="23.1" class="calibre7">23.1 Multiple-Key Public-Key Cryptography</h3>
+
+<p class="calibre9">This is a generalization of RSA (see <a href="Applied%20Cryptography_split_022.html#19.3" class="calibre5 pcalibre">Section 19.3</a>) [<a href="Applied%20Cryptography_split_035.html#r217" class="calibre5 pcalibre">217</a>,<a href="Applied%20Cryptography_split_035.html#r212" class="calibre5 pcalibre">212</a>]. The modulus, <i class="calibre12">n, </i>
+is the product of two primes, <i class="calibre12">p</i> and <i class="calibre12">q. </i> However, instead of choosing <i class="calibre12">e</i> and <i class="calibre12">d</i> such that <i class="calibre12">ed</i> ≡ 1 mod ((<i class="calibre12">p</i> - 1)(<i class="calibre12">q</i> - 1)), choose <i class="calibre12">t</i> keys, <i class="calibre12">K</i><sub class="calibre15">i</sub>, such that</p>
+
+<p class="math"><i class="calibre12">K</i><sub class="calibre15">1</sub> * <i class="calibre12">K</i><sub class="calibre15">2</sub> * ... * <i class="calibre12">K</i><sub class="calibre15"><i class="calibre22">t</i></sub> ≡ 1 mod ((<i class="calibre12">p</i> - 1)(<i class="calibre12">q</i> - 1))
+</p>
+
+<p class="calibre9">Since</p>
+
+<p class="math"><i class="calibre12">M</i><sup class="calibre19"><i class="calibre22">K</i><sub class="calibre16">1</sub>*<i class="calibre22">K</i><sub class="calibre16">2</sub> * ... * <i class="calibre22">K</i><sub class="calibre16"><i class="calibre22">t</i></sub></sup> = <i class="calibre12">M</i>
+</p>
+
+<p class="calibre9">this is a multiple-key scheme as described in <a href="Applied%20Cryptography_split_004.html#3.5" class="calibre5 pcalibre">Section 3.5</a>.</p>
+
+<p class="calibre9">If, for example, there are five keys, a message encrypted with <i class="calibre12">K</i><sub class="calibre15">3</sub> and <i class="calibre12">K</i><sub class="calibre15">5</sub> can be decrypted with <i class="calibre12">K</i><sub class="calibre15">1</sub>, <i class="calibre12">K</i><sub class="calibre15">2</sub> and <i class="calibre12">K</i><sub class="calibre15">4</sub>:</p>
+
+<p class="math"><i class="calibre12">C</i> = <i class="calibre12">M</i><sup class="calibre19"><i class="calibre22">K</i><sub class="calibre16">3</sub> * <i class="calibre22">K</i><sub class="calibre16">5</sub></sup> mod <i class="calibre12">n</i>
+<i class="calibre12">M</i> = <i class="calibre12">C</i><sup class="calibre19"><i class="calibre22">K</i><sub class="calibre16">1</sub> * <i class="calibre22">K</i><sub class="calibre16">2</sub> * <i class="calibre22">K</i><sub class="calibre16">4</sub></sup> mod <i class="calibre12">n</i>
+</p>
+
+<p class="calibre9">One use for this is multisignatures. Imagine a situation where both Alice and
+Bob have to sign a document for it to be valid. Use three keys: <i class="calibre12">K</i><sub class="calibre15">1</sub>, <i class="calibre12">K</i><sub class="calibre15">2</sub> and <i class="calibre12">K</i><sub class="calibre15">3</sub>.
+The first two are issued one each to Alice and Bob, and the third is made
+public.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">First Alice signs <i class="calibre12">M</i> and sends it to Bob.
+<p class="math"><i class="calibre12">M' </i> = <i class="calibre12">M</i><sup class="calibre19"><i class="calibre22">K</i><sub class="calibre16">1</sub></sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Bob can recover <i class="calibre12">M</i> from <i class="calibre12">M'. </i>
+<p class="math"><i class="calibre12">M</i> = <i class="calibre12">M'</i><sup class="calibre19"><i class="calibre22">K</i><sub class="calibre16">2</sub> * <i class="calibre22">K</i><sub class="calibre16">3</sub></sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">He can also add his signature.
+<p class="math"><i class="calibre12">M"</i> = <i class="calibre12">M'</i><sup class="calibre19"><i class="calibre22">K</i><sub class="calibre16">2</sub></sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Anyone can verify the signature with <i class="calibre12">K</i><sub class="calibre15">3</sub>, the public key.
+<p class="math"><i class="calibre12">M</i> = <i class="calibre12">M"</i><sup class="calibre19"><i class="calibre22">K</i><sub class="calibre16">3</sub></sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">Note that a trusted party is needed to set this system up and distribute the keys
+to Alice and Bob. Another scheme with the same problem is [<a href="Applied%20Cryptography_split_035.html#r484" class="calibre5 pcalibre">484</a>]. Yet a third
+scheme is [<a href="Applied%20Cryptography_split_035.html#r695" class="calibre5 pcalibre">695</a>,<a href="Applied%20Cryptography_split_036.html#r830" class="calibre5 pcalibre">830</a>,<a href="Applied%20Cryptography_split_035.html#r700" class="calibre5 pcalibre">700</a>], but the effort in verification is proportional to the
+number of signers. Newer schemes [<a href="Applied%20Cryptography_split_035.html#r220" class="calibre5 pcalibre">220</a>,<a href="Applied%20Cryptography_split_036.html#r1200" class="calibre5 pcalibre">1200</a>] based on zero-knowledge
+identification schemes solve both shortcomings of the previous systems.</p>
+
+<h3 id="23.2" class="calibre7">23.2 Secret-Sharing Algorithms</h3>
+
+<p class="calibre9">Back in <a href="Applied%20Cryptography_split_004.html#3.7" class="calibre5 pcalibre">Section 3.7</a> I discussed the idea behind secret-sharing schemes. The
+four different algorithms that follow are all particular cases of a general
+theoretical framework [<a href="Applied%20Cryptography_split_036.html#r883" class="calibre5 pcalibre">883</a>].</p>
+
+<h4 class="calibre8">LaGrange Interpolating Polynomial Scheme</h4>
+
+<p class="calibre9">Adi Shamir uses polynomial equations in a finite field to construct a threshold
+scheme [<a href="Applied%20Cryptography_split_036.html#r1414" class="calibre5 pcalibre">1414</a>]. Choose a prime, <i class="calibre12">p, </i> which is both larger than the number of
+possible shadows and larger than the largest possible secret. To share a secret,
+generate an arbitrary polynomial of degree <i class="calibre12">m</i> - 1. For example, if you want to
+create a (3,<i class="calibre12">n</i>)-threshold scheme (three shadows are necessary to reconstruct
+<i class="calibre12">M</i>), generate a quadratic polynomial</p>
+
+<p class="math">(<i class="calibre12">ax<sup class="calibre19">2</sup></i> + <i class="calibre12">bx</i> + <i class="calibre12">M</i>) mod <i class="calibre12">p</i>
+</p>
+
+<p class="calibre9">where <i class="calibre12">p</i> is a random prime larger than any of the coefficients. The coefficients <i class="calibre12">a</i> and <i class="calibre12">b</i> are chosen randomly; they are kept secret and discarded after the shadows are handed out. <i class="calibre12">M</i> is the message. The prime must be made public.</p>
+
+<p class="calibre9">The shadows are obtained by evaluating the polynomial at <i class="calibre12">n</i> different points:</p>
+
+<p class="math"><i class="calibre12">k</i><sub class="calibre15"><i class="calibre22">i</i></sub> = <i class="calibre12">F</i>(<i class="calibre12">x</i><sub class="calibre15"><i class="calibre22">i</i></sub>)
+</p>
+
+<p class="calibre9">In other words, the first shadow could be the polynomial evaluated at <i class="calibre12">x</i> = 1, the second shadow could be the polynomial evaluated at <i class="calibre12">x</i> = 2, and so forth.</p>
+
+<p class="calibre9">Since the quadratic polynomial has three unknown coefficients, <i class="calibre12">a, b, </i> and <i class="calibre12">M,</i> any three shadows can be used to create three equations. Two shadows cannot.
+One shadow cannot. Four or five shadows are redundant.</p>
+
+<p class="calibre9">For example, let <i class="calibre12">M</i> be 11. To construct a (3, 5)-threshold scheme, where any
+three of five people can reconstruct <i class="calibre12">M, </i> first generate a quadratic equation (7
+and 8 were chosen randomly):</p>
+
+<p class="math"><i class="calibre12">F</i>(<i class="calibre12">x</i>) = (7 <i class="calibre12">x</i><sup class="calibre19">2</sup> + 8 <i class="calibre12">x</i> + 11) mod 13
+</p>
+
+<p class="calibre9">The five shadows are:</p>
+
+<p class="math-left"><i class="calibre12">k</i><sub class="calibre15">1</sub> = <i class="calibre12">F</i>(1) = 7 + 8 + 11 ≡ 0 (mod 13)
+<i class="calibre12">k</i><sub class="calibre15">2</sub> = <i class="calibre12">F</i>(2) = 28 + 16 + 11 ≡ 3 (mod 13)
+<i class="calibre12">k</i><sub class="calibre15">3</sub> = <i class="calibre12">F</i>(3) = 63 + 24 + 11 ≡ 7 (mod 13)
+<i class="calibre12">k</i><sub class="calibre15">4</sub> = <i class="calibre12">F</i>(4) = 112 + 32 + 11 ≡ 12 (mod 13)
+<i class="calibre12">k</i><sub class="calibre15">5</sub> = <i class="calibre12">F</i>(5) = 175 + 40 + 11 ≡ 5 (mod 13)
+</p>
+
+<p class="calibre9">To reconstruct <i class="calibre12">M</i> from three of the shadows, for example <i class="calibre12">k</i><sub class="calibre15">2</sub>, <i class="calibre12">k</i><sub class="calibre15">3</sub> and <i class="calibre12">k</i><sub class="calibre15">5</sub>, solve the set of linear equations:</p>
+
+<p class="math-left"><i class="calibre12">a</i> * 2<sup class="calibre19">2</sup> + <i class="calibre12">b</i> * 2 + <i class="calibre12">M</i> ≡ 3 (mod 13)
+<i class="calibre12">a</i> * 3<sup class="calibre19">2</sup> + <i class="calibre12">b</i> * 3 + <i class="calibre12">M</i> ≡ 7 (mod 13)
+<i class="calibre12">a</i> * 5<sup class="calibre19">2</sup> + <i class="calibre12">b</i> * 5 + <i class="calibre12">M</i> ≡ 5 (mod 13)
+</p>
+
+<p class="calibre9">The solution will be <i class="calibre12">a</i> = 7, <i class="calibre12">b</i> = 8, and <i class="calibre12">M</i> = 11. So <i class="calibre12">M</i> is recovered.</p>
+
+<p class="calibre9">This sharing scheme can be easily implemented for larger numbers. If you
+want to divide the message into 30 equal parts such that any six can get
+together and reproduce the message, give each of the 30 people the evaluation
+of a polynomial of degree 6.</p>
+
+<p class="math"><i class="calibre12">F</i>(<i class="calibre12">x</i>) = (<i class="calibre12">ax</i><sup class="calibre19">6</sup> + <i class="calibre12">bx</i><sup class="calibre19">5</sup> + <i class="calibre12">cx</i><sup class="calibre19">4</sup> + <i class="calibre12">dx</i><sup class="calibre19">3</sup> + <i class="calibre12">ex</i><sup class="calibre19">2</sup> + <i class="calibre12">fx</i> + <i class="calibre12">M</i>) mod <i class="calibre12">p</i>
+</p>
+
+<p class="calibre9">Six people can solve for the six unknowns (including <i class="calibre12">M</i>); five people cannot
+learn anything about <i class="calibre12">M. </i></p>
+
+<p class="calibre9">The most mind-boggling aspect of secret sharing is that if the coefficients are
+picked randomly, five people with infinite computing power can’t learn
+anything more than the length of the message (which each of them knows
+anyway). This is as secure as a one-time pad; an attempt at exhaustive search
+(that is, trying all possible sixth shadows) will reveal that any conceivable
+message could be the secret. This is true for all the secret-sharing schemes
+presented here.</p>
+
+<h4 class="calibre8">Vector Scheme</h4>
+
+<p class="calibre9">George Blakley invented a scheme using points in space [<a href="Applied%20Cryptography_split_035.html#r182" class="calibre5 pcalibre">182</a>]. The message is
+defined as a point in <i class="calibre12">m-</i>dimensional space. Each shadow is the equation of an
+(<i class="calibre12">m</i> - 1)-dimensional hyperplane that includes the point. The intersection of any <i class="calibre12">m</i> of the hyperplanes exactly determines the point.</p>
+
+<p class="calibre9">For example, if three shadows are required to reconstruct the message, then it
+is a point in three-dimensional space. Each shadow is a different plane. With
+one shadow, you know the point is somewhere on the plane. With two
+shadows, you know the point is somewhere on the line formed where the two
+planes intersect. With three shadows, you can determine the point exactly: the
+intersection of the three planes.</p>
+
+<h4 class="calibre8">Asmuth-Bloom</h4>
+
+<p class="calibre9">This scheme uses prime numbers [<a href="Applied%20Cryptography_split_035.html#r65" class="calibre5 pcalibre">65</a>]. For an (<i class="calibre12">m, n</i>)-threshold scheme, choose
+a large prime, <i class="calibre12">p, </i> greater than <i class="calibre12">M. </i> Then choose <i class="calibre12">n</i> numbers less than <i class="calibre12">p, d</i><sub class="calibre15">1</sub>, <i class="calibre12">d</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">d</i><sub class="calibre15">n</sub>, such that:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">The <i class="calibre12">d</i> values are in increasing order; <i class="calibre12">d</i><sub class="calibre15">i</sub> &lt; <i class="calibre12">d</i><sub class="calibre15">i+1</sub>
+</li>
+<li class="calibre14">Each <i class="calibre12">d</i><sub class="calibre15">i</sub> is relatively prime to every other <i class="calibre12">d</i><sub class="calibre15">i</sub>
+</li>
+<li class="calibre14"> <i class="calibre12">d</i><sub class="calibre15">1</sub> * <i class="calibre12">d</i><sub class="calibre15">2</sub> * ... * <i class="calibre12">d</i><sub class="calibre15"><i class="calibre22">m</i></sub> &gt; <i class="calibre12">p</i> * <i class="calibre12">d</i><sub class="calibre15">n-m+2</sub> * <i class="calibre12">d</i><sub class="calibre15">n-m+3</sub> * ... * <i class="calibre12">d</i><sub class="calibre15">n</sub>
+</li>
+
+</ol>
+
+<p class="calibre9">To distribute the shadows, first choose a random value <i class="calibre12">r</i> and compute</p>
+
+<p class="math"><i class="calibre12">M' </i> = <i class="calibre12">M</i> + <i class="calibre12">rp</i>
+</p>
+
+<p class="calibre9">The shadows, <i class="calibre12">k</i><sub class="calibre15">i</sub>, are</p>
+
+<p class="math"><i class="calibre12">k</i><sub class="calibre15">i</sub> = <i class="calibre12">M' </i> mod <i class="calibre12">d</i><sub class="calibre15">i</sub>
+</p>
+
+<p class="calibre9">Any <i class="calibre12">m</i> shadows can get together and reconstruct <i class="calibre12">M</i> using the Chinese
+remainder theorem, but any <i class="calibre12">m</i> - 1 cannot. See [<a href="Applied%20Cryptography_split_035.html#r65" class="calibre5 pcalibre">65</a>] for details.</p>
+
+<h4 class="calibre8">Karnin-Greene-Hellman</h4>
+
+<p class="calibre9">This scheme uses matrix multiplication [<a href="Applied%20Cryptography_split_035.html#r818" class="calibre5 pcalibre">818</a>]. Choose <i class="calibre12">n</i> +1 <i class="calibre12">m</i>-dimensional vectors, <i class="calibre12">V</i><sub class="calibre15">0</sub>, <i class="calibre12">V</i><sub class="calibre15">1</sub>, ..., <i class="calibre12">V<sub class="calibre15">n</sub>, </i> such that any possible <i class="calibre12">m</i> * <i class="calibre12">m</i> matrix formed out of those vectors has rank <i class="calibre12">m. </i> The vector <i class="calibre12">U</i> is a row vector of dimension <i class="calibre12">m</i> + 1.</p>
+
+<p class="calibre9"><i class="calibre12">M</i> is the matrix product <i class="calibre12">U·V</i><sub class="calibre15">0</sub>. The shadows are the products <i class="calibre12">U·V</i><sub class="calibre15">i</sub>, where <i class="calibre12">i</i> is a number from 1 to <i class="calibre12">n. </i></p>
+
+<p class="calibre9">Any <i class="calibre12">m</i> shadows can be used to solve the <i class="calibre12">m</i> * <i class="calibre12">m</i> system of linear equations, where the unknowns are the coefficients of U. <i class="calibre12">U·V</i><sub class="calibre15">0</sub> can be computed from <i class="calibre12">U. </i>
+Any <i class="calibre12">m</i> - 1 shadows cannot solve the system of linear equations and therefore
+cannot recover the secret.</p>
+
+<h4 class="calibre8">Advanced Threshold Schemes</h4>
+
+<p class="calibre9">The previous examples illustrate only the simplest threshold schemes: Divide a
+secret into <i class="calibre12">n</i> shadows such that any <i class="calibre12">m</i> can be used to recover the secret. These algorithms can be used to create far more complicated schemes. The following
+examples will use Shamir’s algorithm, although any of the others will work.</p>
+
+<p class="calibre9">To create a scheme in which one person is more important than another, give
+that person more shadows. If it takes five shadows to recreate a secret and one
+person has three shadows while everyone else has only one, then that person
+and two other people can recreate the secret. Without that person, it takes five
+to recreate the secret.</p>
+
+<p class="calibre9">Two or more people could get multiple shadows. Each person could have a
+different number of shadows. No matter how the shadows are distributed, any
+<i class="calibre12">m</i> of them can be used to reconstruct the secret. Someone with <i class="calibre12">m</i> - 1 shadows, be it one person or a roomful of people, cannot do it.</p>
+
+<p class="calibre9">In other types of schemes, imagine a scenario with two hostile delegations.
+You can share the secret so that two people from the 7 in Delegation A and 3
+people from the 12 in Delegation B are required to reconstruct the secret.
+Make a polynomial of degree 3 that is the product of a linear expression and a
+quadratic expression. Give everyone from Delegation A a shadow that is the
+result of an evaluation of the linear equation; give everyone from Delegation B
+a shadow that is the evaluation of the quadratic equation.</p>
+
+<p class="calibre9">Any two shadows from Delegation A can be used to reconstruct the linear
+equation, but no matter how many other shadows the group has, they cannot
+get any information about the secret. The same is true for Delegation B: They
+can get three shadows together to reconstruct the quadratic equation, but they
+cannot get any more information necessary to reconstruct the secret. Only
+when the two delegations share their equations can they be multiplied to
+reconstruct the secret.</p>
+
+<p class="calibre9">In general, any type of sharing scheme that can be imagined can be
+implemented. All you have to do is to envision a system of equations that
+corresponds to the particular scheme. Some excellent papers on generalized
+secret-sharing schemes are [<a href="Applied%20Cryptography_split_036.html#r1462" class="calibre5 pcalibre">1462</a>,<a href="Applied%20Cryptography_split_036.html#r1463" class="calibre5 pcalibre">1463</a>,<a href="Applied%20Cryptography_split_036.html#r1464" class="calibre5 pcalibre">1464</a>].</p>
+
+<h4 class="calibre8">Sharing a Secret with Cheaters</h4>
+
+<p class="calibre9">This algorithm modifies the standard (<i class="calibre12">m,n</i>)-threshold scheme to detect
+cheaters [<a href="Applied%20Cryptography_split_036.html#r1529" class="calibre5 pcalibre">1529</a>]. I demonstrate this using the Lagrange scheme, although it
+works with the others as well.</p>
+
+<p class="calibre9">Choose a prime, <i class="calibre12">p, </i> that is both larger than <i class="calibre12">n</i> and larger than</p>
+
+<p class="math">(<i class="calibre12">s</i> - 1) (<i class="calibre12">m</i> - 1)/ <i class="calibre12">e</i> + <i class="calibre12">m</i>
+</p>
+
+<p class="calibre9">where <i class="calibre12">s</i> is the largest possible secret and <i class="calibre12">e</i> is the probability of successful cheating. You can make <i class="calibre12">e</i> as small as you want; it just makes the computation
+more complex. Construct your shadows as before, except instead of using <i class="calibre12">1, 2, 3, ..., n</i> for <i class="calibre12">x</i><sub class="calibre15">i</sub>, choose random numbers between 1 and <i class="calibre12">p</i> - 1 for <i class="calibre12">x</i><sub class="calibre15">i</sub>.</p>
+
+<p class="calibre9">Now, when Mallory sneaks into the secret reconstruction meeting with his
+false share, his share has a high probability of not being possible. An
+impossible secret is, of course, a fake secret. See [<a href="Applied%20Cryptography_split_036.html#r1529" class="calibre5 pcalibre">1529</a>] for the math.</p>
+
+<p class="calibre9">Unfortunately, while Mallory is exposed as a cheater, he still learns the secret
+(assuming that there are <i class="calibre12">m</i> other valid shares). Another protocol, from
+[<a href="Applied%20Cryptography_split_036.html#r1529" class="calibre5 pcalibre">1529</a>,<a href="Applied%20Cryptography_split_036.html#r975" class="calibre5 pcalibre">975</a>], prevents that. The basic idea is to have a series of <i class="calibre12">k</i> secrets, such that none of the participants knows beforehand which is correct. Each secret is
+larger than the one before, except for the real secret. The participants combine
+their shadows to generate one secret after the other, until they create a secret
+that is less than the previous secret. That’s the correct one.</p>
+
+<p class="calibre9">This scheme will expose cheaters early, before the secret is generated. There
+are complications when the participants deliver their shadows one at a time;
+refer to the papers for details. Other papers on the detection and prevention of
+cheaters in threshold schemes are [<a href="Applied%20Cryptography_split_035.html#r355" class="calibre5 pcalibre">355</a>,<a href="Applied%20Cryptography_split_035.html#r114" class="calibre5 pcalibre">114</a>,<a href="Applied%20Cryptography_split_035.html#r270" class="calibre5 pcalibre">270</a>].</p>
+
+<h3 id="23.3" class="calibre7">23.3 Subliminal Channel</h3>
+
+<h4 class="calibre8">Ong-Schnorr-Shamir</h4>
+
+<p class="calibre9">This subliminal channel (see <a href="Applied%20Cryptography_split_005.html#4.2" class="calibre5 pcalibre">Section 4.2</a>), designed by Gustavus Simmons
+[<a href="Applied%20Cryptography_split_036.html#r1458" class="calibre5 pcalibre">1458</a>,<a href="Applied%20Cryptography_split_036.html#r1459" class="calibre5 pcalibre">1459</a>,<a href="Applied%20Cryptography_split_036.html#r1460" class="calibre5 pcalibre">1460</a>], uses the Ong-Schnorr-Shamir identification scheme (see
+<a href="Applied%20Cryptography_split_023.html#20.5" class="calibre5 pcalibre">Section 20.5</a>). As in the original scheme, the sender (Alice) chooses a public
+modulus, <i class="calibre12">n, </i> and a private key, <i class="calibre12">k, </i> such that <i class="calibre12">n</i> and <i class="calibre12">k</i> are relatively prime. Unlike the original scheme, <i class="calibre12">k</i> is shared between Alice and Bob, the recipient of the
+subliminal message.</p>
+
+<p class="calibre9">The public key is calculated:</p>
+
+<p class="math"><i class="calibre12">h</i> = -<i class="calibre12">k</i><sup class="calibre19">2</sup> mod <i class="calibre12">n</i>
+</p>
+
+<p class="calibre9">If Alice wants to send the subliminal message <i class="calibre12">M</i> by means of the innocuous
+message <i class="calibre12">M', </i> she first confirms that <i class="calibre12">M' </i> and <i class="calibre12">n</i> are relatively prime, and that <i class="calibre12">M</i>
+and <i class="calibre12">n</i> are relatively prime.</p>
+
+<p class="calibre9">Alice calculates</p>
+
+<p class="math-left"><i class="calibre12">S</i><sub class="calibre15">1</sub> = 1/2 * ((<i class="calibre12">M'</i>/<i class="calibre12">M</i> + <i class="calibre12">M</i>)) mod <i class="calibre12">n</i>
+<i class="calibre12">S</i><sub class="calibre15">2</sub> = <i class="calibre12">k</i>/2 * ((<i class="calibre12">M'</i>/<i class="calibre12">M</i> - <i class="calibre12">M</i>)) mod <i class="calibre12">n</i>
+</p>
+
+<p class="calibre9">Together, the pair, <i class="calibre12">S</i><sub class="calibre15">1</sub> and <i class="calibre12">S</i><sub class="calibre15">2</sub>, is the signature under the traditional Ong-Schnorr-Shamir scheme and the carrier of the subliminal message.</p>
+
+<p class="calibre9">Walter the warden (remember him?) can authenticate the message as described
+by the Ong-Schnorr-Shamir signature scheme, but Bob can do better. He can
+authenticate the message (it is always possible that Walter can make his own
+messages). He confirms that</p>
+
+<p class="math">
+<i class="calibre12">S</i><sub class="calibre15">1</sub><sup class="calibre19">2</sup> - <i class="calibre12">S</i><sub class="calibre15">2</sub><sup class="calibre19">2</sup>/<i class="calibre12">k</i><sup class="calibre19">2</sup> ≡ <i class="calibre12">M'</i> (mod <i class="calibre12">n</i>)
+</p>
+
+<p class="calibre9">If the message is authentic, the receiver can recover the subliminal message
+using this formula:</p>
+
+<p class="math"><i class="calibre12">M</i> = <i class="calibre12">M'</i>/(<i class="calibre12">S</i><sub class="calibre15">1</sub> + <i class="calibre12">S</i><sub class="calibre15">2</sub>k<sup class="calibre19">-1</sup>) mod <i class="calibre12">n</i>
+</p>
+
+<p class="calibre9">This works, but remember that the basic Ong-Schnorr-Shamir has been
+broken.</p>
+
+<h4 class="calibre8">ElGamal</h4>
+
+<p class="calibre9">Simmons’s second subliminal channel [<a href="Applied%20Cryptography_split_036.html#r1459" class="calibre5 pcalibre">1459</a>], described in [<a href="Applied%20Cryptography_split_036.html#r1407" class="calibre5 pcalibre">1407</a>,<a href="Applied%20Cryptography_split_036.html#r1473" class="calibre5 pcalibre">1473</a>], is
+based on the ElGamal signature scheme (see <a href="Applied%20Cryptography_split_022.html#19.6" class="calibre5 pcalibre">Section 19.6</a>).</p>
+
+<p class="calibre9">Key generation is the same as the basic ElGamal signature scheme. First
+choose a prime, <i class="calibre12">p, </i> and two random numbers, <i class="calibre12">g</i> and <i class="calibre12">r, </i> such that both <i class="calibre12">g</i> and <i class="calibre12">r</i> are less than <i class="calibre12">p. </i> Then calculate</p>
+
+<p class="math"><i class="calibre12">K</i> = <i class="calibre12">g<sup class="calibre19">r</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+<p class="calibre9">The public key is <i class="calibre12">K, g, </i> and <i class="calibre12">p. </i> The private key is <i class="calibre12">r. </i> Besides Alice, Bob also knows <i class="calibre12">r; </i> it is the key that is used to send and read the subliminal message in addition to being the key used to sign the innocuous message.</p>
+
+<p class="calibre9">To send a subliminal message <i class="calibre12">M</i> using the innocuous message <i class="calibre12">M', M</i> and <i class="calibre12">p</i> must be all relatively prime to each other, and <i class="calibre12">M</i> and <i class="calibre12">p</i> - 1 must be relatively prime. Alice calculates</p>
+
+<p class="math"><i class="calibre12">X</i> = <i class="calibre12">g<sup class="calibre19">M</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+<p class="calibre9">and solves the following equation for <i class="calibre12">Y</i> (using the extended Euclidean
+algorithm):</p>
+
+<p class="math"><i class="calibre12">M' </i> = <i class="calibre12">rX</i> + <i class="calibre12">MY</i> mod (<i class="calibre12">p</i> - 1)
+</p>
+
+<p class="calibre9">As in the basic ElGamal scheme, the signature is the pair: <i class="calibre12">X</i> and <i class="calibre12">Y. </i></p>
+
+<p class="calibre9">Walter can verify the ElGamal signature. He confirms that</p>
+
+<p class="math"><i class="calibre12">K<sup class="calibre19">X</sup>X<sup class="calibre19">Y</sup></i> ≡ <i class="calibre12">g<sup class="calibre19">M'</sup></i> (mod <i class="calibre12">p</i>)
+</p>
+
+<p class="calibre9">Bob can recover the subliminal message. First he confirms that</p>
+
+<p class="math">(<i class="calibre12">g<sup class="calibre19">r</sup></i>)<sup class="calibre19">X</sup>X<sup class="calibre19">Y</sup> ≡ <i class="calibre12">g<sup class="calibre19">M'</sup></i> (mod <i class="calibre12">p</i>)
+</p>
+
+<p class="calibre9">If it does, he accepts the message as genuine (not from Walter).</p>
+
+<p class="calibre9">Then, to recover <i class="calibre12">M, </i> he computes</p>
+
+<p class="math"><i class="calibre12">M</i> = (<i class="calibre12">Y</i><sup class="calibre19">-1</sup>(<i class="calibre12">M'</i> - <i class="calibre12">rX</i>)) mod (<i class="calibre12">p</i> - 1)
+</p>
+
+<p class="calibre9">For example, let <i class="calibre12">p</i> = 11 and <i class="calibre12">g</i> = 2. The private key, <i class="calibre12">r, </i> is chosen to be 8. This means the public key, which Walter can use to verify the signature, is <i class="calibre12">g<sup class="calibre19">r</sup></i> mod <i class="calibre12">p</i>
+= 2<sup class="calibre19">8</sup> mod 11 = 3.</p>
+
+<p class="calibre9">To send the subliminal message <i class="calibre12">M</i> = 9, using innocuous message <i class="calibre12">M'</i> = 5, Alice confirms that 9 and 11 are relatively prime and that 5 and 11 are relatively
+prime. She also confirms that 9 and 11 - 1 = 10 are relatively prime. They are,
+so she calculates</p>
+
+<p class="math"><i class="calibre12">X</i> = <i class="calibre12">g<sup class="calibre19">M</sup></i> mod <i class="calibre12">p</i> = 2<sup class="calibre19">9</sup> mod 11 = 6
+</p>
+
+<p class="calibre9">Then, she solves the following equation for <i class="calibre12">Y:</i></p>
+
+<p class="math">5 = 8 * 6 + 9 * <i class="calibre12">Y</i> mod 10
+</p>
+
+<p class="calibre9"><i class="calibre12">Y</i> = 3, so the signature is the pair, <i class="calibre12">X</i> and <i class="calibre12">Y:</i> 6 and 3.</p>
+
+<p class="calibre9">Bob confirms that</p>
+
+<p class="math-left">(<i class="calibre12">g<sup class="calibre19">r</sup></i>)<sup class="calibre19">X</sup>X<sup class="calibre19">Y</sup> ≡ <i class="calibre12">g<sup class="calibre19">M'</sup></i> (mod <i class="calibre12">p</i>)
+(2<sup class="calibre19">8</sup>)<sup class="calibre19">6</sup>6<sup class="calibre19">3</sup> ≡ 2<sup class="calibre19">5</sup> (mod 11)
+</p>
+
+<p class="calibre9">It does (do the math yourself if you don’t trust me), so he then recovers the
+subliminal message by calculating</p>
+
+<p class="math"><i class="calibre12">M</i> = (Y<sup class="calibre19">-1</sup> (<i class="calibre12">M'</i> - <i class="calibre12">rX</i>)) mod (<i class="calibre12">p</i> - 1) = 3<sup class="calibre19">-1</sup>(5 - 8 * 6) mod 10 = 7(7) mod 10 = 49 mod 10 = 9
+</p>
+
+<h4 class="calibre8">ESIGN</h4>
+
+<p class="calibre9">A subliminal channel can be added to ESIGN [<a href="Applied%20Cryptography_split_036.html#r1460" class="calibre5 pcalibre">1460</a>] (see <a href="Applied%20Cryptography_split_023.html#20.6" class="calibre5 pcalibre">Section 20.6</a>).</p>
+
+<p class="calibre9">In ESIGN, the secret key is a pair of large prime numbers, <i class="calibre12">p</i> and <i class="calibre12">q, </i> and the public key is <i class="calibre12">n</i> = <i class="calibre12">p<sup class="calibre19">2</sup>q. </i> With a subliminal channel, the private key is three primes, <i class="calibre12">p, q, </i> and <i class="calibre12">r, </i> and the public key is <i class="calibre12">n, </i> such that</p>
+
+<p class="math"><i class="calibre12">n</i> = <i class="calibre12">p</i><sup class="calibre19">2</sup><i class="calibre12">qr</i>
+</p>
+
+<p class="calibre9">The variable, <i class="calibre12">r</i>, is the extra piece of information that Bob needs to read the
+subliminal message.</p>
+
+<p class="calibre9">To sign a normal message, Alice first picks a random number, <i class="calibre12">x, </i> such that <i class="calibre12">x</i> is less than <i class="calibre12">pqr</i> and computes:</p>
+
+<p class="math-left"><i class="calibre12">w, </i> the least integer that is larger than (<i class="calibre12">H</i>(<i class="calibre12">m</i>) - <i class="calibre12">x<sup class="calibre19">k</sup></i> mod <i class="calibre12">n</i>)/<i class="calibre12">pqr</i>)
+<i class="calibre12">s</i> = <i class="calibre12">x</i> + ((<i class="calibre12">w</i>/<i class="calibre12">kx</i><sup class="calibre19"><i class="calibre22">k</i> - 1</sup>) mod <i class="calibre12">p</i>)<i class="calibre12">pqr</i>
+</p>
+
+<p class="calibre9">H(<i class="calibre12">m</i>) is the hash of the message; <i class="calibre12">k</i> is a security parameter. The value <i class="calibre12">s</i> is the signature.</p>
+
+<p class="calibre9">To verify the signature, Bob computes <i class="calibre12">s<sup class="calibre19">k</sup></i> mod <i class="calibre12">n. </i> He also computes <i class="calibre12">a, </i> which is the least integer larger than the number of bits of <i class="calibre12">n</i> divided by 3. If <i class="calibre12">H</i>(<i class="calibre12">m</i>) is less than or equal to <i class="calibre12">s<sup class="calibre19">k</sup></i> mod <i class="calibre12">n, </i> and if <i class="calibre12">s<sup class="calibre19">k</sup></i> mod <i class="calibre12">n</i> is less than <i class="calibre12">H</i>(<i class="calibre12">m</i>) + 2<sup class="calibre19">a</sup> , then the signature is considered valid.</p>
+
+<p class="calibre9">To send a subliminal message, <i class="calibre12">M, </i> using the innocuous message, <i class="calibre12">M', </i> Alice calculates <i class="calibre12">s</i> using <i class="calibre12">M</i> in place of <i class="calibre12">H</i>(<i class="calibre12">m</i>). This means that the message must be smaller than <i class="calibre12">p</i><sup class="calibre19">2</sup><i class="calibre12">qr. </i> She then chooses a random value, <i class="calibre12">u, </i> and calculates</p>
+
+<p class="math"><i class="calibre12">x' </i> = <i class="calibre12">M' </i> + <i class="calibre12">ur</i>
+</p>
+
+<p class="calibre9">Then, use this <i class="calibre12">x' </i> value as the “random number” <i class="calibre12">x</i> to sign <i class="calibre12">M' </i>. This second <i class="calibre12">s</i> value is sent as a signature.</p>
+
+<p class="calibre9">Walter can verify that <i class="calibre12">s</i> (the second <i class="calibre12">s</i>) is a valid signature of <i class="calibre12">M' </i>.</p>
+
+<p class="calibre9">Bob can also authenticate the message in the same way. But, since he also
+knows <i class="calibre12">r, </i> he can calculate</p>
+
+<p class="math"><i class="calibre12">s</i> = <i class="calibre12">x' </i> + <i class="calibre12">ypqr</i> = <i class="calibre12">M</i> + <i class="calibre12">ur</i> + <i class="calibre12">ypqr</i> ≡ <i class="calibre12">M</i> (mod <i class="calibre12">r</i>)
+</p>
+
+<p class="calibre9">This implementation of a subliminal channel is far better than the previous
+two. In the Ong-Schnorr-Shamir and ElGamal implementations, Bob has
+Alice’s private key. Besides being able to read subliminal messages from
+Alice, Bob can impersonate Alice and sign normal documents. Alice can do
+nothing about this; she must trust Bob to set up this subliminal channel.</p>
+
+<p class="calibre9">The ESIGN scheme doesn’t suffer from this problem. Alice’s private key is
+the set of three primes: <i class="calibre12">p, q, </i> and <i class="calibre12">r. </i> Bob’s secret key is just <i class="calibre12">r. </i> He knows <i class="calibre12">n</i> = <i class="calibre12">p</i><sup class="calibre19">2</sup><i class="calibre12">qr, </i> but to 
+recover <i class="calibre12">p</i> and <i class="calibre12">q</i> he has to factor that number. If the primes are large enough, Bob has just as much trouble impersonating Alice as would
+Walter or anyone else.</p>
+
+<h4 class="calibre8">DSA</h4>
+
+<p class="calibre9">There is also a subliminal channel in DSA (see <a href="Applied%20Cryptography_split_023.html#20.1" class="calibre5 pcalibre">Section 20.1</a>)
+[<a href="Applied%20Cryptography_split_036.html#r1468" class="calibre5 pcalibre">1468</a>,<a href="Applied%20Cryptography_split_036.html#r1469" class="calibre5 pcalibre">1469</a>,<a href="Applied%20Cryptography_split_036.html#r1473" class="calibre5 pcalibre">1473</a>]. In fact, there are several. The simplest subliminal channel
+involves the choice of <i class="calibre12">k. </i> It is supposed to be a 160-bit random number.
+However, if Alice chooses a particular <i class="calibre12">k, </i> then Bob, who also knows Alice’s
+private key, can recover it. Alice can send Bob a 160-bit subliminal message in
+each DSA signature; everyone else simply verifies Alice’s signature. Another
+complication: Since <i class="calibre12">k</i> should be random, Alice and Bob need to share a
+one-time pad and encrypt the subliminal message with the one-time pad to
+generate a <i class="calibre12">k. </i></p>
+
+<p class="calibre9">DSA has subliminal channels that do not require Bob to know Alice’s private
+key. These also involve choosing particular values of <i class="calibre12">k, </i> but cannot be used to send 160 bits of information. This scheme, presented in [<a href="Applied%20Cryptography_split_036.html#r1468" class="calibre5 pcalibre">1468</a>,<a href="Applied%20Cryptography_split_036.html#r1469" class="calibre5 pcalibre">1469</a>], allows
+Alice and Bob to exchange one bit of subliminal information per signed
+message.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice and Bob agree on a random prime, <i class="calibre12">P</i> (different from the
+parameter <i class="calibre12">p</i> in the signature scheme). This is their secret key for the
+subliminal channel.
+</li>
+<li class="calibre14">Alice signs an innocuous message, <i class="calibre12">M. </i> If she wants to send Bob the subliminal bit, 1, she makes sure the <i class="calibre12">r</i> parameter of the signature is a
+quadratic residue modulo <i class="calibre12">P. </i> If she wants to send him a 0, she makes
+sure the <i class="calibre12">r</i> parameter is a quadratic nonresidue modulo <i class="calibre12">P. </i> She does this
+by signing the message with random <i class="calibre12">k</i> values until she gets a signature
+with an <i class="calibre12">r</i> with the requisite property. Since quadratic residues and
+quadratic nonresidues are equally likely, this shouldn’t be too difficult.
+</li>
+<li class="calibre14">Alice sends the signed message to Bob.
+</li>
+<li class="calibre14">Bob verifies the signature to make sure the message is authentic.
+Then he checks whether <i class="calibre12">r</i> is a quadratic residue or a quadratic
+nonresidue modulo <i class="calibre12">P</i> and recovers the subliminal bit.
+</li>
+
+</ol>
+
+<p class="calibre9">Sending multiple bits via this method involves making <i class="calibre12">r</i> either a quadratic
+residue or a quadratic nonresidue modulo a variety of parameters. See
+[<a href="Applied%20Cryptography_split_036.html#r1468" class="calibre5 pcalibre">1468</a>,<a href="Applied%20Cryptography_split_036.html#r1469" class="calibre5 pcalibre">1469</a>] for details.</p>
+
+<p class="calibre9">This scheme can be easily extended to send multiple subliminal bits per
+signature. If Alice and Bob agree on two random primes, <i class="calibre12">P</i> and <i class="calibre12">Q, </i> Alice can send two bits by choosing a random <i class="calibre12">k</i> such that <i class="calibre12">r</i> is either a quadratic residue mod <i class="calibre12">P</i> or a quadratic nonresidue mod <i class="calibre12">P, </i> and either a quadratic residue mod <i class="calibre12">Q</i>
+or a quadratic nonresidue mod <i class="calibre12">Q. </i> A random value of <i class="calibre12">k</i> has a 25 percent chance of producing an <i class="calibre12">r</i> of the correct form.</p>
+
+<p class="calibre9">Here’s how Mallory, an unscrupulous implementer of DSA,can have the
+algorithm leak 10 bits of Alice’s private key every time she signs a document.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Mallory puts his implementation of DSA in a tamperproof VLSI
+chip, so that no one can examine its inner workings. He creates a 14-bit
+subliminal channel in his implementation of DSA. That is, he chooses
+14 random primes, and has the chip choose a value of <i class="calibre12">k</i> such that <i class="calibre12">r</i> is
+either a quadratic residue or a quadratic nonresidue modulo each of
+those 14 primes, depending on the subliminal message.
+</li>
+<li class="calibre14">Mallory distributes the chips to Alice, Bob, and everyone else who
+wants them.
+</li>
+<li class="calibre14">Alice signs a message normally, using her 160-bit private key, <i class="calibre12">x. </i>
+</li>
+<li class="calibre14">The chip randomly chooses a 10-bit block of <i class="calibre12">x:</i> the first 10 bits, the second 10 bits, and so on. Since there are 16 possible 10-bit blocks, a
+4-bit number can identify which block it is. This 4-bit identifier, plus the
+10 bits of the key, is the 14-bit subliminal message.
+</li>
+<li class="calibre14">The chip tries random values of <i class="calibre12">k</i> until it finds one that has the
+correct quadratic residue properties to send the subliminal message. The
+odds of a random <i class="calibre12">k</i> being of the correct form are 1 in 16,384. Assuming
+the chip can test 10,000 values of <i class="calibre12">k</i> per second, it will find one in less
+than two seconds. This computation does not involve the message and
+can be performed off-line, before Alice wants to sign a message.
+</li>
+<li class="calibre14">The chip signs the message normally, using the value of <i class="calibre12">k</i> chosen in step (5).
+</li>
+<li class="calibre14">Alice sends the digital signature to Bob, or publishes it on the
+network, or whatever.
+</li>
+<li class="calibre14">Mallory recovers <i class="calibre12">r</i> and, because he knows the 14 primes, decrypts
+the subliminal message.
+</li>
+
+</ol>
+
+<p class="calibre9">It’s scary that even if Alice knows what is happening, she cannot prove it. As
+long as those 14 secret primes stay secret, Mallory is safe.</p>
+
+<h4 class="calibre8">Foiling the DSA Subliminal Channel</h4>
+
+<p class="calibre9">The subliminal channel relies on the fact that Alice can choose <i class="calibre12">k</i> to transmit
+subliminal information. To foil the subliminal channel, Alice cannot be
+allowed to choose <i class="calibre12">k. </i> However, neither can anyone else; if someone else were
+allowed to choose <i class="calibre12">k, </i> it would allow that person to forge Alice’s signature. The only solution is for Alice to jointly generate <i class="calibre12">k</i> with another party, call him
+Bob, in such a way that Alice cannot control a single bit of <i class="calibre12">k</i> and Bob cannot
+know a single bit of <i class="calibre12">k. </i> At the end of the protocol, Bob should be able to verify that Alice used the <i class="calibre12">k</i> that they jointly generated.</p>
+
+<p class="calibre9">Here’s the protocol [<a href="Applied%20Cryptography_split_036.html#r1470" class="calibre5 pcalibre">1470</a>,<a href="Applied%20Cryptography_split_036.html#r1472" class="calibre5 pcalibre">1472</a>,<a href="Applied%20Cryptography_split_036.html#r1473" class="calibre5 pcalibre">1473</a>]:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses <i class="calibre12">k' </i> and sends Bob
+<p class="math"><i class="calibre12">u</i> = <i class="calibre12">g<sup class="calibre19">k'</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14">Bob chooses <i class="calibre12">k"</i> and sends it to Alice.
+</li>
+<li class="calibre14">Alice calculates <i class="calibre12">k</i> = <i class="calibre12">k'<sup class="calibre19">k"</sup></i> mod (<i class="calibre12">p</i> - 1). She uses <i class="calibre12">k</i> to sign her message, <i class="calibre12">M, </i> with the DSA and sends Bob the signature: <i class="calibre12">r</i> and <i class="calibre12">s. </i>
+</li>
+<li class="calibre14">Bob verifies that
+<p class="math">((<i class="calibre12">u<sup class="calibre19">k"</sup></i> mod <i class="calibre12">p</i>) mod <i class="calibre12">q</i>) = <i class="calibre12">r</i>
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">If it does, he knows that <i class="calibre12">k</i> was used to sign <i class="calibre12">M. </i></p>
+
+<p class="calibre9">After step (4), Bob knows that no subliminal information can be embedded in
+<i class="calibre12">r. </i> If he is a trusted party, he can certify that Alice’s signature is
+subliminal-free. Others will have to trust his certification; Bob cannot prove
+this fact to a third party with a transcript of the protocol.</p>
+
+<p class="calibre9">A surprising result is that if Bob wants to, he can use this protocol to create his
+own subliminal channel. Bob can embed a subliminal message in one of
+Alice’s signatures by choosing <i class="calibre12">k" </i> with certain characteristics. When Simmons discovered this, he dubbed it the “Cuckoo’s Channel.” Details on how the
+Cuckoo’s Channel works, and a three-pass protocol for generating <i class="calibre12">k</i> that
+prevents it, are discussed in [<a href="Applied%20Cryptography_split_036.html#r1471" class="calibre5 pcalibre">1471</a>,<a href="Applied%20Cryptography_split_036.html#r1473" class="calibre5 pcalibre">1473</a>].</p>
+
+<h4 class="calibre8">Other Schemes</h4>
+
+<p class="calibre9">Any signature scheme can be converted into a subliminal channel
+[<a href="Applied%20Cryptography_split_036.html#r1458" class="calibre5 pcalibre">1458</a>,<a href="Applied%20Cryptography_split_036.html#r1460" class="calibre5 pcalibre">1460</a>,<a href="Applied%20Cryptography_split_036.html#r1406" class="calibre5 pcalibre">1406</a>]. A protocol for embedding a subliminal channel in the
+Fiat-Shamir and Feige-Fiat-Shamir protocols, as well as possible abuses of the
+subliminal channel, can be found in [<a href="Applied%20Cryptography_split_035.html#r485" class="calibre5 pcalibre">485</a>].</p>
+
+<h3 id="23.4" class="calibre7">23.4 Undeniable Digital Signatures</h3>
+
+<p class="calibre9">This undeniable signature algorithm (see <a href="Applied%20Cryptography_split_005.html#4.3" class="calibre5 pcalibre">Section 4.3</a>) is by David Chaum
+[<a href="Applied%20Cryptography_split_035.html#r343" class="calibre5 pcalibre">343</a>,<a href="Applied%20Cryptography_split_035.html#r327" class="calibre5 pcalibre">327</a>]. First, a large prime, <i class="calibre12">p, </i> and a primitive element, <i class="calibre12">g, </i> are made public, and used by a group of signers. Alice has a private key, <i class="calibre12">x, </i> and a public key, <i class="calibre12">g<sup class="calibre19">x</sup></i> mod <i class="calibre12">p. </i></p>
+
+<p class="calibre9">To sign a message, Alice computes <i class="calibre12">z</i> = <i class="calibre12">m<sup class="calibre19">x</sup></i> mod <i class="calibre12">p</i>.That’s all she has to do.</p>
+
+<p class="calibre9">Verification is a little more complicated.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Bob chooses two random numbers, <i class="calibre12">a</i> and <i class="calibre12">b, </i> both less than <i class="calibre12">p, </i> and sends Alice:
+<p class="math"><i class="calibre12">c</i> = <i class="calibre12">z<sup class="calibre19">a</sup></i>(<i class="calibre12">g<sup class="calibre19">x</sup></i>)<sup class="calibre19"><i class="calibre22">b</i></sup> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14">Alice computes <i class="calibre12">t</i> = <i class="calibre12">x</i><sup class="calibre19">-1</sup> mod (<i class="calibre12">p</i> - 1), and sends Bob:
+<p class="math"><i class="calibre12">d</i> = <i class="calibre12">c<sup class="calibre19">t</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14">Bob confirms that
+<p class="math"><i class="calibre12">d</i> ≡ <i class="calibre12">m<sup class="calibre19">a</sup>g<sup class="calibre19">b</sup></i> (mod <i class="calibre12">p</i>)
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">If it is, he accepts the signature as genuine.</p>
+
+<p class="calibre9">Imagine that Alice and Bob went through this protocol, and Bob is now
+convinced that Alice signed the message. Bob wants to convince Carol, so he
+shows her a transcript of the protocol. Dave, however, wants to convince Carol
+that some other person signed the document. He creates a fake transcript of the
+protocol. First he generates the message in step (1). Then in step (3) he
+generates <i class="calibre12">d</i> and the fake transmission from this other person in step (2).
+Finally, he creates the message in step (2). To Carol, both Bob’s and Dave’s
+transcripts are identical. She cannot be convinced of the signature’s validity
+unless she goes through the protocol herself.</p>
+
+<p class="calibre9">Of course, if she were watching over Bob’s shoulder as he completed the
+protocol, she would be convinced. Carol has to see the steps done in order, just
+as Bob does.</p>
+
+<p class="calibre9">There may be a problem with this signature scheme, but I know of no details.
+Please pay attention to the literature before you use it.</p>
+
+<p class="calibre9">Another protocol not only has a confirmation protocol — Alice can convince
+Bob that her signature is valid — but it also has a disavowal protocol; Alice can
+use a zero-knowledge interactive protocol to convince him that the signature is
+not valid, if it is not [<a href="Applied%20Cryptography_split_035.html#r329" class="calibre5 pcalibre">329</a>].</p>
+
+<p class="calibre9">Like the previous protocol, a group of signers use a shared public large prime,
+<i class="calibre12">p, </i> and a primitive element, <i class="calibre12">g. </i> Alice has a unique private key, <i class="calibre12">x, </i> and a public key, <i class="calibre12">g<sup class="calibre19">x</sup></i> mod <i class="calibre12">p. </i> To sign a message, Alice computes <i class="calibre12">z</i> = <i class="calibre12">m<sup class="calibre19">x</sup></i> mod <i class="calibre12">p. </i></p>
+
+<p class="calibre9">To verify a signature:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Bob chooses two random numbers, <i class="calibre12">a</i> and <i class="calibre12">b, </i> both less than <i class="calibre12">p, </i> and sends Alice:
+<p class="math"><i class="calibre12">c</i> = <i class="calibre12">m<sup class="calibre19">a</sup>g<sup class="calibre19">b</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14">Alice chooses a random number, <i class="calibre12">q, </i> less than <i class="calibre12">p, </i> and computes and sends to Bob:
+<p class="math"><i class="calibre12">s</i><sub class="calibre15">1</sub> = <i class="calibre12">cg<sup class="calibre19">q</sup></i> mod <i class="calibre12">p,    s</i><sub class="calibre15">2</sub> = (<i class="calibre12">cg<sup class="calibre19">q</sup></i>)<sup class="calibre19"><i class="calibre22">x</i></sup> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14">Bob sends Alice <i class="calibre12">a</i> and <i class="calibre12">b, </i> so that Alice can confirm that Bob did not cheat in step (1).
+</li>
+<li class="calibre14">Alice sends Bob <i class="calibre12">q, </i> so that Bob can use <i class="calibre12">m<sup class="calibre19">x</sup></i> and reconstruct <i class="calibre12">s</i><sub class="calibre15">1</sub> and <i class="calibre12">s</i><sub class="calibre15">2</sub>.
+If then the signature is valid.
+<p class="math-left"><i class="calibre12">s</i><sub class="calibre15">1</sub> ≡ <i class="calibre12">cg<sup class="calibre19">q</sup></i> (mod <i class="calibre12">p</i>)
+<i class="calibre12">s</i><sub class="calibre15">2</sub> ≡ (<i class="calibre12">g<sup class="calibre19">x</sup></i>)<sup class="calibre19"><i class="calibre22">b + q</i></sup><i class="calibre12">z<sup class="calibre19">a</sup></i> (mod <i class="calibre12">p</i>)
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">Alice can also disavow a signature, <i class="calibre12">z, </i> for a message, <i class="calibre12">m. </i> See [<a href="Applied%20Cryptography_split_035.html#r329" class="calibre5 pcalibre">329</a>] for details.</p>
+
+<p class="calibre9">Additional protocols for undeniable signatures can be found in [<a href="Applied%20Cryptography_split_035.html#r584" class="calibre5 pcalibre">584</a>,<a href="Applied%20Cryptography_split_035.html#r344" class="calibre5 pcalibre">344</a>]. Lein
+Harn and Shoubao Yang proposed a group undeniable signature scheme [<a href="Applied%20Cryptography_split_035.html#r700" class="calibre5 pcalibre">700</a>].</p>
+
+<h4 class="calibre8">Convertible Undeniable Signatures</h4>
+
+<p class="calibre9">An algorithm for a <b class="calibre10">convertible undeniable signature, </b> which can be verified,
+disavowed, and also converted to a conventional digital signature is given in
+[<a href="Applied%20Cryptography_split_035.html#r213" class="calibre5 pcalibre">213</a>]. It’s based on the ElGamal digital signature algorithm.</p>
+
+<p class="calibre9">Like ElGamal, first choose two primes, <i class="calibre12">p</i> and <i class="calibre12">q, </i> such that <i class="calibre12">q</i> divides <i class="calibre12">p</i> - 1. Now you have to create a number, <i class="calibre12">g, </i> less than <i class="calibre12">q. </i> First choose a random number, <i class="calibre12">h,</i> between 2 and <i class="calibre12">p</i> - 1. Calculate</p>
+
+<p class="math"><i class="calibre12">g</i> = <i class="calibre12">h</i><sup class="calibre19">(<i class="calibre22">p-1</i>)/<i class="calibre22">q</i></sup> mod <i class="calibre12">p</i>
+</p>
+
+<p class="calibre9">If <i class="calibre12">g</i> equals the 1, choose another random <i class="calibre12">h. </i> If it doesn’t, stick with the <i class="calibre12">g</i> you have.</p>
+
+<p class="calibre9">The private keys are two different random numbers, <i class="calibre12">x</i> and <i class="calibre12">z, </i> both less than <i class="calibre12">q. </i>
+The public keys are <i class="calibre12">p, q, g, y, </i> and <i class="calibre12">u, </i> where</p>
+
+<p class="math-left"><i class="calibre12">y</i> = <i class="calibre12">g<sup class="calibre19">x</sup></i> mod <i class="calibre12">p</i>
+<i class="calibre12">u</i> = <i class="calibre12">g<sup class="calibre19">z</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+<p class="calibre9">To compute the convertible undeniable signature of message <i class="calibre12">m</i> (which is
+actually the hash of a message), first choose a random number, <i class="calibre12">t, </i> between 1
+and <i class="calibre12">q</i> -1. Then compute</p>
+
+<p class="math"><i class="calibre12">T</i> = <i class="calibre12">g<sup class="calibre19">t</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+<p class="calibre9">and</p>
+
+<p class="math"><i class="calibre12">m' </i> = <i class="calibre12">Ttzm</i> mod <i class="calibre12">q. </i>
+</p>
+
+<p class="calibre9">Now, compute the standard ElGamal signature on <i class="calibre12">m' </i>. Choose a random
+number, <i class="calibre12">R, </i> such that <i class="calibre12">R</i> is less than and relatively prime to <i class="calibre12">p</i> - 1. Then compute <i class="calibre12">r</i> = <i class="calibre12">g<sup class="calibre19">R</sup></i> mod <i class="calibre12">p, </i> and use the extended Euclidean algorithm to compute <i class="calibre12">s, </i> such that</p>
+
+<p class="math"><i class="calibre12">m'</i> ≡ <i class="calibre12">rx</i> + <i class="calibre12">Rs</i> (mod <i class="calibre12">q</i>)
+</p>
+
+<p class="calibre9">The signature is the ElGamal signature (<i class="calibre12">r, s</i>), and <i class="calibre12">T. </i></p>
+
+<p class="calibre9">Here’s how Alice verifies her signature to Bob:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Bob generates two random numbers, <i class="calibre12">a</i> and b. He computes <i class="calibre12">c</i> =
+ <i class="calibre12">T<sup class="calibre19">Tma</sup>g<sup class="calibre19">b</sup></i> mod <i class="calibre12">p</i> and sends that to Alice.
+</li>
+<li class="calibre14">Alice generates a random number, <i class="calibre12">k, </i> and computes <i class="calibre12">h</i><sub class="calibre15">1</sub> = <i class="calibre12">cg<sup class="calibre19">k</sup></i> mod <i class="calibre12">p,</i> and <i class="calibre12">h</i><sub class="calibre15">2</sub> = <i class="calibre12">h</i><sub class="calibre15">1</sub><sup class="calibre19">z</sup> mod <i class="calibre12">p, </i> and sends both of those numbers to Bob.
+</li>
+<li class="calibre14">Bob sends Alice <i class="calibre12">a</i> and <i class="calibre12">b. </i>
+</li>
+<li class="calibre14">Alice verifies that <i class="calibre12">c</i> = <i class="calibre12">T<sup class="calibre19">Tma</sup>g<sup class="calibre19">b</sup></i> mod <i class="calibre12">p. </i> She sends <i class="calibre12">k</i> to Bob.
+</li>
+<li class="calibre14">Bob verifies that <i class="calibre12">h</i><sub class="calibre15">1</sub> = <i class="calibre12">T<sup class="calibre19">Tma</sup>g<sup class="calibre19">b + k</sup></i> mod <i class="calibre12">p, </i> and that <i class="calibre12">h</i><sub class="calibre15">2</sub> = <i class="calibre12">y<sup class="calibre19">ra</sup>r<sup class="calibre19">sa</sup>u<sup class="calibre19">b + k</sup></i> mod <i class="calibre12">p. </i>
+</li>
+
+</ol>
+
+<p class="calibre9">Alice can convert all of her undeniable signatures to normal signatures by
+publishing <i class="calibre12">z. </i> Now, anyone can verify her signature without her help.</p>
+
+<p class="calibre9">Undeniable signature schemes can be combined with secret-sharing schemes
+to create <b class="calibre10">distributed convertible undeniable signatures</b> [<a href="Applied%20Cryptography_split_036.html#r1235" class="calibre5 pcalibre">1235</a>]. Someone
+can sign a message, then distribute the ability to confirm that the signature is
+valid. He might, for example, require three out of five people to participate in
+the protocol in order to convince Bob that the signature is valid. Improvements
+on this notion deleted the requirement for a trusted dealer [<a href="Applied%20Cryptography_split_035.html#r700" class="calibre5 pcalibre">700</a>,<a href="Applied%20Cryptography_split_036.html#r1369" class="calibre5 pcalibre">1369</a>].</p>
+
+<h3 id="23.5" class="calibre7">23.5 Designated Confirmer Signatures</h3>
+
+<p class="calibre9">Here’s how Alice can sign a message and Bob can verify it, such that Carol
+can verify Alice’s signature at some later time to Dave (see <a href="Applied%20Cryptography_split_005.html#4.4" class="calibre5 pcalibre">Section 4.4</a>) [<a href="Applied%20Cryptography_split_035.html#r333" class="calibre5 pcalibre">333</a>].</p>
+
+<p class="calibre9">First, a large prime, <i class="calibre12">p, </i> and a primitive element, <i class="calibre12">g, </i> are made public and used by a group of users. The product of two primes, <i class="calibre12">n, </i> is also public. Carol has a
+private key, <i class="calibre12">z, </i> and a public key is <i class="calibre12">h</i> = <i class="calibre12">g<sup class="calibre19">x</sup></i> mod <i class="calibre12">p. </i></p>
+
+<p class="calibre9">In this protocol Alice can sign <i class="calibre12">m</i> such that Bob is convinced that the signature is valid,but cannot convince a third party.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses a random <i class="calibre12">x</i> and computes
+<p class="math-left"><i class="calibre12">a</i> = <i class="calibre12">g<sup class="calibre19">x</sup></i> mod <i class="calibre12">p</i>
+<i class="calibre12">b</i> = <i class="calibre12">h<sup class="calibre19">x</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+She computes the hash of <i class="calibre12">m, H</i>(<i class="calibre12">m</i>), and the hash of <i class="calibre12">a</i> and <i class="calibre12">b</i>
+concatenated, <i class="calibre12">H</i>(<i class="calibre12">a,b</i>). She then computes
+<p class="math-left"><i class="calibre12">j</i> = (<i class="calibre12">H</i>(<i class="calibre12">m</i>) ⊕ <i class="calibre12">H</i>(<i class="calibre12">a, b</i>))<sup class="calibre19">1/3</sup> mod <i class="calibre12">n</i>
+</p>
+
+and sends <i class="calibre12">a, b, </i> and <i class="calibre12">j</i> to Bob.
+</li>
+<li class="calibre14">Bob chooses two random numbers, <i class="calibre12">s</i> and <i class="calibre12">t, </i> both less than <i class="calibre12">p, </i> and sends Alice
+<p class="math-left"><i class="calibre12">c</i> = <i class="calibre12">g<sup class="calibre19">s</sup>h<sup class="calibre19">t</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14">Alice chooses a random <i class="calibre12">q</i> less than <i class="calibre12">p, </i> and sends Bob
+<p class="math-left"><i class="calibre12">d</i> = <i class="calibre12">g<sup class="calibre19">q</sup></i> mod <i class="calibre12">p</i>
+<i class="calibre12">e</i> = (<i class="calibre12">cd</i>)<sup class="calibre19"><i class="calibre22">x</i></sup> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14">Bob sends Alice <i class="calibre12">s</i> and <i class="calibre12">t. </i>
+</li>
+<li class="calibre14">Alice confirms that
+<p class="math-left"><i class="calibre12">g<sup class="calibre19">s</sup>h<sup class="calibre19">t</sup></i> ≡ <i class="calibre12">c</i> (mod <i class="calibre12">p</i>)
+</p>
+
+Then she sends Bob <i class="calibre12">q. </i>
+</li>
+<li class="calibre14">Bob confirms
+<p class="math-left"><i class="calibre12">d</i> ≡ <i class="calibre12">g<sup class="calibre19">q</sup></i> (mod <i class="calibre12">p</i>)
+<i class="calibre12">e</i>/<i class="calibre12">a<sup class="calibre19">q</sup></i> ≡ <i class="calibre12">a<sup class="calibre19">s</sup>b<sup class="calibre19">t</sup></i> (mod <i class="calibre12">p</i>)
+<i class="calibre12">H</i>(<i class="calibre12">m</i>) ⊕ <i class="calibre12">H</i>(<i class="calibre12">a, b</i>) ≡ <i class="calibre12">j</i><sup class="calibre19">1/3</sup> mod <i class="calibre12">n</i>
+</p>
+
+If they all check out, he accepts the signature as genuine.
+</li>
+
+</ol>
+
+<p class="calibre9">Bob cannot use a transcript of this proof to convince Dave that the signature is
+genuine, but Dave can conduct a protocol with Alice’s designated confirmer,
+Carol. Here’s how Carol convinces Dave that <i class="calibre12">a</i> and <i class="calibre12">b</i> constitute a valid
+signature.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Dave chooses a random <i class="calibre12">u</i> and <i class="calibre12">v, </i> both less than <i class="calibre12">p, </i> and sends Carol
+<p class="math-left"><i class="calibre12">k</i> = <i class="calibre12">g<sup class="calibre19">u</sup>a<sup class="calibre19">v</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14">Carol chooses a random <i class="calibre12">w, </i> less than <i class="calibre12">p, </i> and sends Dave
+<p class="math-left"><i class="calibre12">l</i> = <i class="calibre12">g<sup class="calibre19">w</sup></i> mod <i class="calibre12">p</i>
+<i class="calibre12">y</i> = (<i class="calibre12">kl</i>)<sup class="calibre19">z</sup> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14">Dave sends Carol <i class="calibre12">u</i> and <i class="calibre12">v. </i>
+</li>
+<li class="calibre14">Carol confirms that
+<p class="math-left"><i class="calibre12">g<sup class="calibre19">u</sup>a<sup class="calibre19">v</sup></i> ≡ <i class="calibre12">k</i> (mod <i class="calibre12">p</i>)
+</p>
+
+Then she sends Dave <i class="calibre12">w. </i>
+</li>
+<li class="calibre14">Dave confirms that
+<p class="math-left"><i class="calibre12">g<sup class="calibre19">w</sup></i> ≡ <i class="calibre12">l</i> (mod <i class="calibre12">p</i>)
+<i class="calibre12">y</i>/<i class="calibre12">h<sup class="calibre19">w</sup></i> ≡ <i class="calibre12">h<sup class="calibre19">u</sup>b<sup class="calibre19">v</sup></i> (mod <i class="calibre12">p</i>)
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">If they both check out, he accepts the signature as genuine.
+In another protocol Carol can convert the designated-confirmer protocol into a
+conventional digital signature. See [<a href="Applied%20Cryptography_split_035.html#r333" class="calibre5 pcalibre">333</a>] for details.</p>
+
+<h3 id="23.6" class="calibre7">23.6 Computing with Encrypted Data</h3>
+
+<h4 class="calibre8">The Discrete Logarithm Problem</h4>
+
+<p class="calibre9">There is a large prime, <i class="calibre12">p, </i> and a generator, <i class="calibre12">g. </i> Alice has a particular value for <i class="calibre12">x,</i> and wants to know <i class="calibre12">e, </i> such that</p>
+
+<p class="math"><i class="calibre12">g<sup class="calibre19">e</sup></i> ≡ <i class="calibre12">x</i> (mod <i class="calibre12">p</i>)
+</p>
+
+<p class="calibre9">This is a hard problem, and Alice lacks the computational power to compute
+the result. Bob has the power to solve the problem — he represents the
+government, or a large computing organization, or whatever. Here’s how Bob
+can do it without Alice revealing <i class="calibre12">x</i> [<a href="Applied%20Cryptography_split_035.html#r547" class="calibre5 pcalibre">547</a>,<a href="Applied%20Cryptography_split_035.html#r4" class="calibre5 pcalibre">4</a>]:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses a random number, <i class="calibre12">r, </i> less than <i class="calibre12">p. </i>
+</li>
+<li class="calibre14">Alice computes
+<p class="math"><i class="calibre12">x' </i> = <i class="calibre12">xg<sup class="calibre19">r</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14">Alice asks Bob to solve
+<p class="math"><i class="calibre12">g<sup class="calibre19">e'</sup></i> ≡ <i class="calibre12">x' </i> (mod <i class="calibre12">p</i>)
+</p>
+
+</li>
+<li class="calibre14">Bob computes <i class="calibre12">e' </i> and sends it to Alice.
+</li>
+<li class="calibre14">Alice recovers <i class="calibre12">e</i> by computing
+<p class="math"><i class="calibre12">e</i> = (<i class="calibre12">e' </i> - <i class="calibre12">r</i>) mod (<i class="calibre12">p</i> - 1)
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">Similar protocols for the quadratic residuosity problem and for the primitive
+root problem are in [<a href="Applied%20Cryptography_split_035.html#r3" class="calibre5 pcalibre">3</a>,<a href="Applied%20Cryptography_split_035.html#r4" class="calibre5 pcalibre">4</a>]. (See also <a href="Applied%20Cryptography_split_005.html#4.8" class="calibre5 pcalibre">Section 4.8</a>.)</p>
+
+<h3 id="23.7" class="calibre7">23.7 Fair Coin Flips</h3>
+
+<p class="calibre9">The following protocols allow Alice and Bob to flip a fair coin over a data
+network (see <a href="Applied%20Cryptography_split_005.html#4.9" class="calibre5 pcalibre">Section 4.9</a>) [<a href="Applied%20Cryptography_split_035.html#r194" class="calibre5 pcalibre">194</a>]. This is an example of flipping a coin into a
+well (see <a href="Applied%20Cryptography_split_005.html#4.10" class="calibre5 pcalibre">Section 4.10</a>). At first, only Bob knows the result of the coin toss and
+tells it to Alice. Later, Alice may check to make sure that Bob told her the
+correct outcome of the toss.</p>
+
+<h4 class="calibre8">Coin Flipping Using Square Roots</h4>
+
+<p class="calibre9">Coin-flip subprotocol:</p>
+
+<ol class="split">
+
+<li class="pcalibre1 calibre30">Alice chooses two large primes, <i class="calibre32">p</i> and <i class="calibre32">q, </i> and sends their product, <i class="calibre32">n</i> to Bob.
+</li>
+<li class="pcalibre1 calibre30">Bob chooses a random positive integer, <i class="calibre32">r, </i> such that <i class="calibre32">r</i> is less than <i class="calibre32">n</i>/2. Bob computes
+<p class="math1"><i class="calibre32">z</i> = <i class="calibre32"><i class="calibre32">r</i><sup class="calibre93">2</sup></i> mod <i class="calibre32">n</i>
+</p>
+
+and sends <i class="calibre32">z</i> to Alice.
+</li>
+<li class="pcalibre1 calibre30">Alice computes the four square roots of <i class="calibre32">z</i> (mod <i class="calibre32">n</i>). She can do this because she knows the factorization of <i class="calibre32">n. </i> Let’s call them +x, -x, +y, and
+-y. Call <i class="calibre32">x' </i> the smaller of these two numbers:
+<p class="math1"><i class="calibre32">x</i> mod <i class="calibre32">n</i>
+<i class="calibre32">-x</i> mod <i class="calibre32">n</i>
+</p>
+
+Similarly, call <i class="calibre32">y' </i> the smaller of these two numbers:
+<p class="math1"><i class="calibre32">y</i> mod <i class="calibre32">n</i>
+<i class="calibre32">-y</i> mod <i class="calibre32">n</i>
+</p>
+
+Note that <i class="calibre32">r</i> is equal either to <i class="calibre32">x' </i> or <i class="calibre32">y'. </i>
+</li>
+<li class="pcalibre1 calibre30">Alice guesses whether <i class="calibre32">r</i> = <i class="calibre32">x' </i> or <i class="calibre32">r</i> = <i class="calibre32">y', </i> and sends her guess to Bob.
+</li>
+<li class="pcalibre1 calibre30">If Alice’s guess is correct, the result of the coin flip is heads. If
+Alice’s guess is incorrect, the result of the coin flip is tails. Bob
+announces the result of the coin flip.
+</li>
+
+</ol>
+
+<p class="calibre9">Verification subprotocol:</p>
+
+<ol class="split1">
+
+<li class="pcalibre1 calibre30">Alice sends <i class="calibre32">p</i> and <i class="calibre32">q</i> to Bob.
+</li>
+<li class="pcalibre1 calibre30">Bob computes <i class="calibre32">x' </i> and <i class="calibre32">y' </i> and sends them to Alice.
+</li>
+<li class="pcalibre1 calibre30">Alice calculates <i class="calibre32">r. </i>
+</li>
+
+</ol>
+
+<p class="calibre9">Alice has no way of knowing <i class="calibre12">r, </i> so her guess is real. She only tells Bob one bit of her guess in step (4) to prevent Bob from getting both <i class="calibre12">x' </i> and <i class="calibre12">y' </i>. If Bob has both of those numbers, he can change <i class="calibre12">r</i> after step (4).</p>
+
+<h4 class="calibre8">Coin Flipping Using Exponentiation Modulo p</h4>
+
+<p class="calibre9">Exponentiation modulo a prime number, <i class="calibre12">p</i>, is used as a one-way function in
+this protocol [<a href="Applied%20Cryptography_split_036.html#r1306" class="calibre5 pcalibre">1306</a>]:</p>
+
+<p class="calibre9">Coin-flip subprotocol:</p>
+
+<ol class="split">
+
+<li class="pcalibre1 calibre30">Alice chooses a prime number, <i class="calibre32">p, </i> in such a way that the
+factorization of <i class="calibre32">p</i> - 1 is known and contains at least one large prime.
+</li>
+<li class="pcalibre1 calibre30">Bob selects two primitive elements, <i class="calibre32">h</i> and <i class="calibre32">t, </i> in GF(<i class="calibre32">p</i>). He sends them to Alice.
+</li>
+<li class="pcalibre1 calibre30">Alice checks that <i class="calibre32">h</i> and <i class="calibre32">t</i> are primitive and then chooses a random integer <i class="calibre32">x, </i> relatively prime to <i class="calibre32">p</i> - 1. She then computes one of the two values:
+<p class="math1"><i class="calibre32">y</i> = <i class="calibre32">h<sup class="calibre93">x</sup></i> mod <i class="calibre32">p, </i> or <i class="calibre32">y</i> = <i class="calibre32">t<sup class="calibre93">x</sup></i> mod <i class="calibre32">p</i>
+</p>
+
+She sends <i class="calibre32">y</i> to Bob.
+</li>
+<li class="pcalibre1 calibre30">Bob guesses whether Alice calculated <i class="calibre32">y</i> as afunction of <i class="calibre32">h</i> or <i class="calibre32">t, </i> and sends his guess to Alice.
+</li>
+<li class="pcalibre1 calibre30">If Bob’s guess is correct, the result of the coin flip is heads. If Bob’s
+guess is incorrect, the result of the coin flip is tails. Alice announces the
+result of the coin flip.
+</li>
+
+</ol>
+
+<p class="calibre9">Verification subprotocol:</p>
+
+<ol class="split1">
+
+<li class="pcalibre1 calibre30">Alice reveals <i class="calibre32">x</i> to Bob. Bob computes <i class="calibre32">h<sup class="calibre93">x</sup></i> mod <i class="calibre32">p</i> and <i class="calibre32">t<sup class="calibre93">x</sup></i> mod <i class="calibre32">p, </i> to confirm that Alice has played fairly and to verify the result of the toss.
+He also checks that <i class="calibre32">x</i> and <i class="calibre32">p</i> - 1 are relatively prime.
+</li>
+
+</ol>
+
+<p class="calibre9">For Alice to cheat, she has to know two integers, <i class="calibre12">x</i> and <i class="calibre12">x', </i> such that <i class="calibre12">hx</i> a <i class="calibre12">tx' </i>
+(mod <i class="calibre12">p</i>). If she knew those values,she would be able to calculate:</p>
+
+<p class="math"><i class="calibre12">log</i><sub class="calibre15">t</sub><i class="calibre12">h</i> = <i class="calibre12">x'x</i><sup class="calibre19">-1</sup> mod <i class="calibre12">p</i> - 1 and <i class="calibre12">log</i><sub class="calibre15">t</sub>h = x<sup class="calibre19">-1</sup>x' mod <i class="calibre12">p</i> - 1
+</p>
+
+<p class="calibre9">These are hard problems.</p>
+
+<p class="calibre9">Alice would be able to do this if she knew <i class="calibre12">log</i><sub class="calibre15">t</sub>h, but Bob chooses <i class="calibre12">h</i> and <i class="calibre12">t</i> in step (2). Alice has no other recourse except to try to compute the discrete
+logarithm. Alice could also attempt to cheat by choosing an <i class="calibre12">x</i> that is not
+relatively prime to <i class="calibre12">p</i> - 1, but Bob will detect that in step (6).</p>
+
+<p class="calibre9">Bob can cheat if <i class="calibre12">h</i> and <i class="calibre12">t</i> are not primitive in GF(<i class="calibre12">p</i>), but Alice can easily check that after step (2) because she knows the prime factorization of <i class="calibre12">p</i> - 1.</p>
+
+<p class="calibre9">One nice thing about this protocol is that if Alice and Bob want to flip multiple
+coins, they can use the same values for <i class="calibre12">p, h, </i> and <i class="calibre12">t. </i> Alice just generates a new <i class="calibre12">x,</i> and the protocol continues from step (3).</p>
+
+<h4 class="calibre8">Coin Flipping Using Blum Integers</h4>
+
+<p class="calibre9">Blum integers can be used in a coin-flipping protocol.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice generates a Blum integer, <i class="calibre12">n, </i> a random <i class="calibre12">x</i> relatively prime to
+<i class="calibre12">n, x</i><sub class="calibre15">0</sub> = <i class="calibre12">x</i><sup class="calibre19">2</sup> mod <i class="calibre12">n, </i> and <i class="calibre12">x</i><sub class="calibre15">1</sub> = <i class="calibre12">x</i><sub class="calibre15">0</sub><sup class="calibre19">2</sup> mod <i class="calibre12">n. </i> She sends <i class="calibre12">n</i> and <i class="calibre12">x</i><sub class="calibre15">1</sub> to Bob.
+</li>
+<li class="calibre14">Bob guesses whether <i class="calibre12">x</i><sub class="calibre15">0</sub> is even or odd.
+</li>
+<li class="calibre14">Alice sends <i class="calibre12">x</i> to Bob.
+</li>
+<li class="calibre14">Bob checks that <i class="calibre12">n</i> is a Blum integer (Alice would have to give Bob
+the factors of <i class="calibre12">n</i> and proofs of their primality, or execute some
+zero-knowledge protocol to convince him that <i class="calibre12">n</i> is a Blum integer), and
+he verifies that <i class="calibre12">x</i><sub class="calibre15">0</sub> = <i class="calibre12">x</i><sub class="calibre15">2</sub> mod <i class="calibre12">n</i> and <i class="calibre12">x</i><sub class="calibre15">1</sub> = <i class="calibre12">x</i><sub class="calibre15">0</sub><sup class="calibre19">2</sup> mod <i class="calibre12">n. </i> If all this checks out, Bob wins the flip if he guessed correctly.
+</li>
+
+</ol>
+
+<p class="calibre9">It is crucial that <i class="calibre12">n</i> be a Blum integer. Otherwise, Alice may be able to find an <i class="calibre12">x'</i><sub class="calibre15">0</sub>
+such that <i class="calibre12">x'</i><sub class="calibre15">0</sub><sup class="calibre19">2</sup> mod <i class="calibre12">n</i> = <i class="calibre12">x</i><sub class="calibre15">0</sub><sup class="calibre19">2</sup> mod <i class="calibre12">n</i> = <i class="calibre12">x</i><sub class="calibre15">1</sub> , where <i class="calibre12">x'</i><sub class="calibre15">0</sub> is also a quadratic residue.
+If <i class="calibre12">x</i><sub class="calibre15">0</sub> were even and <i class="calibre12">x'</i><sub class="calibre15">0</sub> were odd (or vice versa), Alice could freely cheat.</p>
+
+<h3 id="23.8" class="calibre7">23.8 One-Way Accumulators</h3>
+
+<p class="calibre9">There is a simple one-way accumulator function [<a href="Applied%20Cryptography_split_035.html#r116" class="calibre5 pcalibre">116</a>] (see <a href="Applied%20Cryptography_split_005.html#4.12" class="calibre5 pcalibre">Section 4.12</a>):</p>
+
+<p class="math">A(<i class="calibre12">x<sub class="calibre15">i</sub></i>, <i class="calibre12">y</i>) = <i class="calibre12">x</i><sub class="calibre15"><i class="calibre22">i</i> - 1</sub><sup class="calibre19">y</sup> mod <i class="calibre12">n</i>
+</p>
+
+<p class="calibre9">The numbers <i class="calibre12">n</i> (<i class="calibre12">n</i> is the product of two primes) and <i class="calibre12">x</i><sub class="calibre15">0</sub> must be agreed upon in advance. Then, the accumulation of <i class="calibre12">y</i><sub class="calibre15">1</sub>, <i class="calibre12">y</i><sub class="calibre15">2</sub>, and <i class="calibre12">y</i><sub class="calibre15">3</sub> would be</p>
+
+<p class="math">((<i class="calibre12">x</i><sub class="calibre15">0</sub><sup class="calibre19"><i class="calibre22">y</i><sub class="calibre16">1</sub></sup> mod <i class="calibre12">n</i>)<sup class="calibre19"><i class="calibre22">y</i><sub class="calibre16">2</sub></sup> mod <i class="calibre12">n</i>)<sup class="calibre19"><i class="calibre22">y</i><sub class="calibre16">3</sub></sup> mod <i class="calibre12">n</i>
+</p>
+
+<p class="calibre9">This computation is independent of the order of <i class="calibre12">y</i><sub class="calibre15">1</sub>, <i class="calibre12">y</i><sub class="calibre15">2</sub> , and <i class="calibre12">y</i><sub class="calibre15">3</sub>.</p>
+
+<h3 id="23.9" class="calibre7">23.9 All-or-Nothing Disclosure of Secrets</h3>
+
+<p class="calibre9">This protocol allows multiple parties (at least two are required for the protocol
+to work) to buy individual secrets from a single seller (see <a href="Applied%20Cryptography_split_005.html#4.13" class="calibre5 pcalibre">Section 4.13</a>)
+[<a href="Applied%20Cryptography_split_036.html#r1374" class="calibre5 pcalibre">1374</a>,<a href="Applied%20Cryptography_split_036.html#r1175" class="calibre5 pcalibre">1175</a>]. First, here’s a definition. Take two bit strings, <i class="calibre12">x</i> and <i class="calibre12">y. </i> The <b class="calibre10">fixed</b> <b class="calibre10">bit index</b> (<b class="calibre10">FBI</b>) of <i class="calibre12">x</i> and <i class="calibre12">y</i> are the bits where the <i class="calibre12">i</i> th bit of <i class="calibre12">x</i> equals the <i class="calibre12">i</i> th bit of <i class="calibre12">y. </i></p>
+
+<p class="calibre9">For example:</p>
+
+<p class="math-left"><i class="calibre12">x</i> = <code class="calibre18">110101001011</code>
+<i class="calibre12">y</i> = <code class="calibre18">101010000110</code>
+FBI(<i class="calibre12">x, y</i>) = {1, 4, 5, 11}
+(We’re reading the bits from right to left, with the right-most bit as zero.)
+</p>
+
+<p class="calibre9">Now, here’s the protocol. Alice is the seller. Bob and Carol are buyers. Alice
+has <i class="calibre12">k n</i>-bit secrets: <i class="calibre12">S</i><sub class="calibre15">1</sub>, <i class="calibre12">S</i><sub class="calibre15">2</sub>, ... , <i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">k</i></sub>. Bob wants to buy secret <i class="calibre12">S<sub class="calibre15">b</sub></i>; Carol wants to buy secret <i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">c</i></sub>.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice generates a public-key/private-key key pair and tells Bob (but
+not Carol) the public key. She generates another public-key/private-key
+key pair and tells Carol (but not Bob) the public key.
+</li>
+<li class="calibre14">Bob generates <i class="calibre12">k n-</i>bit random numbers, <i class="calibre12">B</i><sub class="calibre15">1</sub>, <i class="calibre12">B</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">B</i><sub class="calibre15"><i class="calibre22">k</i></sub>, and tells
+them to Carol. Carol generates <i class="calibre12">k n-</i>bit random numbers, <i class="calibre12">C</i><sub class="calibre15">1</sub>, <i class="calibre12">C</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">C</i><sub class="calibre15"><i class="calibre22">k</i></sub>, and tells them to Bob.
+</li>
+<li class="calibre14">Bob encrypts <i class="calibre12">C</i><sub class="calibre15"><i class="calibre22">b</i></sub> (remember, <i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">b</i></sub> is the secret he wants to buy) with the public key from Alice. He computes the FBI of <i class="calibre12">C</i><sub class="calibre15"><i class="calibre22">b</i></sub> and the result he
+just encrypted. He sends this FBI to Carol.
+Carol encrypts <i class="calibre12">B</i><sub class="calibre15"><i class="calibre22">c</i></sub> (remember, <i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">c</i></sub> is the secret she wants to buy) with the public key from Alice. She computes the FBI of <i class="calibre12">B</i><sub class="calibre15"><i class="calibre22">c</i></sub> and the result she
+just encrypted. She sends this FBI to Bob.
+</li>
+<li class="calibre14">Bob takes each of the <i class="calibre12">n-</i>bit numbers <i class="calibre12">B</i><sub class="calibre15">1</sub>, <i class="calibre12">B</i><sub class="calibre15">2</sub>,..., <i class="calibre12">B</i><sub class="calibre15"><i class="calibre22">k</i></sub>, and replaces every bit whose index is not in the FBI he received from Carol with its
+complement. He sends this new list of <i class="calibre12">n-</i>bit numbers, <i class="calibre12">B'</i><sub class="calibre15">1</sub>, <i class="calibre12">B'</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">B'</i><sub class="calibre15">k</sub>, to Alice.
+Carol takes each of the <i class="calibre12">n-</i>bit numbers <i class="calibre12">C</i><sub class="calibre15">1</sub>, <i class="calibre12">C</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">C</i><sub class="calibre15"><i class="calibre22">k</i></sub>, and replaces every bit whose index is not in the FBI she received from Bob with its
+complement. She sends this new list of <i class="calibre12">n-</i>bit numbers, <i class="calibre12">C'</i><sub class="calibre15">1</sub>, <i class="calibre12">C'</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">C'</i><sub class="calibre15">k</sub>, to Alice.
+</li>
+<li class="calibre14">Alice decrypts all <i class="calibre12">C'</i><sub class="calibre15">i</sub> with Bob’s private key, giving her <i class="calibre12">k n-</i>bit numbers: <i class="calibre12">C"</i><sub class="calibre15">1</sub>, <i class="calibre12">C"</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">C"</i><sub class="calibre15">k</sub>. She computes <i class="calibre12">S</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">C"</i><sub class="calibre15">i</sub>, for <i class="calibre12">i</i> = 1 to <i class="calibre12">k</i>, and sends the results to Bob.
+Alice decrypts all <i class="calibre12">B'</i><sub class="calibre15">i</sub> with Carol’s private key, giving her <i class="calibre12">k n-</i>bit numbers: <i class="calibre12">B"</i><sub class="calibre15">1</sub>, <i class="calibre12">B"</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">B"</i><sub class="calibre15">k</sub>. She computes <i class="calibre12">S</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">B"</i><sub class="calibre15">i</sub>, for <i class="calibre12">i</i> = 1 to <i class="calibre12">k, </i> and sends the results to Carol.
+</li>
+<li class="calibre14">Bob computes <i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">b</i></sub> by XORing <i class="calibre12">C</i><sub class="calibre15"><i class="calibre22">b</i></sub> and the <i class="calibre12">b</i>th number he received from Alice.
+Carol computes <i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">c</i></sub> by XORing <i class="calibre12">B</i><sub class="calibre15"><i class="calibre22">c</i></sub> and the <i class="calibre12">c</i>th number she received from Alice.
+</li>
+
+</ol>
+
+<p class="calibre9">This is complicated. An example will go a long way to help.</p>
+
+<p class="calibre9">Alice has the following eight 12-bit secrets for sale: <i class="calibre12">S</i><sub class="calibre15">1</sub> = 1990, <i class="calibre12">S</i><sub class="calibre15">2</sub> = 471, <i class="calibre12">S</i><sub class="calibre15">3</sub>
+= 3860, <i class="calibre12">S</i><sub class="calibre15">4</sub> = 1487, <i class="calibre12">S</i><sub class="calibre15">5</sub> = 2235, <i class="calibre12">S</i><sub class="calibre15">6</sub> = 3751, <i class="calibre12">S</i><sub class="calibre15">7</sub> = 2546, and <i class="calibre12">S</i><sub class="calibre15">8</sub> = 4043. Bob wants to buy <i class="calibre12">S</i><sub class="calibre15">7</sub>. Carol wants to buy <i class="calibre12">S</i><sub class="calibre15">2</sub>.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice uses the RSA algorithm.
+<p class="calibre9">The key pair she will use with Bob
+is: <i class="calibre12">n</i> = 7387, <i class="calibre12">e</i> = 5145, and <i class="calibre12">d</i> = 777.</p>
+ The key pair she will use with Carol is: <i class="calibre12">n</i> = 2747, <i class="calibre12">e</i> = 1421, and <i class="calibre12">d</i> = 2261. She tells Bob and Carol each their public key.
+</li>
+<li class="calibre14">Bob generates eight 12-bit random numbers, <i class="calibre12">B</i><sub class="calibre15">1</sub> = 743, <i class="calibre12">B</i><sub class="calibre15">2</sub> = 1988, <i class="calibre12">B</i><sub class="calibre15">3</sub> = 4001, <i class="calibre12">B</i><sub class="calibre15">4</sub> = 2942, <i class="calibre12">B</i><sub class="calibre15">5</sub> = 3421, <i class="calibre12">B</i><sub class="calibre15">6</sub> = 2210, <i class="calibre12">B</i><sub class="calibre15">7</sub> = 2306, and <i class="calibre12">B</i><sub class="calibre15">8</sub> = 222, and tells them to Carol. Carol generates eight 12-bit random numbers,
+ <i class="calibre12">C</i><sub class="calibre15">1</sub> = 1708, <i class="calibre12">C</i><sub class="calibre15">2</sub> = 711, <i class="calibre12">C</i><sub class="calibre15">3</sub> = 1969, <i class="calibre12">C</i><sub class="calibre15">4</sub> = 3112, <i class="calibre12">C</i><sub class="calibre15">5</sub> = 4014, <i class="calibre12">C</i><sub class="calibre15">6</sub> = 2308, <i class="calibre12">C</i><sub class="calibre15">7</sub>
+= 2212, and <i class="calibre12">C</i><sub class="calibre15">8</sub> = 222, and tells them to Bob.
+</li>
+<li class="calibre14">Bob wants to buy <i class="calibre12">S</i><sub class="calibre15">7</sub> , so he encrypts <i class="calibre12">C</i><sub class="calibre15">7</sub> with the public key that Alice gave him.
+<p class="math-left">2212<sup class="calibre19">5145</sup> mod 7387 = 5928
+</p>
+
+Now:
+<p class="math-left">2212 = 0100010100100
+5928 = 1011100101000
+</p>
+
+<p class="calibre9">So, the FBI of those two numbers is {0, 1, 4, 5, 6}. He sends this to
+Carol.</p>
+
+<p class="calibre9">Carol wants to buy <i class="calibre12">S</i><sub class="calibre15">2</sub>, so she encrypts <i class="calibre12">B</i><sub class="calibre15">2</sub> with the public key that Alice gave her and computes the FBI of <i class="calibre12">B</i><sub class="calibre15">2</sub> with the result of her encryption. She sends
+{0, 1, 2, 6, 9, 10} to Bob.</p>
+
+</li>
+<li class="calibre14">Bob takes <i class="calibre12">B</i><sub class="calibre15">1</sub>, <i class="calibre12">B</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">B</i><sub class="calibre15">8</sub>, and replaces every bit whose index is not in the set {0, 1, 2, 6, 9, 10} with its complement. For example:
+<p class="math-left"><i class="calibre12">B</i><sub class="calibre15">2</sub> = 111111000100 = 1988
+<i class="calibre12">B'</i><sub class="calibre15">2</sub> = 011001111100 = 1660
+</p>
+
+He sends <i class="calibre12">B'</i><sub class="calibre15">1</sub>, <i class="calibre12">B'</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">B'</i><sub class="calibre15">8</sub>, to Alice.
+Carol takes <i class="calibre12">C</i><sub class="calibre15">1</sub>, <i class="calibre12">C</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">C</i><sub class="calibre15">8</sub>, and replaces every bit whose index is not in the set {0, 1, 4, 5, 6} with its complement. For example:
+<p class="math-left"><i class="calibre12">C</i><sub class="calibre15">7</sub> = 0100010100100 = 2212
+<i class="calibre12">C'</i><sub class="calibre15">7</sub> = 1011100101000 = 5928
+</p>
+She sends <i class="calibre12">C'</i><sub class="calibre15">1</sub>, <i class="calibre12">C'</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">C'</i><sub class="calibre15">8</sub>, to Alice.
+</li>
+<li class="calibre14">Alice decrypts all <i class="calibre12">C'</i><sub class="calibre15">i</sub> with Bob’s private key and XORs the results with <i class="calibre12">S</i><sub class="calibre15">i</sub>. For example, for <i class="calibre12">i</i> = 7:
+<p class="math">5928<sup class="calibre19">777</sup> mod 7387 = 2212; 2546 ⊕ 2212 = 342
+</p>
+
+<p class="calibre9">She sends the results to Bob.</p>
+
+Alice decrypts all <i class="calibre12">B' </i> i with Carol’s private key and XORs the results with
+<i class="calibre12">S</i><sub class="calibre15">i</sub>. For example, for <i class="calibre12">i</i> = 2:
+<p class="math">1660<sup class="calibre19">2261</sup> (mod 2747) = 1988; 471 ⊕ 1988 = 1555
+</p>
+
+She sends the results to Carol.
+</li>
+<li class="calibre14">Bob computes <i class="calibre12">S</i><sub class="calibre15">7</sub> by XORing <i class="calibre12">C</i><sub class="calibre15">7</sub> and the seventh number he
+received from Alice:
+<p class="math">2212 ⊕ 342 = 2546
+</p>
+
+Carol computes <i class="calibre12">S</i><sub class="calibre15">2</sub> by XORing <i class="calibre12">B</i><sub class="calibre15">2</sub> and the second number she received
+from Alice.
+<p class="math">1988 ⊕ 1555 = 471
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">The protocol works for any number of buyers. If Bob, Carol, and Dave want to
+buy secrets, Alice gives each buyer two public keys, one for each of the others.
+Each buyer gets a set of numbers from each other buyer. Then, they complete
+the protocol with Alice for each of their sets of numbers and XOR all of their
+final results from Alice to get their secret. More details are in [<a href="Applied%20Cryptography_split_036.html#r1374" class="calibre5 pcalibre">1374</a>,<a href="Applied%20Cryptography_split_036.html#r1175" class="calibre5 pcalibre">1175</a>].</p>
+
+<p class="calibre9">Unfortunately, a pair of dishonest parties can cheat. Alice and Carol, working
+together, can easily find out what secret Bob is getting: If they know the FBI
+of <i class="calibre12">C</i><sub class="calibre15"><i class="calibre22">b</i></sub> and Bob’s encryption algorithm, they can find <i class="calibre12">b</i> such that <i class="calibre12">C</i><sub class="calibre15"><i class="calibre22">b</i></sub> has the right FBI. And Bob and Carol, working together, can easily get all the secrets
+from Alice.</p>
+
+<p class="calibre9">If you assume honest parties,there’s an easier protocol [<a href="Applied%20Cryptography_split_035.html#r389" class="calibre5 pcalibre">389</a>].</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice encrypts all of the secrets with RSA and sends them to Bob:
+<p class="math"><i class="calibre12">C</i><sub class="calibre15">i</sub> = <i class="calibre12">S</i><sub class="calibre15">i</sub><sup class="calibre19">e</sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Bob chooses his secret <i class="calibre12">C</i><sub class="calibre15"><i class="calibre22">b</i></sub>, picks a random <i class="calibre12">r, </i> and sends <i class="calibre12">C', </i> to Alice.
+<p class="math"><i class="calibre12">C'</i> = <i class="calibre12">C</i><sub class="calibre15">b</sub>r<sup class="calibre19">e</sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Alice sends Bob <i class="calibre12">P'</i>.
+<p class="math"><i class="calibre12">P'</i> = <i class="calibre12">C'<sup class="calibre19">d</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Bob calculates <i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">b</i></sub>.
+<p class="math"><i class="calibre12">S</i><sub class="calibre15"><i class="calibre22">b</i></sub> = <i class="calibre12">P'r</i><sup class="calibre19">-1</sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">If the parties may be dishonest, Bob can prove in zero-knowledge that he
+knows some <i class="calibre12">r</i> such that <i class="calibre12">C'</i> = <i class="calibre12">C</i><sub class="calibre15">b</sub>r<sup class="calibre19">e</sup> mod <i class="calibre12">n</i> and keep <i class="calibre12">b</i> secret until Alice gives him <i class="calibre12">P'</i> in step (3) [<a href="Applied%20Cryptography_split_035.html#r246" class="calibre5 pcalibre">246</a>].</p>
+
+<h3 id="23.10" class="calibre7">23.10 Fair and Failsafe Cryptosystems</h3>
+
+<h4 class="calibre8">Fair Diffie-Hellman</h4>
+
+<p class="calibre9">Fair cryptosystems are a way to do key escrowing in software (see <a href="Applied%20Cryptography_split_005.html#4.14" class="calibre5 pcalibre">Section 4.14</a>). 
+This example is from Silvio Micali [<a href="Applied%20Cryptography_split_036.html#r1084" class="calibre5 pcalibre">1084</a>,<a href="Applied%20Cryptography_split_036.html#r1085" class="calibre5 pcalibre">1085</a>]. It is patented
+[<a href="Applied%20Cryptography_split_036.html#r1086" class="calibre5 pcalibre">1086</a>,<a href="Applied%20Cryptography_split_036.html#r1087" class="calibre5 pcalibre">1087</a>].</p>
+
+<p class="calibre9">In the basic Diffie-Hellman scheme, a group of users share a prime, <i class="calibre12">p, </i> and a
+generator, <i class="calibre12">g. </i> Alice’s private key is <i class="calibre12">s, </i> and her public key is <i class="calibre12">t</i> = <i class="calibre12">g<sup class="calibre19">s</sup></i> mod <i class="calibre12">p. </i></p>
+
+<p class="calibre9">Here’s how to make Diffie-Hellman fair (this example uses five trustees).</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses five integers, <i class="calibre12">s</i><sub class="calibre15">1</sub>, <i class="calibre12">s</i><sub class="calibre15">2</sub>, <i class="calibre12">s</i><sub class="calibre15">3</sub>, <i class="calibre12">s</i><sub class="calibre15">4</sub>, and <i class="calibre12">s</i><sub class="calibre15">5</sub>, each less than <i class="calibre12">p</i> -
+1. Alice’s private key is
+<p class="math"><i class="calibre12">s</i> = (<i class="calibre12">s</i><sub class="calibre15">1</sub> + <i class="calibre12">s</i><sub class="calibre15">2</sub> + <i class="calibre12">s</i><sub class="calibre15">3</sub> + <i class="calibre12">s</i><sub class="calibre15">4</sub> + <i class="calibre12">s</i><sub class="calibre15">5</sub>) mod <i class="calibre12">p</i> - 1
+</p>
+
+and her public key is
+<p class="math"><i class="calibre12">t</i> = <i class="calibre12">g<sup class="calibre19">s</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+Alice also computes
+<p class="math"><i class="calibre12">t</i><sub class="calibre15">i</sub> = <i class="calibre12">g<sup class="calibre19">s<sub class="calibre16">i</sub></sup></i> mod <i class="calibre12">p, </i> for <i class="calibre12">i</i> = 1 to 5
+</p>
+
+Alice’s public shares are <i class="calibre12">t</i><sub class="calibre15">i</sub>, and her private shares are <i class="calibre12">s</i><sub class="calibre15">i</sub>.
+</li>
+<li class="calibre14">Alice sends a private piece and corresponding public piece to each
+trustee. For example, she sends <i class="calibre12">s</i><sub class="calibre15">1</sub> and <i class="calibre12">t</i><sub class="calibre15">1</sub> to trustee 1. She sends <i class="calibre12">t</i> to the KDC.
+</li>
+<li class="calibre14">Each trustee verifies that
+<p class="math"><i class="calibre12">t</i><sub class="calibre15">i</sub> = <i class="calibre12">g<sup class="calibre19">s<sub class="calibre16">i</sub></sup></i> mod <i class="calibre12">p</i>
+</p>
+
+If it does, the trustee signs <i class="calibre12">t</i><sub class="calibre15">i</sub> and sends it to the KDC. The trustee stores
+<i class="calibre12">s</i><sub class="calibre15">i</sub> in a secure place.
+</li>
+<li class="calibre14">After receiving all five public pieces, the KDC verifies that
+<p class="math"><i class="calibre12">t</i> = (<i class="calibre12">t</i><sub class="calibre15">1</sub> * <i class="calibre12">t</i><sub class="calibre15">2</sub> * <i class="calibre12">t</i><sub class="calibre15">3</sub> * <i class="calibre12">t</i><sub class="calibre15">4</sub> * <i class="calibre12">t</i><sub class="calibre15">5</sub>) mod <i class="calibre12">p</i>
+</p>
+If it does, the KDC approves the public key.
+</li>
+
+</ol>
+
+<p class="calibre9">At this point, the KDC knows that the trustees each have a valid piece, and that
+they can reconstruct the private key if required. However, neither the KDC nor
+any four of the trustees working together can reconstruct Alice’s private key.</p>
+
+<p class="calibre9">Micali’s papers [<a href="Applied%20Cryptography_split_036.html#r1084" class="calibre5 pcalibre">1084</a>,<a href="Applied%20Cryptography_split_036.html#r1085" class="calibre5 pcalibre">1085</a>] also contain a procedure for making RSA fair and
+for combining a threshold scheme with the fair cryptosystem, so that <i class="calibre12">m</i> out of
+<i class="calibre12">n</i> trustees can reconstruct the private key.</p>
+
+<h4 class="calibre8">Failsafe Diffie-Hellman</h4>
+
+<p class="calibre9">Like the previous protocol, a group of users share a prime, <i class="calibre12">p, </i> and a generator, <i class="calibre12">g. </i> Alice’s private key is <i class="calibre12">s, </i> and her public key is <i class="calibre12">t</i> = <i class="calibre12">g<sup class="calibre19">s</sup></i> mod <i class="calibre12">p. </i></p>
+
+<ol class="calibre17">
+
+<li class="calibre14">The KDC chooses a random number, <i class="calibre12">B, </i> between 0 and <i class="calibre12">p</i> - 2, and commits to <i class="calibre12">B</i> using a bit-commitment protocol (see <a href="Applied%20Cryptography_split_005.html#4.9" class="calibre5 pcalibre">Section 4.9</a>).
+</li>
+<li class="calibre14">Alice chooses a random number, <i class="calibre12">A, </i> between 0 and <i class="calibre12">p</i> - 2. She sends <i class="calibre12">g<sup class="calibre19">A</sup></i> mod <i class="calibre12">p</i> to the KDC.
+</li>
+<li class="calibre14">The user “shares” <i class="calibre12">A</i> with each trustee using a verifiable
+secret-sharing scheme (see <a href="Applied%20Cryptography_split_004.html#3.7" class="calibre5 pcalibre">Section 3.7</a>).
+</li>
+<li class="calibre14">The KDC reveals <i class="calibre12">B</i> to Alice.
+</li>
+<li class="calibre14">Alice verifies the commitment from step (1). Then she sets her
+public key as
+<p class="math"><i class="calibre12">t</i> = (<i class="calibre12">g<sup class="calibre19">A</sup></i>)<i class="calibre12">g<sup class="calibre19">B</sup></i> mod <i class="calibre12">p</i>
+</p>
+
+She sets her private key as
+<p class="math"><i class="calibre12">s</i> = (<i class="calibre12">A</i> + <i class="calibre12">B</i>) mod (<i class="calibre12">p</i> - 1)
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">The trustees can reconstruct <i class="calibre12">A. </i> Since the KDC knows <i class="calibre12">B, </i> this is enough to reconstruct <i class="calibre12">s. </i> And Alice cannot make use of any subliminal channels to send
+unauthorized information. This protocol, discussed in [<a href="Applied%20Cryptography_split_036.html#r946" class="calibre5 pcalibre">946</a>,<a href="Applied%20Cryptography_split_036.html#r833" class="calibre5 pcalibre">833</a>] is being
+patented.</p>
+
+<h3 id="23.11" class="calibre7">23.11 Zero-Knowledge Proofs of Knowledge</h3>
+
+<h4 class="calibre8">Zero-Knowledge Proof of a Discrete Logarithm</h4>
+
+<p class="calibre9">Peggy wants to prove to Victor that she knows an <i class="calibre12">x</i> that satisfies</p>
+
+<p class="math"><i class="calibre12">A<sup class="calibre19">x</sup></i> ≡ <i class="calibre12">B</i> (mod <i class="calibre12">p</i>)
+</p>
+
+<p class="calibre9">where <i class="calibre12">p</i> is a prime, and <i class="calibre12">x</i> is a random number relatively prime to <i class="calibre12">p</i> - 1. The numbers <i class="calibre12">A, B, </i> and <i class="calibre12">p</i> are public, and <i class="calibre12">x</i> is secret. Here’s how Peggy can prove she knows <i class="calibre12">x</i> without revealing it (see <a href="Applied%20Cryptography_split_006.html#5.1" class="calibre5 pcalibre">Section 5.1</a>) [<a href="Applied%20Cryptography_split_035.html#r338" class="calibre5 pcalibre">338</a>,<a href="Applied%20Cryptography_split_035.html#r337" class="calibre5 pcalibre">337</a>].</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Peggy generates <i class="calibre12">t</i> random numbers, <i class="calibre12">r</i><sub class="calibre15">1</sub>, <i class="calibre12">r</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">t</i></sub>, where all <i class="calibre12">r</i><sub class="calibre15">i</sub> are less than <i class="calibre12">p</i> - 1.
+</li>
+<li class="calibre14">Peggy computes <i class="calibre12">h</i><sub class="calibre15">i</sub> = <i class="calibre12">A<sup class="calibre19">r<sub class="calibre16">i</sub></sup></i> mod <i class="calibre12">p, </i> for all values of <i class="calibre12">i, </i> and sends them to Victor.
+</li>
+<li class="calibre14">Peggy and Victor engage in a coin-flipping protocol to generate <i class="calibre12">t</i>
+bits: <i class="calibre12">b</i><sub class="calibre15">1</sub>, <i class="calibre12">b</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">b</i><sub class="calibre15"><i class="calibre22">t</i></sub>.
+</li>
+<li class="calibre14">For all <i class="calibre12">t</i> bits, Peggy does one of the following:
+<ol class="calibre43">
+
+<li class="calibre14">If <i class="calibre12">b</i><sub class="calibre15">i</sub> = 0, she sends Victor <i class="calibre12">r</i><sub class="calibre15">i</sub>
+</li>
+<li class="calibre14">If <i class="calibre12">b</i><sub class="calibre15">i</sub> = 1, she sends Victor <i class="calibre12">s</i><sub class="calibre15">i</sub> = (<i class="calibre12">r</i><sub class="calibre15">i</sub> - <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">j</i></sub>) mod (<i class="calibre12">p</i> - 1), where <i class="calibre12">j</i> is the lowest value for which <i class="calibre12">b</i><sub class="calibre15"><i class="calibre22">j</i></sub> = 1
+</li>
+
+</ol>
+
+</li>
+<li class="calibre14">For all <i class="calibre12">t</i> bits, Victor confirms one of the following:
+<ol class="calibre43">
+
+<li class="calibre14">If <i class="calibre12">b</i><sub class="calibre15">i</sub> = 0, that <i class="calibre12">A<sup class="calibre19">r<sub class="calibre16">i</sub></sup></i> ≡ <i class="calibre12">h</i><sub class="calibre15">i</sub> (mod <i class="calibre12">p</i>)
+</li>
+<li class="calibre14">If <i class="calibre12">b</i><sub class="calibre15">i</sub> = 1, that <i class="calibre12">A<sup class="calibre19">s<sub class="calibre16">i</sub></sup></i> ≡ <i class="calibre12">h</i><sub class="calibre15">i</sub>h<sub class="calibre15">j</sub><sup class="calibre19">-1</sup> (mod <i class="calibre12">p</i>)
+</li>
+
+</ol>
+
+</li>
+<li class="calibre14">Peggy sends Victor <i class="calibre12">Z, </i> where
+<p class="math"><i class="calibre12">Z</i> = (<i class="calibre12">x</i> - <i class="calibre12">r</i><sub class="calibre15"><i class="calibre22">j</i></sub>) mod (<i class="calibre12">p</i> - 1)
+</p>
+
+</li>
+<li class="calibre14">Victor confirms that
+<p class="math"><i class="calibre12">A<sup class="calibre19">Z</sup></i> ≡ <i class="calibre12">Bh</i><sub class="calibre15">j</sub><sup class="calibre19">-1</sup> (mod <i class="calibre12">p</i>)
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">Peggy’s probability of successfully cheating is 2<sup class="calibre19">-t</sup>.</p>
+
+<h4 class="calibre8">Zero-Knowledge Proof of the Ability to Break RSA</h4>
+
+<p class="calibre9">Alice knows Carol’s private key. Maybe she has broken RSA; maybe she has
+broken into Carol’s house and stolen the key. Alice wants to convince Bob that
+she knows Carol’s key. However, she doesn’t want to tell Bob the key or even
+decrypt one of Carol’s messages for Bob. Here’s a zero-knowledge protocol by
+which Alice convinces Bob that she knows Carol’s private key [<a href="Applied%20Cryptography_split_036.html#r888" class="calibre5 pcalibre">888</a>].</p>
+
+<p class="calibre9">Carol’s public key is <i class="calibre12">e, </i> her private key is <i class="calibre12">d, </i> and the RSA modulus is <i class="calibre12">n. </i></p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice and Bob agree on a random <i class="calibre12">k</i> and an <i class="calibre12">m</i> such that
+<p class="math"><i class="calibre12">km</i> ≡ <i class="calibre12">e</i> (mod <i class="calibre12">n</i>)
+</p>
+
+They should choose the numbers randomly, using a coin-flip protocol to
+generate <i class="calibre12">k</i> and then computing <i class="calibre12">m. </i> If both <i class="calibre12">k</i> and <i class="calibre12">m</i> are greater than 3, the protocol continues. Otherwise, they choose again.
+</li>
+<li class="calibre14">Alice and Bob generate a random ciphertext, <i class="calibre12">C. </i> Again, they should use a coin-flip protocol.
+</li>
+<li class="calibre14">Alice, using Carol’s private key, computes
+<p class="math"><i class="calibre12">M</i> = <i class="calibre12">C<sup class="calibre19">d</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+She then computes
+<p class="math"><i class="calibre12">X</i> = <i class="calibre12">M<sup class="calibre19">k</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+and sends <i class="calibre12">X</i> to Bob.
+</li>
+<li class="calibre14">Bob confirms that <i class="calibre12">X<sup class="calibre19">m</sup></i> mod <i class="calibre12">n</i> = <i class="calibre12">C. </i> If it does, he believes Alice.
+</li>
+
+</ol>
+
+<p class="calibre9">A similar protocol can be used to demonstrate the ability to break a discrete
+logarithm problem [<a href="Applied%20Cryptography_split_036.html#r888" class="calibre5 pcalibre">888</a>].</p>
+
+<h4 class="calibre8">Zero-Knowledge Proof that n Is a Blum Integer</h4>
+
+<p class="calibre9">There are no known truly practical zero-knowledge proofs that <i class="calibre12">n</i> = <i class="calibre12">pq, </i> where <i class="calibre12">p</i> and <i class="calibre12">q</i> are primes congruent to 3 modulo 4. However, if you allow <i class="calibre12">n</i> to be of the form <i class="calibre12">p<sup class="calibre19">r</sup>q<sup class="calibre19">s</sup>, </i> where <i class="calibre12">r</i> and <i class="calibre12">s</i> are odd, then the properties which make Blum integers useful in cryptography still hold. And there exists a zero-knowledge
+proof that <i class="calibre12">n</i> is of that form.</p>
+
+<p class="calibre9">Assume Alice knows the factorization of the Blum integer <i class="calibre12">n, </i> where <i class="calibre12">n</i> is of the form previously discussed. Here’s how she can prove to Bob that <i class="calibre12">n</i> is of that
+form [<a href="Applied%20Cryptography_split_035.html#r660" class="calibre5 pcalibre">660</a>].</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice sends Bob a number <i class="calibre12">u</i> which has a Jacobi symbol -1 modulo <i class="calibre12">n. </i>
+</li>
+<li class="calibre14">Alice and Bob jointly agree on random bits: <i class="calibre12">b</i><sub class="calibre15">1</sub>, <i class="calibre12">b</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">b</i><sub class="calibre15"><i class="calibre22">k</i></sub>.
+</li>
+<li class="calibre14">Alice and Bob jointly agree on random numbers: <i class="calibre12">x</i><sub class="calibre15">1</sub>, <i class="calibre12">x</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">x</i><sub class="calibre15"><i class="calibre22">k</i></sub>.
+</li>
+<li class="calibre14">For each <i class="calibre12">i</i> = 1, 2, ..., <i class="calibre12">k, </i> Alice sends Bob a square root modulo <i class="calibre12">n, </i> of one of the four numbers: <i class="calibre12">x</i><sub class="calibre15">i</sub>, <i class="calibre12">-x</i><sub class="calibre15">i</sub>, <i class="calibre12">ux</i><sub class="calibre15">i</sub>, <i class="calibre12">-ux</i><sub class="calibre15">i</sub>. The square root must have the Jacobi symbol <i class="calibre12">b</i><sub class="calibre15">i</sub>.
+</li>
+
+</ol>
+
+<p class="calibre9">The odds of Alice successfully cheating are one in 2<sup class="calibre19">k</sup>.</p>
+
+<h3 id="23.12" class="calibre7">23.12 Blind Signatures</h3>
+
+<p class="calibre9">The notion of blind signatures (see <a href="Applied%20Cryptography_split_006.html#5.3" class="calibre5 pcalibre">Section 5.3</a>) was invented by David Chaum
+[<a href="Applied%20Cryptography_split_035.html#r317" class="calibre5 pcalibre">317</a>,<a href="Applied%20Cryptography_split_035.html#r323" class="calibre5 pcalibre">323</a>], who also invented their first implementation [<a href="Applied%20Cryptography_split_035.html#r318" class="calibre5 pcalibre">318</a>]. It uses the RSA
+algorithm.</p>
+
+<p class="calibre9">Bob has a public key, <i class="calibre12">e, </i> a private key, <i class="calibre12">d, </i> and a public modulus, <i class="calibre12">n. </i> Alice wants Bob to sign message <i class="calibre12">m</i> blindly.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses a random value, <i class="calibre12">k, </i> between 1 and <i class="calibre12">n. </i> Then she blinds <i class="calibre12">m</i> by computing
+<p class="math"><i class="calibre12">t</i> = <i class="calibre12">mk<sup class="calibre19">e</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Bob signs <i class="calibre12">t</i>
+<p class="math"><i class="calibre12">t<sup class="calibre19">d</sup></i> = (<i class="calibre12">mk<sup class="calibre19">e</sup></i>)<sup class="calibre19"><i class="calibre22">d</i></sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Alice unblinds <i class="calibre12">t<sup class="calibre19">d</sup></i> by computing
+<p class="math"><i class="calibre12">s</i> = <i class="calibre12">t<sup class="calibre19">d</sup></i>/<i class="calibre12">k</i> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">And the result is
+<p class="math"><i class="calibre12">s</i> = <i class="calibre12">m<sup class="calibre19">d</sup></i> mod <i class="calibre12">n</i>
+</p>
+
+This can easily be shown
+<p class="math"><i class="calibre12">t<sup class="calibre19">d</sup></i> ≡ (<i class="calibre12">mk<sup class="calibre19">e</sup></i>)<sup class="calibre19">d</sup> ≡ <i class="calibre12">m<sup class="calibre19">d</sup>k</i> (mod <i class="calibre12">n</i>), so <i class="calibre12">t<sup class="calibre19">d</sup></i>/<i class="calibre12">k</i> = <i class="calibre12">m<sup class="calibre19">d</sup>k</i>/<i class="calibre12">k</i> ≡ <i class="calibre12">m<sup class="calibre19">d</sup></i> (mod <i class="calibre12">n</i>).
+</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">Chaum invented a family of more complicated blind signature algorithms in
+[<a href="Applied%20Cryptography_split_035.html#r320" class="calibre5 pcalibre">320</a>,<a href="Applied%20Cryptography_split_035.html#r324" class="calibre5 pcalibre">324</a>], called blind unanticipated signatures. These signatures are more
+complex in construction, but more flexible.</p>
+
+<h3 id="23.13" class="calibre7">23.13 Oblivious Transfer</h3>
+
+<p class="calibre9">In this protocol by Michael Rabin [<a href="Applied%20Cryptography_split_036.html#r1286" class="calibre5 pcalibre">1286</a>], Alice has a 50 percent chance of
+sending Bob two primes, <i class="calibre12">p, </i> and <i class="calibre12">q. </i> Alice will not know whether the transfer is successful. (See <a href="Applied%20Cryptography_split_006.html#5.5" class="calibre5 pcalibre">Section 5.5</a>.) (This protocol can be used to send Bob any
+message with a 50 percent success rate if <i class="calibre12">p</i> and <i class="calibre12">q</i> reveal an RSA private key.)</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice sends Bob the product of the two primes: <i class="calibre12">n</i> = <i class="calibre12">pq. </i>
+</li>
+<li class="calibre14">Bob chooses a random <i class="calibre12">x</i> less than <i class="calibre12">n, </i> such that <i class="calibre12">x</i> is relatively prime to <i class="calibre12">n. </i> He sends Alice:
+<p class="math"><i class="calibre12">a</i> = <i class="calibre12">x</i><sup class="calibre19">2</sup> mod <i class="calibre12">n</i>
+</p>
+
+</li>
+<li class="calibre14">Alice, knowing <i class="calibre12">p</i> and <i class="calibre12">q, </i> computes the four roots of <i class="calibre12">a: x, n</i> - <i class="calibre12">x, y,</i> and <i class="calibre12">n</i> - <i class="calibre12">y. </i> She chooses one of these roots at random and sends it to Bob.
+</li>
+<li class="calibre14">If Bob receives <i class="calibre12">y</i> or <i class="calibre12">n</i> - <i class="calibre12">y, </i> he can compute the greatest common divisor of <i class="calibre12">x</i> + <i class="calibre12">y</i> and <i class="calibre12">n, </i> which is either <i class="calibre12">p</i> or <i class="calibre12">q. </i> Then, of course, <i class="calibre12">n</i>/<i class="calibre12">p</i> = <i class="calibre12">q. </i>
+<p class="calibre9">If Bob receives <i class="calibre12">x</i> or <i class="calibre12">n</i> - <i class="calibre12">x, </i> he can’t compute anything.</p>
+
+</li>
+
+</ol>
+
+<p class="calibre9">This protocol may have a weakness: It might be the case that Bob can compute
+a number <i class="calibre12">a</i> such that given the square root of <i class="calibre12">a</i> you can calculate a factor of <i class="calibre12">n</i> all the time.</p>
+
+<h3 id="23.14" class="calibre7">23.14 Secure Multiparty Computation</h3>
+
+<p class="calibre9">This protocol is from [<a href="Applied%20Cryptography_split_036.html#r1373" class="calibre5 pcalibre">1373</a>]. Alice knows the integer <i class="calibre12">i; </i> Bob knows the integer <i class="calibre12">j. </i> Alice and Bob together wish to know whether <i class="calibre12">i</i>  ≤ <i class="calibre12">j</i> or if <i class="calibre12">i</i> &gt; <i class="calibre12">j, </i> but neither Alice nor Bob wish to reveal the integer each knows. This special case of
+secure multiparty computation (see <a href="Applied%20Cryptography_split_007.html#6.2" class="calibre5 pcalibre">Section 6.2</a>) is sometimes known as <b class="calibre10">Yao’s</b>
+<b class="calibre10">millionaire problem</b> [<a href="Applied%20Cryptography_split_036.html#r1627" class="calibre5 pcalibre">1627</a>].</p>
+
+<p class="calibre9">For this example, assume that <i class="calibre12">i</i> and <i class="calibre12">j</i> range from 1 to 100. Bob has a public key and a private key.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses a large random number, <i class="calibre12">x, </i> and encrypts it in Bob’s
+public key.
+<p class="math"><i class="calibre12">c</i> = <i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">B</i></sub>(<i class="calibre12">x</i>)
+</p>
+
+</li>
+<li class="calibre14">Alice computes <i class="calibre12">c</i> - <i class="calibre12">i</i> and sends the result to Bob.
+</li>
+<li class="calibre14">Bob computes the following 100 numbers:
+<p class="math"><i class="calibre12">y</i><sub class="calibre15"><i class="calibre22">u</i></sub> = <i class="calibre12">D</i><sub class="calibre15"><i class="calibre22">B</i></sub>(<i class="calibre12">c</i> - <i class="calibre12">i</i> + <i class="calibre12">u</i>), for 1 ≤ <i class="calibre12">u</i> ≤ 100
+</p>
+
+<p class="calibre9"><i class="calibre12">D</i><sub class="calibre15"><i class="calibre22">B</i></sub> is the decryption algorithm with Bob’s private key.</p>
+
+<p class="calibre9">He chooses a large random prime, <i class="calibre12">p. </i> (The size of <i class="calibre12">p</i> should be somewhat smaller than <i class="calibre12">x. </i> Bob doesn’t know <i class="calibre12">x, </i> but Alice could easily tell him the size of <i class="calibre12">x. </i>) He then computes the following 100 numbers:</p>
+
+<p class="math"><i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">u</i></sub> = (<i class="calibre12">y</i><sub class="calibre15"><i class="calibre22">u</i></sub> mod <i class="calibre12">p</i>), for 1 ≤ <i class="calibre12">u</i> ≤ 100
+</p>
+
+He then verifies that, for all <i class="calibre12">u</i> ≠ <i class="calibre12">v</i>
+<p class="math">|<i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">u</i></sub> - <i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">v</i></sub>| ≥ 2
+</p>
+
+and that for all <i class="calibre12">u</i>
+<p class="math">0 &lt; <i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">u</i></sub> &lt; <i class="calibre12">p</i> - 1
+</p>
+
+If this is not true, Bob chooses another prime and tries again.
+</li>
+<li class="calibre14">Bob sends Alice this sequence of numbers in this exact order:
+<p class="math"><i class="calibre12">z</i><sub class="calibre15">1</sub>, <i class="calibre12">z</i><sub class="calibre15">2</sub>, ..., <i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">j</i></sub>, <i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">j + 1</i></sub> + 1, <i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">j + 2</i></sub> + 1, ..., <i class="calibre12">z</i><sub class="calibre15">100</sub> + 1, <i class="calibre12">p</i>
+</p>
+
+</li>
+<li class="calibre14"> Alice checks whether the <i class="calibre12">i</i>th number in the sequence is congruent to
+ <i class="calibre12">x</i> mod <i class="calibre12">p. </i> If it is, she concludes that <i class="calibre12">i</i> ≤ <i class="calibre12">j. </i> If it is not, she concludes that <i class="calibre12">i</i>
+&gt; <i class="calibre12">j. </i>
+</li>
+<li class="calibre14">Alice tells Bob the conclusion.
+</li>
+
+</ol>
+
+<p class="calibre9">All the verification that Bob goes through in step (3) is to guarantee that no
+number appears twice in the sequence generated in step (4). Otherwise, if <i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">a</i></sub> 
+= <i class="calibre12">z</i><sub class="calibre15"><i class="calibre22">b</i></sub>, Alice knows that <i class="calibre12">a</i> ≤ <i class="calibre12">j</i> &lt; <i class="calibre12">b. </i></p>
+
+<p class="calibre9">The one drawback to this protocol is that Alice learns the result of the
+computation before Bob does. Nothing stops her from completing the protocol
+up to step (5) and then refusing to tell Bob the results in step (6). She could
+even lie to Bob in step (6).</p>
+
+<h4 class="calibre8">Example of the Protocol</h4>
+
+<p class="calibre9">Assume they’re using RSA. Bob’s public key is 7 and his private key is 23; <i class="calibre12">n</i>
+= 55. Alice’s secret value, <i class="calibre12">i, </i> is 4; Bob’s secret value, <i class="calibre12">j, </i> is 2. (Assume that only the values 1, 2, 3, and 4 are possible for <i class="calibre12">i</i> and <i class="calibre12">j. </i>)</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice chooses <i class="calibre12">x</i> = 39, and <i class="calibre12">c</i> = <i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">B</i></sub>(39) = 19.
+</li>
+<li class="calibre14">Alice computes <i class="calibre12">c</i> - <i class="calibre12">i</i> = 19 - 4 = 15. She sends 15 to Bob.
+</li>
+<li class="calibre14">Bob computes the following 4 numbers:
+<p class="math-left"><i class="calibre12">y</i><sub class="calibre15">1</sub> = <i class="calibre12">D</i><sub class="calibre15"><i class="calibre22">B</i></sub>(15 + 1) = 26
+<i class="calibre12">y</i><sub class="calibre15">2</sub> = <i class="calibre12">D</i><sub class="calibre15"><i class="calibre22">B</i></sub>(15 + 2) = 18
+<i class="calibre12">y</i><sub class="calibre15">3</sub> = <i class="calibre12">D</i><sub class="calibre15"><i class="calibre22">B</i></sub>(15 + 3) = 2
+<i class="calibre12">y</i><sub class="calibre15">4</sub> = <i class="calibre12">D</i><sub class="calibre15"><i class="calibre22">B</i></sub>(15 + 4) = 39
+</p>
+
+He chooses <i class="calibre12">p</i> = 31 and calculates:
+<p class="math-left"><i class="calibre12">z</i><sub class="calibre15">1</sub> = (26 mod 31) = 26
+<i class="calibre12">z</i><sub class="calibre15">2</sub> = (18 mod 31) = 18
+<i class="calibre12">z</i><sub class="calibre15">3</sub> = (2 mod 31) = 2
+<i class="calibre12">z</i><sub class="calibre15">4</sub> = (39 mod 31) = 8
+</p>
+
+He does all the verifications and confirms that the sequence is fine.
+</li>
+<li class="calibre14">Bob sends Alice this sequence of numbers in this exact order:
+<p class="math">26, 18, 2 + 1, 8 + 1, 31 = 26, 18, 3, 9, 31
+</p>
+
+</li>
+<li class="calibre14">Alice checks whether the 4th number in the sequence is congruent
+to <i class="calibre12">x</i> mod <i class="calibre12">p. </i> Since 9 ≠ 39 (mod 31), then <i class="calibre12">i</i> &gt; <i class="calibre12">j. </i>
+</li>
+<li class="calibre14">Alice tells Bob.
+</li>
+
+</ol>
+
+<p class="calibre9">This protocol can be used to create far more complicated protocols. A group of
+people can conduct a secret auction over a computer network. They arrange
+themselves in a logical circle, and through individual pairwise comparisons,
+determine which is offering the highest price. In order to prevent people from
+changing their bids in mid-auction, some sort of bit-commitment protocol
+could also be used. If the auction is a Dutch auction, then the highest bidder
+gets the item for his highest price. If it is an English auction, then he gets the
+item for the second-highest price. (This can be determined by a second round
+of pairwise comparisons.) Similar ideas have applications in bargaining,
+negotiations, and arbitration.</p>
+
+<h3 id="23.15" class="calibre7">23.15 Probabilistic Encryption</h3>
+
+<p class="calibre9">The notion of <b class="calibre10">probabilistic encryption</b> was invented by Shafi Goldwasser
+and Silvio Micali [<a href="Applied%20Cryptography_split_035.html#r624" class="calibre5 pcalibre">624</a>]. Although its theory makes it the most secure
+cryptosystem invented, its early implementation was impractical [<a href="Applied%20Cryptography_split_035.html#r625" class="calibre5 pcalibre">625</a>]. More
+recent implementations have changed that.</p>
+
+<p class="calibre9">The point behind probabilistic encryption is to eliminate any information
+leaked with public-key cryptography. Because a cryptanalyst can always
+encrypt random messages with a public key, he can get some information.
+Assuming he has ciphertext <i class="calibre12">C</i> = <i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">M</i>) and is trying to recover plaintext message <i class="calibre12">M, </i> he can pick a random message <i class="calibre12">M'</i> and encrypt it: <i class="calibre12">C'</i> = <i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">M'</i>). If <i class="calibre12">C'</i> = <i class="calibre12">C, </i> then he guessed the correct plaintext. If it’s wrong, he just guesses again.</p>
+
+<p class="calibre9">Also, no partial information is leaked about the original message. With
+public-key cryptography, sometimes a cryptanalyst can learn things about the
+bits: The XOR of bits 5, 17, and 39 is 1, and so on. With probabilistic
+encryption, even this type of information remains hidden.</p>
+
+<p class="calibre9">Not a whole lot of information is to be gained here, but there are potential
+problems with allowing a cryptanalyst to encrypt random messages with your
+public key. Some information is being leaked to the cryptanalyst every time he
+encrypts a message. No one really knows how much.</p>
+
+<p class="calibre9">Probabilistic encryption tries to eliminate that leakage. The goal is that no
+computation on the ciphertext, or on any other trial plaintexts, can give the
+cryptanalyst any information about the corresponding plaintext.</p>
+
+<p class="calibre9">In probabilistic encryption, the encrypting algorithm is probabilistic rather than
+deterministic. In other words, a large number of ciphertexts will decrypt to a
+given plaintext, and the particular ciphertext used in any given encryption is
+randomly chosen.</p>
+
+<p class="math-left"><i class="calibre12">C</i><sub class="calibre15">1</sub> = <i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">M</i>), <i class="calibre12">C</i><sub class="calibre15">2</sub> = <i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">M</i>), <i class="calibre12">C</i><sub class="calibre15">3</sub> = <i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">M</i>), ..., <i class="calibre12">C</i><sub class="calibre15">i</sub> = <i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">M</i>)
+<i class="calibre12">M</i> = <i class="calibre12">D</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">C</i><sub class="calibre15">1</sub>) = <i class="calibre12">D</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">C</i><sub class="calibre15">2</sub>) = <i class="calibre12">D</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">C</i><sub class="calibre15">3</sub>) = ... = <i class="calibre12">D</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">C</i><sub class="calibre15">i</sub>)
+</p>
+
+<p class="calibre9">With probabilistic encryption, a cryptanalyst can no longer encrypt random
+plaintexts looking for the correct ciphertext. To illustrate, assume the
+cryptanalyst has ciphertext <i class="calibre12">C<sub class="calibre15">i</sub></i> = <i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">M</i>). Even if he guesses <i class="calibre12">M</i> correctly, when he encrypts <i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">K</i></sub>(<i class="calibre12">M</i>), the result will be a completely different <i class="calibre12">C: C</i><sub class="calibre15"><i class="calibre22">j</i></sub>. He cannot compare <i class="calibre12">C</i><sub class="calibre15">i</sub> and <i class="calibre12">C</i><sub class="calibre15"><i class="calibre22">j</i></sub>, and so cannot know that he has guessed the message correctly.</p>
+
+<p class="calibre9">This is amazingly cool stuff. Even if a cryptanalyst has the public encryption
+key, the plaintext, and the ciphertext, he cannot prove that the ciphertext is the
+encryption of the plaintext without the private decryption key. Even if he tries
+exhaustive search, he can only prove that every conceivable plaintext is a
+possible plaintext.</p>
+
+<p class="calibre9">Under this scheme, the ciphertext will always be larger than the plaintext. You
+can’t get around this; it’s a result of the fact that many ciphertexts decrypt to
+the same plaintexts. The first probabilistic encryption scheme [<a href="Applied%20Cryptography_split_035.html#r625" class="calibre5 pcalibre">625</a>] resulted in
+a ciphertext so much larger than the plaintext that it was unusable.</p>
+
+<p class="calibre9">However, Manual Blum and Goldwasser have an efficient implementation of
+probabilistic encryption using the Blum Blum Shub (BBS) random-bit
+generator described in <a href="Applied%20Cryptography_split_020.html#17.9" class="calibre5 pcalibre">Section 17.9</a> [<a href="Applied%20Cryptography_split_035.html#r199" class="calibre5 pcalibre">199</a>].</p>
+
+<p class="calibre9">The BBS generator is based on the theory of quadratic residues. In English,
+there are two primes, <i class="calibre12">p</i> and <i class="calibre12">q, </i> that are congruent to 3 modulo 4. That’s the private key. Their product, <i class="calibre12">pq</i> = <i class="calibre12">n, </i> is the public key. (Mind your <i class="calibre12">p</i>s and <i class="calibre12">q</i>s; the security of this scheme rests in the difficulty of factoring <i class="calibre12">n. </i>)</p>
+
+<p class="calibre9">To encrypt a message, <i class="calibre12">M, </i> first choose some random <i class="calibre12">x, </i> relatively prime to <i class="calibre12">n. </i>
+Then compute</p>
+
+<p class="math"><i class="calibre12">x</i><sub class="calibre15">0</sub> = <i class="calibre12">x</i><sup class="calibre19">2</sup> mod <i class="calibre12">n</i>
+</p>
+
+<p class="calibre9">Use <i class="calibre12">x</i><sub class="calibre15">0</sub> as the seed of the BBS pseudo-random-bit generator and use the output
+of the generator as a stream cipher. XOR <i class="calibre12">M, </i> one bit at a time, with the output of the generator. The generator spits out bits <i class="calibre12">b</i><sub class="calibre15">i</sub> (the least-significant bit of <i class="calibre12">x</i><sub class="calibre15">i</sub>, where <i class="calibre12">x</i><sub class="calibre15">i</sub> = <i class="calibre12">x</i><sub class="calibre15">i - 1</sub> mod <i class="calibre12">n</i>), so</p>
+
+<p class="math-left"><i class="calibre12">M</i> = <i class="calibre12">M</i><sub class="calibre15">1</sub>, <i class="calibre12">M</i><sub class="calibre15">2</sub>  <i class="calibre12">M</i><sub class="calibre15">3</sub>, ..., <i class="calibre12">M<sub class="calibre15">t</sub></i>
+<i class="calibre12">C</i> = <i class="calibre12">M</i><sub class="calibre15">1</sub> ⊕ <i class="calibre12">b</i><sub class="calibre15">1</sub>, <i class="calibre12">M</i><sub class="calibre15">2</sub> ⊕ <i class="calibre12">b</i><sub class="calibre15">2</sub>, <i class="calibre12">M</i><sub class="calibre15">3</sub> ⊕ <i class="calibre12">b</i><sub class="calibre15">3</sub>, ..., <i class="calibre12">M<sub class="calibre15">t</sub></i> ⊕ <i class="calibre12">b<sub class="calibre15">t</sub></i>
+where <i class="calibre12">t</i> is the length of the plaintext.
+</p>
+
+<p class="calibre9">Append the last computed value, <i class="calibre12">x</i><sub class="calibre15"><i class="calibre22">t</i></sub>, to the end of the message and you’re done.</p>
+
+<p class="calibre9">The only way to decrypt this message is to recover <i class="calibre12">x</i><sub class="calibre15">0</sub> and then set up the same BBS generator to XOR with the ciphertext. Because the BBS generator is
+secure to the left, the value <i class="calibre12">x</i><sub class="calibre15"><i class="calibre22">t</i></sub> is of no use to the cryptanalyst. Only someone who knows <i class="calibre12">p</i> and <i class="calibre12">q</i> can decrypt the message.</p>
+
+<p class="calibre9">In C, the algorithm to recover <i class="calibre12">x</i><sub class="calibre15">0</sub> from <i class="calibre12">x</i><sub class="calibre15"><i class="calibre22">t</i></sub> is:</p>
+
+<pre class="calibre20">int x0 (int p, int q, int n, int t, int xt)
+{
+    int a, b, u, v, w, z;
+
+    /* we already know that gcd(p, q) == 1 */
+    (void)extended_euclidian(p, q, &amp;a, &amp;b);
+    u = modexp ((p+1)/4, t, p-1);
+    v = modexp ((q+1)/4, t, q-1);
+    w = modexp (xt%p, u, p);
+    z = modexp (xt%q, v, q);
+    return (b*q*w + a*p*z) % n;
+}
+</pre>
+
+<p class="calibre9">Once you have <i class="calibre12">x</i><sub class="calibre15">0</sub>, decryption is easy. Just set up the BBS generator and XOR
+the output with the ciphertext.</p>
+
+<p class="calibre9">You can make this scheme go even faster by using all the known secure bits of
+<i class="calibre12">x</i><sub class="calibre15">i</sub>, not just the least significant bit. With this improvement, Blum-Goldwasser probabilistic encryption is faster than RSA while leaking no partial
+information about the plaintext. You can also prove that the difficulty of
+breaking this scheme is the same as the difficulty of factoring <i class="calibre12">n. </i></p>
+
+<p class="calibre9">On the other hand, this scheme is totally insecure against a chosen-ciphertext
+attack. From the least significant bits of the right quadratic residues, it is
+possible to calculate the square root of any quadratic residue. If you can do
+this, then you can factor. For details, consult [<a href="Applied%20Cryptography_split_036.html#r1570" class="calibre5 pcalibre">1570</a>,<a href="Applied%20Cryptography_split_036.html#r1571" class="calibre5 pcalibre">1571</a>,<a href="Applied%20Cryptography_split_035.html#r35" class="calibre5 pcalibre">35</a>,<a href="Applied%20Cryptography_split_035.html#r36" class="calibre5 pcalibre">36</a>].</p>
+
+<h3 id="23.16" class="calibre7">23.16 Quantum Cryptography</h3>
+
+<p class="calibre9">Quantum cryptography taps the natural uncertainty of the quantum world.
+With it, you can create a communications channel where it is impossible to
+eavesdrop without disturbing the transmission. The laws of physics secure this
+quantum channel: even if the eavesdropper can do whatever he wants, even if
+the eavesdropper has unlimited computing power, even if <b class="calibre10">P = NP</b>. Charles
+Bennett, Gilles Brassard, Claude Crépeau, and others have expanded on this
+idea, describing quantum key distribution, quantum coin flipping, quantum bit
+commitment, quantum oblivious transfer, and quantum secure multiparty
+computation. Their work is described in
+[<a href="Applied%20Cryptography_split_035.html#r128" class="calibre5 pcalibre">128</a>, <a href="Applied%20Cryptography_split_035.html#r129" class="calibre5 pcalibre">129</a>, <a href="Applied%20Cryptography_split_035.html#r123" class="calibre5 pcalibre">123</a>, <a href="Applied%20Cryptography_split_035.html#r124" class="calibre5 pcalibre">124</a>, <a href="Applied%20Cryptography_split_035.html#r125" class="calibre5 pcalibre">125</a>, <a href="Applied%20Cryptography_split_035.html#r133" class="calibre5 pcalibre">133</a>, <a href="Applied%20Cryptography_split_035.html#r126" class="calibre5 pcalibre">126</a>, <a href="Applied%20Cryptography_split_035.html#r394" class="calibre5 pcalibre">394</a>, <a href="Applied%20Cryptography_split_035.html#r134" class="calibre5 pcalibre">134</a>, <a href="Applied%20Cryptography_split_035.html#r392" class="calibre5 pcalibre">392</a>, <a href="Applied%20Cryptography_split_035.html#r396" class="calibre5 pcalibre">396</a>]. The best overview of
+quantum cryptography can be found in [<a href="Applied%20Cryptography_split_035.html#r131" class="calibre5 pcalibre">131</a>]; [<a href="Applied%20Cryptography_split_036.html#r1651" class="calibre5 pcalibre">1651</a>] is another good
+nontechnical overview. A complete bibliography of quantum cryptography is
+[<a href="Applied%20Cryptography_split_035.html#r237" class="calibre5 pcalibre">237</a>].</p>
+
+<p class="calibre9">This would still be on the lunatic fringe of cryptography, but Bennett and
+Brassard actually went and built a working model of the thing [<a href="Applied%20Cryptography_split_035.html#r127" class="calibre5 pcalibre">127</a>,<a href="Applied%20Cryptography_split_035.html#r121" class="calibre5 pcalibre">121</a>,<a href="Applied%20Cryptography_split_035.html#r122" class="calibre5 pcalibre">122</a>].
+Now we have <i class="calibre12">experimental</i> quantum cryptography.</p>
+
+<p class="calibre9">So sit back, get yourself something to drink, and relax. I’m going to explain
+what this is all about.</p>
+
+<p class="calibre9">According to quantum mechanics, particles don’t actually exist in any single
+place. They exist in several places at once, with probabilities of being in
+different places if someone looks. However, it isn’t until a scientist comes
+along and measures the particle that it “collapses” into a single location. But
+you can’t measure every aspect (for example, position and velocity) of a
+particle at the same time. If you measure one of those two quantities, the very
+act of measuring it destroys any possibility of measuring the other quantity.
+The quantum world has a fundamental uncertainty and there’s no way to avoid
+it.</p>
+
+<p class="calibre9">That uncertainty can be used to generate a secret key. As they travel, photons
+vibrate in some direction; up and down, left to right, or more likely at some
+angle. Normal sunlight is unpolarized; the photons vibrate every which way.
+When a large group of photons vibrate in the same direction they are
+<b class="calibre10">polarized</b>. Polarization filters allow only photons that are polarized in a certain direction through; the rest are blocked. For example, a horizontal polarization
+filter only allows horizontally polarized photons through. Turn that filter 90
+degrees, and only vertically polarized photons can come through.</p>
+
+<p class="calibre9">Let’s say you have a pulse of horizontally polarized photons. If they try to pass
+through a horizontally polarized filter, they all get through. Slowly turn that
+filter 90 degrees; the number of photons getting through gets smaller and
+smaller, until none get through. This is counterintuitive. You’d think that
+turning the filter just a little will block all the photons, since the photons are
+horizontally polarized. But in quantum mechanics, each particle has a
+probability of suddenly switching its polarization to match the filter. If the
+angle is a little bit off, it has a high probability. If the angle is 90 degrees off, it has zero probability. And if the angle is 45 degrees off, it has a 50 percent
+probability of passing through the filter.</p>
+
+<p class="calibre9">Polarization can be measured in any <b class="calibre10">basis</b>: two directions at right angles. An
+example basis is rectilinear: horizontal and vertical. Another is diagonal:
+left-diagonal and right-diagonal. If a photon pulse is polarized in a given basis
+and you measure it in the same basis, you learn the polarization. If you
+measure it in the wrong basis, you get a random result. We’re going to use this
+property to generate a secret key:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice sends Bob a string of photon pulses. Each of the pulses is
+randomly polarized in one of four directions: horizontal (↔), vertical (↕),
+left-diagonal (⤡), and right-diagonal (⤢).
+For example, Alice sends Bob:
+<p class="math">↕ ↕ ⤢ ↔  ↔ ⤡ ↔ ↕ ↔ ⤢
+</p>
+
+</li>
+<li class="calibre14">Bob has a polarization detector. He can set his detector to measure
+rectilinear (+) polarization or he can set his detector to measure diagonal (×)
+polarization. He can’t do both; quantum mechanics won’t let him.
+Measuring one destroys any possibility of measuring the other. So, he
+sets his detectors at random, for example:
+<p class="math">× + + × × × + × + +
+</p>
+
+Now, when Bob sets his detector correctly, he will record the correct
+polarization. If he sets his detector to measure rectilinear polarization
+and the pulse is polarized rectilinearly, he will learn which way Alice
+polarized the photon. If he sets his detector to measure diagonal
+polarization and the pulse is polarized rectilinearly, he will get a random
+measurement. He won’t know the difference. In this example, he might
+get the result:
+<p class="math">⤢ ↕ ↔ ⤡ ⤢ ⤡ ↔ ⤢ ↔ ↕
+</p>
+
+</li>
+<li class="calibre14">Bob tells Alice, over an insecure channel, what settings he used.
+</li>
+<li class="calibre14">Alice tells Bob which settings were correct. In our example, the
+detector was correctly set for pulses 2, 6, 7, and 9.
+</li>
+<li class="calibre14">Alice and Bob keep only those polarizations that were correctly
+measured. In our example, they keep:
+<p class="math">* ↕ * * * ⤡ ↔ * ↔ *
+</p>
+
+Using a prearranged code, Alice and Bob each translate those
+polarization measurements into bits. For example, horizontal and
+left-diagonal might equal one, and vertical and right-diagonal might
+equal zero. In our example, they both have:
+<pre class="calibre20">0 0 1 1
+</pre>
+
+</li>
+
+</ol>
+
+<p class="calibre9">So, Alice and Bob have generated four bits. They can generate as many as they
+like using this system. On the average, Bob will guess the correct setting 50
+percent of the time, so Alice has to send 2<i class="calibre12">n</i> photon pulses to generate <i class="calibre12">n</i> bits.
+They can use these bits as a secret key for a symmetric algorithm or they can
+guarantee perfect secrecy and generate enough bits for a one-time pad.</p>
+
+<p class="calibre9">The really cool thing is that Eve cannot eavesdrop. Just like Bob, she has to
+guess which type of polarization to measure; and like Bob, half of her guesses
+will be wrong. Since wrong guesses change the polarization of the photons,
+she can’t help introducing errors in the pulses as she eavesdrops. If she does,
+Alice and Bob will end up with different bit strings. So,Alice and Bob finish
+the protocol like this:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Alice and Bob compare a few bits in their strings. If there are
+discrepancies, they know they are being bugged. If there are none, they
+discard the bits they used for comparison and use the rest.
+</li>
+
+</ol>
+
+<p class="calibre9">Enhancements to this protocol allow Alice and Bob to use their bits even in the
+presence of Eve [<a href="Applied%20Cryptography_split_035.html#r133" class="calibre5 pcalibre">133</a>,<a href="Applied%20Cryptography_split_035.html#r134" class="calibre5 pcalibre">134</a>,<a href="Applied%20Cryptography_split_035.html#r192" class="calibre5 pcalibre">192</a>]. They could compare only the parity of subsets
+of the bits. Then, if no discrepancies are found, they only have to discard one
+bit of the subset. This detects eavesdropping with only a 50 percent
+probability, but if they do this with <i class="calibre12">n</i> different subsets Eve’s probability of eavesdropping without detection is only 1 in 2<sup class="calibre19">n</sup>.</p>
+
+<p class="calibre9">There’s no such thing as passive eavesdropping in the quantum world. If Eve
+tries to recover all the bits, she will necessarily disrupt the communications.</p>
+
+<p class="calibre9">Bennett and Brassard built a working model of quantum key distribution and
+have exchanged secure bits on a laser table. The latest I heard, some folks at
+British Telecom were sending bits over a 10-kilometer fiber-optic link
+[<a href="Applied%20Cryptography_split_035.html#r276" class="calibre5 pcalibre">276</a>,<a href="Applied%20Cryptography_split_036.html#r1245" class="calibre5 pcalibre">1245</a>,<a href="Applied%20Cryptography_split_036.html#r1533" class="calibre5 pcalibre">1533</a>]. The mind boggles.</p>
+
+<div class="calibre6" id="calibre_pb_52"></div>
+</div>
+
+
+
+
+
+
+</body></html>

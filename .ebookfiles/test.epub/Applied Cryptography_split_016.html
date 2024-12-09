@@ -1,0 +1,1340 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Applied Cryptography, Second Edition: Protocols, Algorithms, and Source Code in C</title>
+    <meta content="Bruce Schneier" name="author"/>
+    <meta content="An introduction to cryptography." name="description"/>
+    <meta content="programming,cryptography" name="keywords"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body class="calibre">
+<div id="book" class="calibre1">
+<h1 class="chapter" id="13">Chapter 13 <br class="calibre3"/>
+Other Block Ciphers</h1>
+
+<h3 id="13.1" class="calibre7">13.1 Lucifer</h3>
+
+<p class="calibre9">In the late 1960s, led by Horst Feistel and later by Walt Tuchman, IBM
+initiated a research program in computer cryptography called Lucifer. Lucifer
+is also the name of a block algorithm that came out of that program in the early
+1970s [<a href="Applied%20Cryptography_split_036.html#r1482" class="calibre5 pcalibre">1482</a>,<a href="Applied%20Cryptography_split_036.html#r1484" class="calibre5 pcalibre">1484</a>]. In fact, there are at least two different algorithms with that
+name [<a href="Applied%20Cryptography_split_035.html#r552" class="calibre5 pcalibre">552</a>,<a href="Applied%20Cryptography_split_036.html#r1492" class="calibre5 pcalibre">1492</a>]. And [<a href="Applied%20Cryptography_split_035.html#r552" class="calibre5 pcalibre">552</a>] leaves some gaps in the specification of the
+algorithm. All this has led to more than a little confusion.</p>
+
+<p class="calibre9">Lucifer is a substitution-permutation network, with building blocks similar to
+DES. In DES, the output of the function f is XORed with the input of the
+previous round to form the input of the next round. Lucifer’s S-boxes have
+4-bit inputs and 4-bit outputs; the input of the S-boxes is the bit-permuted
+output of the S-boxes of the previous round; the input of the S-boxes of the
+first round is the plaintext. A key bit is used to choose the actual S-box from
+two possible S-boxes. (Lucifer represents this as a single T-box with 9 bits in
+and 8 bits out.) Unlike DES, there is no swapping between rounds and no
+block halves are used. Lucifer has 16 rounds, 128-bit blocks, and a key
+schedule simpler than DES.</p>
+
+<p class="calibre9">Using differential cryptanalysis against the first incarnation of Lucifer, Biham
+and Shamir [<a href="Applied%20Cryptography_split_035.html#r170" class="calibre5 pcalibre">170</a>,<a href="Applied%20Cryptography_split_035.html#r172" class="calibre5 pcalibre">172</a>] showed that Lucifer, with 32-bit blocks and 8 rounds,
+can be broken with 40 chosen plaintexts and 2<sup class="calibre19">29</sup> steps; the same attack can
+break Lucifer with 128-bit blocks and 8 rounds with 60 chosen plaintexts and
+2<sup class="calibre19">53</sup> steps. Another differential cryptanalytic attack breaks 18-round, 128-bit
+Lucifer with 24 chosen plaintexts in 2<sup class="calibre19">21</sup> steps. All of these attacks used the
+strong DES S-boxes. Using differential cryptanalysis against the second
+incarnation, they found the S-boxes to be much weaker than DES. Further
+analysis showed that over half the possible keys are insecure [<a href="Applied%20Cryptography_split_035.html#r112" class="calibre5 pcalibre">112</a>].
+Related-key cryptanalysis can break 128-bit Lucifer, with any number of
+rounds, with 2<sup class="calibre19">33</sup> chosen-key chosen plaintexts, or with 2<sup class="calibre19">65</sup> chosen-key known
+plaintexts [<a href="Applied%20Cryptography_split_035.html#r158" class="calibre5 pcalibre">158</a>]. The second incarnation of Lucifer is even weaker [<a href="Applied%20Cryptography_split_035.html#r170" class="calibre5 pcalibre">170</a>,<a href="Applied%20Cryptography_split_035.html#r172" class="calibre5 pcalibre">172</a>,<a href="Applied%20Cryptography_split_035.html#r112" class="calibre5 pcalibre">112</a>].</p>
+
+<p class="calibre9">Some people feel that Lucifer is more secure than DES because of the longer
+key length and lack of published results. This is clearly not the case.</p>
+
+<p class="calibre9">Lucifer is the subject of several U.S. patents: [<a href="Applied%20Cryptography_split_035.html#r553" class="calibre5 pcalibre">553</a>,<a href="Applied%20Cryptography_split_035.html#r554" class="calibre5 pcalibre">554</a>,<a href="Applied%20Cryptography_split_035.html#r555" class="calibre5 pcalibre">555</a>,<a href="Applied%20Cryptography_split_036.html#r1483" class="calibre5 pcalibre">1483</a>]. They have
+all expired.</p>
+
+<h3 id="13.2" class="calibre7">13.2 Madryga</h3>
+
+<p class="calibre9">W. E. Madryga proposed this block algorithm in 1984 [<a href="Applied%20Cryptography_split_036.html#r999" class="calibre5 pcalibre">999</a>]. It is efficient for
+software: It has no irritating permutations and all its operations work on bytes.</p>
+
+<p class="calibre9">His design objectives are worth repeating:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">The plaintext cannot be derived from the ciphertext without using the
+key. (This just means that the algorithm is secure.)
+</li>
+<li class="calibre14">The number of operations required to determine the key from a
+sample of plaintext and ciphertext should be statistically equal to the
+product of the operations in an encryption times the number of possible
+keys. (This means that no plaintext attack should be better than brute
+force.)
+</li>
+<li class="calibre14">Knowledge of the algorithm should not defeat the strength of the
+cipher. (All the security should rest in the key.)
+</li>
+<li class="calibre14">A one-bit change of the key should produce a radical change in the
+ciphertext using the same plaintext, and a 1-bit change of the plaintext
+should produce a radical change in the ciphertext using the same key.
+(This is the avalanche effect.)
+</li>
+<li class="calibre14">The algorithm should contain a noncommutative combination of
+substitution and permutation.
+</li>
+<li class="calibre14">The algorithm should include substitutions and permutations under
+the control of both the input data and the key.
+</li>
+<li class="calibre14">Redundant bit groups in the plaintext should be totally obscured in
+the ciphertext.
+</li>
+<li class="calibre14">The length of the ciphertext should be the same length as the
+plaintext.
+</li>
+<li class="calibre14">There should be no simple relationships between any possible keys
+and ciphertext effects.
+</li>
+<li class="calibre14">Any possible key should produce a strong cipher. (There should be
+no weak keys.)
+</li>
+<li class="calibre14">The length of the key and the text should be adjustable to meet
+varying security requirements.
+</li>
+<li class="calibre14">The algorithm should be efficiently implementable in software on
+large mainframes, minicomputers, and microcomputers, and in discrete
+logic. (In fact, the functions used in the algorithm are limited to XOR
+and bit-shifting.)
+</li>
+
+</ol>
+
+<p class="calibre9">DES had already met objectives one through nine, but the next three were new.
+Assuming that the best way to break the algorithm was through brute force, a
+variable-length key would surely silence those who thought 56 bits was too
+low. They could implement this algorithm with any key length they desired.
+And, for anyone who has ever attempted to implement DES in software, an
+algorithm that took software implementations into account would be
+welcomed.</p>
+
+<h4 class="calibre8">Description of Madryga</h4>
+
+<p class="calibre9">Madryga consists of two nested cycles. The outer cycle repeats eight times
+(although this could be increased if security warrants) and consists of an
+application of the inner cycle to the plaintext. The inner cycle transforms
+plaintext to ciphertext and repeats once for each 8-bit block (byte) of the
+plaintext. Thus, the algorithm passes through the entire plaintext eight
+successive times.</p>
+
+<p class="calibre9">An iteration of the inner cycle operates on a 3-byte window of data, called the
+working frame (see Figure 13.1). This window advances 1 byte for each
+iteration. (The data are considered circular when dealing with the last 2 bytes.)
+The first 2 bytes of the working frame are together rotated a variable number
+of positions, while the last byte is XORed with some key bits. As the working
+frame advances, all bytes are successively rotated and XORed with key
+material. Successive rotations overlap the results of a previous XOR and
+rotation, and data from the XOR is used to influence the rotation. This makes
+the entire process reversible.</p>
+
+<div class="figure" id="figure-13-1">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-13-1.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 13.1</b> One iteration of Madryga.</i></p>
+</div>
+
+<p class="calibre9">Because every byte of data influences the 2 bytes to its left and the 1 byte to its
+right, after eight passes every byte of the ciphertext is dependent on 16 bytes to
+the left and 8 bytes to the right.</p>
+
+<p class="calibre9">When encrypting, each iteration of the inner cycle starts the working frame at
+the next-to-last byte of the plaintext and advances circularly through to the
+third-to-last byte of the plaintext. First, the entire key is XORed with a random
+constant and then rotated to the left 3 bits. The low-order 3 bits of the
+low-order byte of the working frame are saved; they will control the rotation of
+the other 2 bytes. Then, the low-order byte of the working frame is XORed
+with the low-order byte of the key. Next, the concatenation of the 2 high-order
+bytes are rotated to the left the variable number of bits (0 to 7). Finally, the
+working frame is shifted to the right 1 byte and the whole process repeats.</p>
+
+<p class="calibre9">The point of the random constant is to turn the key into a pseudo-random
+sequence. The length of this constant must be equal to the length of the key
+and must be the same for everyone who wishes to communicate with one
+another. For a 64-bit key, Madryga recommends the constant
+<code class="calibre18">0x0f1e2d3c4b5a6978</code>.</p>
+
+<p class="calibre9">Decryption reverses this process. Each iteration of the inner cycle starts the
+working frame at the third-to-last byte of the ciphertext and advances in the
+reverse direction circularly through to the second-to-last byte of the ciphertext.
+Both the key and the 2 ciphertext bytes are shifted to the right. And the XOR is
+done before the rotations.</p>
+
+<h4 class="calibre8">Cryptanalysis of Madryga</h4>
+
+<p class="calibre9">Researchers at Queensland University of Technology [<a href="Applied%20Cryptography_split_035.html#r675" class="calibre5 pcalibre">675</a>] examined
+Madryga, along with several other block ciphers. They observed that the
+algorithm didn’t exhibit the plaintext-ciphertext avalanche effect. Additionally,
+many ciphertexts had a higher percentage of ones than zeros.</p>
+
+<p class="calibre9">Although I know of no formal analysis of the algorithm, it doesn’t look
+terribly secure. A cursory review by Eli Biham led to the following
+observations [<a href="Applied%20Cryptography_split_035.html#r160" class="calibre5 pcalibre">160</a>]:</p>
+
+<p class="quote">
+The algorithm consists only of linear operations (rotations and
+XOR), which are slightly modified depending on the data.
+<br class="calibre3"/><br class="calibre3"/>
+There is nothing like the strength of DES’s S-boxes.
+<br class="calibre3"/><br class="calibre3"/>
+The parity of all the bits of the plaintext and the ciphertext is a
+constant, depending only on the key. So, if you have one plaintext
+and its corresponding ciphertext, you can predict the parity of the
+ciphertext for any plaintext.
+</p>
+
+<p class="calibre9">None of this is damning in itself, but it doesn’t leave me with a good feeling
+about the algorithm. I do not recommend Madryga.</p>
+
+<h3 id="13.3" class="calibre7">13.3 NewDES</h3>
+
+<p class="calibre9">NewDES was designed in 1985 by Robert Scott as a possible DES
+replacement [<a href="Applied%20Cryptography_split_036.html#r1405" class="calibre5 pcalibre">1405</a>,<a href="Applied%20Cryptography_split_035.html#r364" class="calibre5 pcalibre">364</a>]. The algorithm is not a DES variant, as its name
+might imply. It operates on 64-bit blocks of plaintext, but it has a 120-bit key.
+NewDES is simpler than DES, with no initial or final permutations. All
+operations are on entire bytes. (Actually, NewDES isn’t anything like a new
+version of DES; the name is unfortunate.)</p>
+
+<p class="calibre9">The plaintext block is divided into eight 1-byte sub-blocks: <i class="calibre12">B</i><sub class="calibre15">0</sub>, <i class="calibre12">B</i><sub class="calibre15">1</sub>, ..., <i class="calibre12">B</i><sub class="calibre15">6</sub>, <i class="calibre12">B</i><sub class="calibre15">7</sub>.
+Then the sub-blocks go through 17 rounds. Each round has eight steps. In each
+step, one of the sub-blocks is XORed with some key material (there is one
+exception), substituted with another byte via an f function, and then XORed
+with another sub-block to become that sub-block. The 120-bit key is divided
+into 15 key sub-blocks: <i class="calibre12">K</i><sub class="calibre15">0</sub>, <i class="calibre12">K</i><sub class="calibre15">1</sub>, ..., <i class="calibre12">K</i><sub class="calibre15">13</sub>, <i class="calibre12">K</i><sub class="calibre15">14</sub>. The process is easier to understand visually than to describe. Figure 13.2 shows the NewDES encryption
+algorithm.</p>
+
+<div class="figure" id="figure-13-2">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-13-2.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 13.2</b> NewDES.</i></p>
+</div>
+
+<p class="calibre9">The f-function is derived from the Declaration of Independence. See [<a href="Applied%20Cryptography_split_036.html#r1405" class="calibre5 pcalibre">1405</a>] for
+details.</p>
+
+<p class="calibre9">Scott showed that every bit of the plaintext block affects every bit of the
+ciphertext block after only 7 rounds. He also analyzed the f function and found
+no obvious problems. NewDES has the same complementation property that
+DES has [<a href="Applied%20Cryptography_split_035.html#r364" class="calibre5 pcalibre">364</a>]: If <i class="calibre12">E<sub class="calibre15">K</sub></i>(<i class="calibre12">P</i>) = <i class="calibre12">C</i>, then <i class="calibre12">E<sub class="calibre15">K´</sub></i>(<i class="calibre12">P´</i>) = <i class="calibre12">C´</i>. This reduces the work required for a brute-force attack from 2<sup class="calibre19">120</sup> steps to 2<sup class="calibre19">119</sup> steps. Biham noticed
+that any change of a full byte, applied to all the key and data bytes, leads to
+another complementation property [<a href="Applied%20Cryptography_split_035.html#r160" class="calibre5 pcalibre">160</a>]. This reduces a brute-force attack
+further to 2<sup class="calibre19">112</sup> steps.</p>
+
+<p class="calibre9">This is not damning, but Biham’s related-key cryptanalytic attack can break
+NewDES with 2<sup class="calibre19">33</sup> chosen-key chosen-plaintexts in 2<sup class="calibre19">48</sup> steps [<a href="Applied%20Cryptography_split_035.html#r160" class="calibre5 pcalibre">160</a>]. While this
+attack is time-consuming and largely theoretical, it shows that NewDES is
+weaker than DES.</p>
+
+<h3 id="13.4" class="calibre7">13.4 FEAL</h3>
+
+<p class="calibre9">FEAL was designed by Akihiro Shimizu and Shoji Miyaguchi from NTT
+Japan [<a href="Applied%20Cryptography_split_036.html#r1435" class="calibre5 pcalibre">1435</a>]. It uses a 64-bit block and a 64-bit key. The idea was to make a
+DES-like algorithm with a stronger round function. Needing fewer rounds, the
+algorithm would run faster. Unfortunately, reality fell far short of the design
+goals.</p>
+
+<h4 class="calibre8">Description of FEAL</h4>
+
+<p class="calibre9">Figure 13.3 is a block diagram of one round of FEAL. The encryption process
+starts with a 64-bit block of plaintext. First, the data block is XORed with 64
+key bits. The data block is then split into a left half and a right half. The left
+half is XORed with the right half to form a new right half. The left and new
+right halves go through <i class="calibre12">n</i> rounds (four, initially). In each round the right half is
+combined with 16 bits of key material (using function f) and XORed with the
+left half to form the new right half. The original right half (before the round)
+forms the new left half. After <i class="calibre12">n</i> rounds (remember not to switch the left and
+right halves after the <i class="calibre12">n</i> th round) the left half is again XORed with the right half to form a new right half, and then the left and right halves are concatenated
+together to form a 64-bit whole. The data block is XORed with another 64 bits
+of key material, and the algorithm terminates.</p>
+
+<div class="figure" id="figure-13-3">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-13-3.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 13.3</b> One round of FEAL.</i></p>
+</div>
+
+<p class="calibre9">Function f takes the 32 bits of data and 16 bits of key material and mixes them
+together. First the data block is broken up into 8-bit chunks, then the chunks
+are XORed and substituted with each other. Figure 13.4 is a block diagram of
+function f. The two functions <i class="calibre12">S</i><sub class="calibre15">0</sub> and <i class="calibre12">S</i><sub class="calibre15">1</sub>, are defined as:</p>
+
+<p class="math"><i class="calibre12">S</i><sub class="calibre15">0</sub>(<i class="calibre12">a,b</i>) = rotate left two bits ((<i class="calibre12">a</i> + <i class="calibre12">b</i>) mod 256)
+ <i class="calibre12">S</i><sub class="calibre15">1</sub>(<i class="calibre12">a,b</i>) = rotate left two bits ((<i class="calibre12">a</i> + <i class="calibre12">b</i> + 1) mod 256)
+</p>
+
+<div class="figure" id="figure-13-4">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-13-4.png" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 13.4</b> Function f.</i></p>
+</div>
+
+<p class="calibre9">The same algorithm can be used for decryption. The only difference is: When
+decrypting, the key material must be used in the reverse order.</p>
+
+<p class="calibre9">Figure 13.5 is a block diagram of the key-generating function. First the 64-bit
+key is divided into two halves. The halves are XORed and operated on by
+function <i class="calibre12">f<sub class="calibre15">k</sub></i>, as indicated in the diagram. Figure 13.6 is a block diagram of
+function <i class="calibre12">f<sub class="calibre15">k</sub></i>. The two 32-bit inputs are broken up into 8-bit blocks and
+combined and substituted as shown. <i class="calibre12">S</i><sub class="calibre15">0</sub> and <i class="calibre12">S</i><sub class="calibre15">1</sub> are defined as just shown. The 16-bit key blocks are then used in the encryption/decryption algorithm.</p>
+
+<div class="figure" id="figure-13-54">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-13-5.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 13.5</b> Key processing part of FEAL.</i></p>
+</div>
+
+<div class="figure" id="figure-13-6">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-13-6.png" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 13.6</b> Function f<sub class="calibre15">K</sub>.</i></p>
+</div>
+
+<p class="calibre9">On a 10 megahertz 80286 microprocessor, an assembly-language
+implementation of FEAL-32 can encrypt data at a speed of 220 kilobits per
+second. FEAL-64 can encrypt data at a speed of 120 kilobits per second
+[<a href="Applied%20Cryptography_split_036.html#r1104" class="calibre5 pcalibre">1104</a>].</p>
+
+<h4 class="calibre8">Cryptanalysis of FEAL</h4>
+
+<p class="calibre9">FEAL-4, FEAL with four rounds, was successfully cryptanalyzed with a
+chosen-plaintext attack in [<a href="Applied%20Cryptography_split_035.html#r201" class="calibre5 pcalibre">201</a>] and later demolished [<a href="Applied%20Cryptography_split_036.html#r1132" class="calibre5 pcalibre">1132</a>]. This later attack,
+by Sean Murphy, was the first published differential-cryptanalysis attack and
+required only 20 chosen plaintexts. The designers retaliated with 8-round
+FEAL [<a href="Applied%20Cryptography_split_036.html#r1436" class="calibre5 pcalibre">1436</a>,<a href="Applied%20Cryptography_split_036.html#r1437" class="calibre5 pcalibre">1437</a>,<a href="Applied%20Cryptography_split_036.html#r1108" class="calibre5 pcalibre">1108</a>] which Biham and Shamir cryptanalyzed at the
+SECURICOM ’89 conference[<a href="Applied%20Cryptography_split_036.html#r1427" class="calibre5 pcalibre">1427</a>]. Another chosen-plaintext attack, using
+only 10,000 blocks, against FEAL-8 [<a href="Applied%20Cryptography_split_035.html#r610" class="calibre5 pcalibre">610</a>] forced the designers to throw up
+their hands and define FEAL-<i class="calibre12">N</i> [<a href="Applied%20Cryptography_split_036.html#r1102" class="calibre5 pcalibre">1102</a>,<a href="Applied%20Cryptography_split_036.html#r1104" class="calibre5 pcalibre">1104</a>], with a variable number of rounds
+(greater than 8, of course).</p>
+
+<p class="calibre9">Biham and Shamir used differential cryptanalysis against FEAL-<i class="calibre12">N</i>; they could
+break it more quickly than by brute force (with fewer than 2<sup class="calibre19">64</sup> chosen plaintext
+encryptions) for <i class="calibre12">N</i> less than 32 [<a href="Applied%20Cryptography_split_035.html#r169" class="calibre5 pcalibre">169</a>]. FEAL-16 required 2<sup class="calibre19">28</sup> chosen plaintexts
+or 2<sup class="calibre19">46.5</sup> known plaintexts to break. FEAL-8 required 2000 chosen plaintexts or
+2<sup class="calibre19">37.5</sup> known plaintexts to break. FEAL-4 could be broken with just eight
+carefully selected chosen plaintexts.</p>
+
+<p class="calibre9">The FEAL designers also defined FEAL-<i class="calibre12">NX</i>, a modification of FEAL, that
+accepts 128-bit keys (see Figure 13.7)[<a href="Applied%20Cryptography_split_036.html#r1103" class="calibre5 pcalibre">1103</a>,<a href="Applied%20Cryptography_split_036.html#r1104" class="calibre5 pcalibre">1104</a>]. Biham and Shamir showed
+that FEAL-<i class="calibre12">NX</i> with a 128-bit key is just as easy to break as FEAL-<i class="calibre12">N</i> with a 64-bit key, for any value of <i class="calibre12">N</i> [<a href="Applied%20Cryptography_split_035.html#r169" class="calibre5 pcalibre">169</a>]. 
+Recently FEAL-<i class="calibre12">N</i>(X)S has been proposed, which strengthens FEAL with a dynamic swapping function [<a href="Applied%20Cryptography_split_036.html#r1525" class="calibre5 pcalibre">1525</a>].</p>
+
+<div class="figure" id="figure-13-7">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-13-7.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 13.7</b> FEAL-NX key schedule.</i></p>
+</div>
+
+<p class="calibre9">There’s more. Another attack against FEAL-4, requiring only 1000 known
+plaintexts, and against FEAL-8, requiring only 20,000 known plaintexts, was
+published in [<a href="Applied%20Cryptography_split_036.html#r1520" class="calibre5 pcalibre">1520</a>]. Other attacks are in [<a href="Applied%20Cryptography_split_036.html#r1549" class="calibre5 pcalibre">1549</a>,<a href="Applied%20Cryptography_split_036.html#r1550" class="calibre5 pcalibre">1550</a>]. The best attack is by
+Mitsuru Matsui and Atshuiro Yamagishi [<a href="Applied%20Cryptography_split_036.html#r1020" class="calibre5 pcalibre">1020</a>]. This is the first use of linear
+cryptanalysis, and can break FEAL-4 with 5 known plaintexts, FEAL-6 with
+100 known plaintexts and FEAL-8 with 2<sup class="calibre19">15</sup> known plaintexts. Further
+refinements are in [<a href="Applied%20Cryptography_split_035.html#r64" class="calibre5 pcalibre">64</a>]. Differential-linear cryptanalysis can break FEAL-8
+with only 12 chosen plaintexts [<a href="Applied%20Cryptography_split_035.html#r62" class="calibre5 pcalibre">62</a>]. Whenever someone discovers a new
+cryptanalytic attack, he always seems to try it out on FEAL first.</p>
+
+<h4 class="calibre8">Patents</h4>
+
+<p class="calibre9">FEAL is patented in the United States [<a href="Applied%20Cryptography_split_036.html#r1438" class="calibre5 pcalibre">1438</a>] and has patents pending in
+England, France, and Germany. Anyone wishing to license the algorithm
+should contact the <code class="calibre18">Intellectual Property Department, NTT, 1-6
+Uchisaiwai-cho, 1-chome, Chiyoda-ku, 100 Japan.</code></p>
+
+<h3 id="13.5" class="calibre7">13.5 REDOC</h3>
+
+<p class="calibre9">REDOC II is another block algorithm, designed by Michael Wood for
+Cryptech, Inc. [<a href="Applied%20Cryptography_split_036.html#r1613" class="calibre5 pcalibre">1613</a>,<a href="Applied%20Cryptography_split_035.html#r400" class="calibre5 pcalibre">400</a>]. It has a 20-byte (160-bit) key and an 80-bit block.</p>
+
+<p class="calibre9">REDOC II performs all of its manipulations — permutations, substitutions, and
+key XORs — on bytes; the algorithm is efficient in software. REDOC II uses
+variable function tables. Unlike DES, which has a fixed (albeit optimized for
+security) set of permutation and substitution tables, REDOC II uses a
+key-dependent and plaintext-dependent set of tables (S-boxes, actually).
+REDOC II has 10 rounds; each round is a complicated series of manipulations
+on the block.</p>
+
+<p class="calibre9">Another unique feature in the design is the use of <b class="calibre10">masks</b>. These are numbers
+derived from the key table that are used to select the tables in a given function
+within a given round. Both the value of the data and the masks are used
+together to select the function tables.</p>
+
+<p class="calibre9">Assuming that brute force is the most efficient means of attack, REDOC II is
+very secure: 2<sup class="calibre19">160</sup> operations are required to recover the key. Thomas Cusick
+cryptanalyzed 1 round of REDOC II, but he was unable to extend the attack to
+multiple rounds [<a href="Applied%20Cryptography_split_035.html#r400" class="calibre5 pcalibre">400</a>]. Using differential cryptanalysis, Biham and Shamir
+were able to successfully cryptanalyze 1 round of REDOC II with 2300
+chosen-plaintexts [<a href="Applied%20Cryptography_split_035.html#r170" class="calibre5 pcalibre">170</a>]. This attack cannot be extended to multiple rounds, but
+they were able to obtain three mask values after 4 rounds. I know of no other
+cryptanalysis.</p>
+
+<h4 class="calibre8">REDOC III</h4>
+
+<p class="calibre9">REDOC III is a streamlined version of REDOC II, also designed by Michael
+Wood [<a href="Applied%20Cryptography_split_036.html#r1615" class="calibre5 pcalibre">1615</a>]. It operates on an 80-bit block. The key length is variable and can
+be as large as 2560 bytes (20,480 bits). The algorithm consists solely of XORing
+key bytes with message bytes; there are no permutations or substitutions.</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Create a key table of 256 10-byte keys, using the secret key.
+</li>
+<li class="calibre14">Create two 10-byte mask blocks, <i class="calibre12">M</i><sub class="calibre15">1</sub> and <i class="calibre12">M</i><sub class="calibre15">2</sub>. <i class="calibre12">M</i><sub class="calibre15">1</sub> is the XOR of the first 128 10-byte keys; <i class="calibre12">M</i><sub class="calibre15">2</sub> is the XOR of the second 128 10-byte keys.
+</li>
+<li class="calibre14">To encrypt a 10-byte block:
+<ol class="calibre43">
+
+<li class="calibre14">XOR the first byte of the data block with the first byte of <i class="calibre12">M</i><sub class="calibre15">1</sub>.
+Select a key from the key table computed in step (1). Use the
+computed XOR as the index into the table. XOR each byte in the
+data block with the corresponding byte in the chosen key, except for
+the first data byte.
+</li>
+<li class="calibre14">XOR the second byte of the data block with the second byte of
+ <i class="calibre12">M</i><sub class="calibre15">1</sub>. Select a key from the key table computed in step (1). Use the
+computed XOR as the index into the table. XOR each byte in the
+data block with the corresponding byte in the chosen key, except for
+the second data byte.
+</li>
+<li class="calibre14">Continue with the entire block (bytes 3 through 10), until each
+byte has been used to select a key from the key table after XORing
+it with the corresponding <i class="calibre12">M</i><sub class="calibre15">1</sub> value. Then XOR each byte with the
+key except for the byte used to select the key.
+</li>
+<li class="calibre14">Repeat steps (a) through (c) with <i class="calibre12">M</i><sub class="calibre15">2</sub>.
+</li>
+
+</ol>
+
+</li>
+
+</ol>
+
+<p class="calibre9">The algorithm is easy and fast. On a 33 megahertz 80386, the algorithm encrypts
+data at 2.75 megabits per second. Wood estimates that a VLSI-pipelined design,
+with a 64-bit data path, woud encrypt data at over 1.28 gigabits per second with a
+20 megahertz clock.</p>
+
+<p class="calibre9">REDOC III is not secure [<a href="Applied%20Cryptography_split_036.html#r1440" class="calibre5 pcalibre">1440</a>]. It is vulnerable to differential cryptanalysis.
+Only about 223 chosen plaintexts are required to reconstruct both masks.</p>
+
+<h4 class="calibre8">Patents and Licenses</h4>
+
+<p class="calibre9">Both REDOC versions are patented in the United States [<a href="Applied%20Cryptography_split_036.html#r1614" class="calibre5 pcalibre">1614</a>]. Foreign patents
+are pending. Anyone interested in licensing either REDOC II or REDOC III
+should contact <code class="calibre18">Michael C. Wood, Delta Computec, Inc., 6647 Old Thompson
+Rd., Syracuse, NY 13211</code>.</p>
+
+<h3 id="13.6" class="calibre7">13.6 LOKI</h3>
+
+<p class="calibre9">LOKI is Australian and was first presented in 1990 as a potential alternative to
+DES [<a href="Applied%20Cryptography_split_035.html#r273" class="calibre5 pcalibre">273</a>]. It uses a 64-bit block and a 64-bit key. The general structure of the
+algorithm and key schedule were based on [<a href="Applied%20Cryptography_split_035.html#r274" class="calibre5 pcalibre">274</a>,<a href="Applied%20Cryptography_split_035.html#r275" class="calibre5 pcalibre">275</a>], and the design of the
+S-boxes was based on [<a href="Applied%20Cryptography_split_036.html#r1247" class="calibre5 pcalibre">1247</a>].</p>
+
+<p class="calibre9">Using differential cryptanalysis, Biham and Shamir were able to break LOKI
+with 11 or fewer rounds faster than by brute force [<a href="Applied%20Cryptography_split_035.html#r170" class="calibre5 pcalibre">170</a>]. Furthermore, there is an
+8-bit complementation property, which reduces the complexity of a brute-force
+attack by a factor of 256 [<a href="Applied%20Cryptography_split_035.html#r170" class="calibre5 pcalibre">170</a>,<a href="Applied%20Cryptography_split_036.html#r916" class="calibre5 pcalibre">916</a>,<a href="Applied%20Cryptography_split_036.html#r917" class="calibre5 pcalibre">917</a>].</p>
+
+<p class="calibre9">Lars Knudsen showed that LOKI, with 14 rounds or fewer, is vulnerable to
+differential cryptanalysis [<a href="Applied%20Cryptography_split_036.html#r852" class="calibre5 pcalibre">852</a>,<a href="Applied%20Cryptography_split_036.html#r853" class="calibre5 pcalibre">853</a>]. Additionally, if LOKI is implemented with
+alternate S-boxes, the resulting cipher will probably be vulnerable to differential
+cryptanalysis.</p>
+
+<h4 class="calibre8">LOKI91</h4>
+
+<p class="calibre9">In response to these attacks, LOKI’s designers went back to the drawing board
+and revised their algorithm. The result is LOKI91 [<a href="Applied%20Cryptography_split_035.html#r272" class="calibre5 pcalibre">272</a>]. (The previous version
+of LOKI was renamed LOKI89.)</p>
+
+<p class="calibre9">To make the algorithm more resistant to differential cryptanalysis and to remove
+the complementation property, the following changes were made to the original
+design:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">The subkey generation algorithm was changed so that the halves were
+swapped every second round, not every round.
+</li>
+<li class="calibre14">The subkey generation algorithm was changed so that the rotation of
+the left subkey alternated between 12 and 13 bits to the left.
+</li>
+<li class="calibre14">The initial and final XOR of the block with the key were eliminated.
+</li>
+<li class="calibre14">The S-box function was altered to flatten out their XOR profile (to
+improve their resistance to differential cryptanalysis), and to eliminate any
+value of <i class="calibre12">x</i> such that f(<i class="calibre12">x</i>) = 0, where f is the combination of the E-, S-, and P-boxes.
+</li>
+
+</ol>
+
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Description of LOKI91</b></i></p>
+
+<p class="calibre9">The mechanics of LOKI91 are similar to DES (see Figure 13.8). The data block
+is then divided into a left half and a right half and goes through 16 rounds, much
+like DES. In each round, the right half is first XORed with a piece of the key,
+then sent through an expansion permutation (see Table 13.1).</p>
+
+<div class="figure" id="figure-13-8">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-13-8.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 13.8</b> LOKI91.</i></p>
+</div>
+
+<table class="data-table1" id="table-13-2">
+<caption class="calibre67">Table 13.1 - Expansion Permutation</caption>
+<tbody class="calibre24"><tr class="calibre68"><td class="calibre69">4</td><td class="calibre69">3</td><td class="calibre69">2</td><td class="calibre69">1</td><td class="calibre69">32</td><td class="calibre69">31</td><td class="calibre69">20</td><td class="calibre69">29</td><td class="calibre69">28</td><td class="calibre69">27</td><td class="calibre69">26</td><td class="calibre69">25</td></tr>
+<tr class="calibre25"><td class="calibre70">28</td><td class="calibre70">27</td><td class="calibre70">26</td><td class="calibre70">25</td><td class="calibre70">24</td><td class="calibre70">23</td><td class="calibre70">22</td><td class="calibre70">21</td><td class="calibre70">20</td><td class="calibre70">19</td><td class="calibre70">18</td><td class="calibre70">17</td></tr>
+<tr class="calibre71"><td class="calibre72">20</td><td class="calibre72">19</td><td class="calibre72">18</td><td class="calibre72">17</td><td class="calibre72">16</td><td class="calibre72">15</td><td class="calibre72">14</td><td class="calibre72">13</td><td class="calibre72">12</td><td class="calibre72">11</td><td class="calibre72">10</td><td class="calibre72">9</td></tr>
+<tr class="calibre25"><td class="calibre70">12</td><td class="calibre70">11</td><td class="calibre70">10</td><td class="calibre70">9</td><td class="calibre70">8</td><td class="calibre70">7</td><td class="calibre70">6</td><td class="calibre70">5</td><td class="calibre70">4</td><td class="calibre70">3</td><td class="calibre70">2</td><td class="calibre70">1</td></tr>
+</tbody></table>
+
+<p class="calibre39">The 48-bit output is divided into four 12-bit blocks, and each block is sent
+through an S-box substitution. The S-box substitution is as follows: Take each
+12-bit input; use the 2 left-most bits and the 2 right-most bits to form the number
+<i class="calibre12">r</i>, and the 8 innermost bits and form the number <i class="calibre12">c</i>. The output of the S-box, <i class="calibre12">O</i>, is as follows:</p>
+
+<p class="math"><i class="calibre12">O</i>(<i class="calibre12">r,c</i>) = (<i class="calibre12">c</i> + ((<i class="calibre12">r</i>*17) ⊕ 0xff) &amp; 0xff)<sup class="calibre19">31</sup> mod <i class="calibre12">P<sub class="calibre15">r</sub></i>
+</p>
+
+<p class="calibre9"><i class="calibre12">P<sub class="calibre15">r</sub></i> is given in Table 13.2.</p>
+
+<table class="data-table1">
+<caption class="calibre67">Table 13.2 - <i class="calibre12">P<sub class="calibre15">r</sub></i></caption>
+<tbody class="calibre24"><tr class="calibre73"><td class="calibre75"><i class="calibre12">r: </i></td><td class="calibre75">1</td><td class="calibre75">2</td><td class="calibre75">3</td><td class="calibre75">4</td><td class="calibre75">5</td><td class="calibre75">6</td><td class="calibre75">7</td><td class="calibre75">8</td><td class="calibre75">9</td><td class="calibre75">10</td><td class="calibre75">11</td><td class="calibre75">12</td><td class="calibre75">13</td><td class="calibre75">14</td><td class="calibre75">15</td><td class="calibre75">16</td></tr>
+<tr class="calibre25"><td class="calibre70"><i class="calibre12">P</i><sub class="calibre15">r</sub>:</td><td class="calibre70">375</td><td class="calibre70">379</td><td class="calibre70">391</td><td class="calibre70">395</td><td class="calibre70">397</td><td class="calibre70">415</td><td class="calibre70">419</td><td class="calibre70">425</td><td class="calibre70">433</td><td class="calibre70">445</td><td class="calibre70">451</td><td class="calibre70">463</td><td class="calibre70">471</td><td class="calibre70">477</td><td class="calibre70">487</td><td class="calibre70">499</td></tr>
+</tbody></table>
+
+<p class="calibre39">Then, the four 8-bit outputs are recombined to form a single 32-bit number and
+sent through the permutation described in Table 13.3. Finally, the right half is
+XORed with the left half to become the new left half, and the left half becomes
+the new right half. After 16 rounds, the block is again XORed with the key to
+produce the ciphertext.</p>
+
+<table class="data-table1" id="table-13-3">
+<caption class="calibre67">Table 13.3 - P-Box Permutation</caption>
+<tbody class="calibre24"><tr class="calibre73"><td class="calibre75">32</td><td class="calibre75">24</td><td class="calibre75">16</td><td class="calibre75">8</td><td class="calibre75">31</td><td class="calibre75">23</td><td class="calibre75">15</td><td class="calibre75">7</td><td class="calibre75">30</td><td class="calibre75">22</td><td class="calibre75">14</td><td class="calibre75">6</td><td class="calibre75">29</td><td class="calibre75">21</td><td class="calibre75">13</td><td class="calibre75">5</td></tr>
+<tr class="calibre25"><td class="calibre70">28</td><td class="calibre70">20</td><td class="calibre70">12</td><td class="calibre70">4</td><td class="calibre70">27</td><td class="calibre70">19</td><td class="calibre70">11</td><td class="calibre70">3</td><td class="calibre70">26</td><td class="calibre70">18</td><td class="calibre70">10</td><td class="calibre70">2</td><td class="calibre70">25</td><td class="calibre70">17</td><td class="calibre70">9</td><td class="calibre70">1</td></tr>
+</tbody></table>
+
+<p class="calibre39">The subkeys are generated from the key in a straightforward manner. The 64-bit
+key is split into a left half and a right half. In each round, the subkey is the left
+half. This left half is then rotated 12 or 13 bits to the left, and then every two
+rounds the left and right halves are exchanged. As with DES, the same algorithm
+can be used for both encryption and decryption, with some modification in how
+the subkeys are used.</p>
+
+<h4 class="calibre8">Cryptanalysis of LOKI91</h4>
+
+<p class="calibre9">Knudsen attempted to cryptanalyze LOKI91 [<a href="Applied%20Cryptography_split_036.html#r854" class="calibre5 pcalibre">854</a>,<a href="Applied%20Cryptography_split_036.html#r858" class="calibre5 pcalibre">858</a>], but found it secure
+against differential cryptanalysis. However, he found a related-key
+chosen-plaintext attack that reduces the complexity of a brute-force search by
+almost a factor of four. This attack exploits a weakness in the key schedule and
+may also apply if the algorithm is used as a one-way hash function (see <a href="Applied%20Cryptography_split_021.html#18.11" class="calibre5 pcalibre">Section 18.11</a>).</p>
+
+<p class="calibre9">Another attack on related keys can break LOKI91 with 2<sup class="calibre19">32</sup> chosen-key chosen
+plaintexts, or 2<sup class="calibre19">48</sup> chosen-key known plaintexts [<a href="Applied%20Cryptography_split_035.html#r158" class="calibre5 pcalibre">158</a>]. The attack is independent
+of the number of rounds of the algorithm. (In the same paper, Biham breaks
+LOKI89 with 2<sup class="calibre19">17</sup> chosen-key chosen plaintexts or 2<sup class="calibre19">33</sup> known-key known
+plaintexts using related-key cryptanalysis.) It’s easy to make LOKI91 resistant to
+this attack; avoid the simple key schedule.</p>
+
+<h4 class="calibre8">Patents and Licenses</h4>
+
+<p class="calibre9">LOKI is not patented. Anyone can implement the algorithm and use it. The
+source code implementation in this book is copyrighted by the University of
+New South Wales. Anyone interested in using this implementation (or their
+other implementation, which is several orders of magnitude faster) in a
+commercial product should contact <code class="calibre18">Director CITRAD, Department of
+Computer Science, University College, UNSW, Australian Defense Force
+Academy, Canberra ACT 2600, Australia; FAX: +61 6 268 8581</code>.</p>
+
+<h3 id="13.7" class="calibre7">13.7 Khufu and Khafre</h3>
+
+<p class="calibre9">In 1990 Ralph Merkle proposed two algorithms. The basic design principles
+behind them are [<a href="Applied%20Cryptography_split_036.html#r1071" class="calibre5 pcalibre">1071</a>]:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">DES’s 56-bit key size is too small. Considering the negligible cost of
+increasing the key size (computer memory is cheap and plentiful), it
+should be increased.
+</li>
+<li class="calibre14">DES’s extensive use of permutations, while suitable for hardware
+implementations, is very difficult to implement in software. The faster
+software implementations of DES implement the permutations by table
+lookup. Table lookup can provide the same “diffusion” characteristics as
+permutation and can be much more flexible.
+</li>
+<li class="calibre14">The S-boxes in DES are small, with only 64 4-bit entries per box.
+Now that memory is larger, S-boxes should grow. Moreover, all eight
+S-boxes are used simultaneously. While this is suitable for hardware, it
+seems like an unreasonable restriction in software. A larger S-box size
+and sequential (rather than parallel) S-box usage should be employed.
+</li>
+<li class="calibre14">The initial and final permutations in DES are widely viewed as
+cryptographically pointless and should be discarded.
+</li>
+<li class="calibre14">All the faster implementations of DES precompute the keys for each
+round. Given this fact, there is no reason not to make this computation
+more complicated.
+</li>
+<li class="calibre14">Unlike DES, the S-box design criteria should be public.
+</li>
+
+</ol>
+
+<p class="calibre9">To this list, Merkle would probably now add “resistant to differential
+cryptanalysis and to linear attacks, ” but those attacks were still unknown at
+the time.</p>
+
+<h4 class="calibre8">Khufu</h4>
+
+<p class="calibre9">Khufu is a 64-bit block cipher. The 64-bit plaintext is first divided into two
+32-bit halves, <i class="calibre12">L</i> and <i class="calibre12">R</i>. First, both halves are XORed with some key material.
+Then, they are subjected to a series of rounds similar to DES. In each round,
+the least significant byte of <i class="calibre12">L</i><sub class="calibre15">i</sub>s used as the input to an S-box. Each S-box has 8 input bits and 32 output bits. The selected 32-bit entry in the S-box is then
+XORed with <i class="calibre12">R. L</i><sub class="calibre15">i</sub>s then rotated some multiple of 8 bits, <i class="calibre12">L</i> and <i class="calibre12">R</i> are swapped, and the round ends. The S-box itself is not static, but changes every 8 rounds.
+Finally, after the last round, <i class="calibre12">L</i> and <i class="calibre12">R</i> are XORed with more key material, and then combined to form the ciphertext block.</p>
+
+<p class="calibre9">Although parts of the key are XORed with the encryption block at the
+beginning and end of the algorithm, the primary purpose of the key is to
+generate the S-boxes. These S-boxes are secret and, in essence, part of the key.
+Khufu calls for a total key size of 512 bits (64 bytes) and gives an algorithm
+for generating S-boxes from the key. The number of rounds for the algorithm
+is left open. Merkle mentioned that 8-round Khufu is susceptible to a
+chosen-plaintext attack and recommended 16, 24, or 32 rounds [<a href="Applied%20Cryptography_split_036.html#r1071" class="calibre5 pcalibre">1071</a>]. (He
+restricted the choice of rounds to a multiple of eight.)</p>
+
+<p class="calibre9">Because Khufu has key-dependent and secret S-boxes, it is resistant to
+differential cryptanalysis. There is a differential attack against 16-round Khufu
+that recovers the key after 2<sup class="calibre19">31</sup> chosen plaintexts [<a href="Applied%20Cryptography_split_035.html#r611" class="calibre5 pcalibre">611</a>], but it cannot be
+extended to more rounds. If brute-force is the best way to attack Khufu, it is
+impressively secure. A 512-bit key gives a complexity of 2<sup class="calibre19">512</sup> — inconceivable
+under any circumstances.</p>
+
+<h4 class="calibre8">Khafre</h4>
+
+<p class="calibre9">Khafre is the second of two cryptosystems proposed by Merkle [<a href="Applied%20Cryptography_split_036.html#r1071" class="calibre5 pcalibre">1071</a>]. (Khufu
+and Khafre are names of Egyptian pharaohs.) It is similar in design to Khufu,
+except that it was designed for applications without precomputation time. The
+S-boxes are not key-dependent. Instead, Khafre uses fixed S-boxes. And the
+key is XORed with the encryption block not only before the first round and
+after the last round, but also after every 8 rounds of encryption.</p>
+
+<p class="calibre9">Merkle speculated that key sizes of 64- or 128-bits would be used for Khafre
+and that more rounds of encryption would be required for Khafre than for
+Khufu. This, combined with the fact that each round of Khafre is more
+complex than for Khufu, makes Khafre slower. In compensation, Khafre does
+not require any precomputation and will encrypt small amounts of data more
+quickly.</p>
+
+<p class="calibre9">In 1990 Biham and Shamir turned their differential cryptanalysis techniques
+against Khafre [<a href="Applied%20Cryptography_split_035.html#r170" class="calibre5 pcalibre">170</a>]. They were able to break 16-round Khafre with a
+chosen-plaintext attack using about 1500 different encryptions. It took about
+an hour, using their personal computer. Converting that to a known-plaintext
+attack would require about 2<sup class="calibre19">38</sup> encryptions. Khafre with 24 rounds can be
+broken by a chosen-plaintext attack using 2<sup class="calibre19">53</sup> encryptions, and a
+known-plaintext attack using 2<sup class="calibre19">59</sup> encryptions.</p>
+
+<h4 class="calibre8">Patents</h4>
+
+<p class="calibre9">Both Khufu and Khafre are patented [<a href="Applied%20Cryptography_split_036.html#r1072" class="calibre5 pcalibre">1072</a>]. Source code for the algorithms
+are in the patent. Anyone interested in licensing either or both algorithms
+should contact <code class="calibre18">Director of Licensing, Xerox Corporation, P.O. Box 1600,
+Stamford, CT, 06904-1600</code>.</p>
+
+<h3 id="13.8" class="calibre7">13.8 RC2</h3>
+
+<p class="calibre9">RC2 is a variable-key-size encryption algorithm designed by Ron Rivest for
+RSA Data Security, Inc. (RSADSI). Apparently, “RC” stands for “Ron’s
+Code, ” although it officially stands for “Rivest Cipher.” (RC3 was broken at
+RSADSI during development; RC1 never got further than Rivest’s notebook.)
+It is proprietary, and its details have not been published. Don’t think for a
+minute that this helps security. RC2 has already appeared in commercial
+products. As far as I know, RC2 has not been patented and is only protected as
+a trade secret.</p>
+
+<p class="calibre9">RC2 is a variable-key-size 64-bit block cipher, designed to be a replacement
+for DES. According to the company, software implementations of RC2 are
+three times faster than DES. The algorithm accepts a variable-length key, from
+0 bytes to the maximum string length the computer system supports;
+encryption speed is independent of key size. This key is preprocessed to yield
+a key-dependent table of 128 bytes. So the number of effectively different keys
+is 2<sup class="calibre19">1024</sup>. RC2 has no S-boxes [<a href="Applied%20Cryptography_split_035.html#r805" class="calibre5 pcalibre">805</a>]; the two operations are “mix” and “mash, ”
+and one is chosen in each round. According to their literature [<a href="Applied%20Cryptography_split_036.html#r1334" class="calibre5 pcalibre">1334</a>]:</p>
+
+<p class="quote">... RC2 is not an iterative block cipher. This suggests that RC2
+offers more protection against differential and linear cryptanalysis
+than other block ciphers which have relied for their security on
+copying the design of DES.</p>
+
+<p class="calibre9">RSADSI’s refusal to make RC2 public casts doubt on their claims. They are
+willing to provide details of the algorithm to most anyone willing to sign a
+nondisclosure agreement, and have claimed to allow cryptanalysts to publish
+any negative results they find. I don’t know of any cryptanalyst outside the
+employ of the company who studied it, since it would amount to doing their
+analysis work for them.</p>
+
+<p class="calibre9">Still, Ron Rivest is not the usual snake-oil peddler. He’s a respected and
+competent cryptographer. I would put a fair degree of trust in the algorithm,
+even though I haven’t personally inspected the code. RC4, once the proprietary
+intellectual property of RSADSI, was posted to the Internet (see <a href="Applied%20Cryptography_split_020.html#17.1" class="calibre5 pcalibre">Section 17.1</a>),
+and it’s probably just a matter of time before RC2 is posted as well.</p>
+
+<p class="calibre9">An agreement between the Software Publishers Association (SPA) and the
+U.S. government gave RC2 and RC4 (see <a href="Applied%20Cryptography_split_020.html#17.1" class="calibre5 pcalibre">Section 17.1</a>) special export status
+(see <a href="Applied%20Cryptography_split_029.html#25.14" class="calibre5 pcalibre">Section 25.14</a>). Products that implement one of these two algorithms have
+a much simpler export approval process, provided that the keys are no more
+than 40 bits long.</p>
+
+<p class="calibre9">Is a 40-bit key enough? There are a total of one trillion possible keys.
+Assuming that brute force is the most efficient method of cryptanalysis (a big
+assumption, considering that the algorithm has never been published), and
+assuming that a brute-force cryptanalysis chip can test one million keys per
+second, it will take him 12.7 days to find the correct key. One thousand
+machines working in parallel can produce the key in twenty minutes.</p>
+
+<p class="calibre9">RSA Data Security, Inc., maintains that while encryption and decryption are
+quick, exhaustive key search is not. A significant amount of time is spent
+setting up the key schedule. While this time is negligible when encrypting and
+decrypting messages, it is not when trying every possible key.</p>
+
+<p class="calibre9">The U.S. government would never allow export of any algorithm it couldn’t, at
+least in theory, break. They could create a magnetic tape or CD of a specific
+plaintext block encrypted with every possible key. To break a given message,
+they could just run the tape and compare the ciphertext blocks in the message
+with the ciphertext blocks on the tape. If there is a match, they could try the
+candidate key and see if the message makes any sense. If they choose a
+common plaintext block (all zeros, the ASCII characters for a space, etc.), this
+method should work. The storage requirement for a 64-bit plaintext block
+encrypted with all 10<sup class="calibre19">12</sup> possible keys is 8 terabytes — certainly possible.</p>
+
+<p class="calibre9">For information on licensing RC2, contact RSADSI (see <a href="Applied%20Cryptography_split_029.html#25.4" class="calibre5 pcalibre">Section 25.4</a>).</p>
+
+<h3 id="13.9" class="calibre7">13.9 IDEA</h3>
+
+<p class="calibre9">The first incarnation of the IDEA cipher, by Xuejia Lai and James Massey,
+surfaced in 1990 [<a href="Applied%20Cryptography_split_036.html#r929" class="calibre5 pcalibre">929</a>]. It was called PES (Proposed Encryption Standard).
+The next year, after Biham and Shamir’s demonstrated differential
+cryptanalysis, the authors strengthened their cipher against the attack and
+called the new algorithm IPES (Improved Proposed Encryption Standard)
+[<a href="Applied%20Cryptography_split_036.html#r931" class="calibre5 pcalibre">931</a>,<a href="Applied%20Cryptography_split_036.html#r924" class="calibre5 pcalibre">924</a>]. IPES changed its name to IDEA (International Data Encryption
+Algorithm) in 1992 [<a href="Applied%20Cryptography_split_036.html#r925" class="calibre5 pcalibre">925</a>].</p>
+
+<p class="calibre9">IDEA is based on some impressive theoretical foundations and, although
+cryptanalysis has made some progress against reduced-round variants, the
+algorithm still seems strong. In my opinion, it is the best and most secure
+block algorithm available to the public at this time.</p>
+
+<p class="calibre9">The future of IDEA is not yet clear. There has been no rush to adopt it as a
+replacement to DES, partly because it is patented and must be licensed for
+commercial applications, and partly because people are still waiting to see how
+well the algorithm fares during the coming years of cryptanalysis. Its current
+claim to fame is that it is part of PGP (see <a href="Applied%20Cryptography_split_028.html#24.12" class="calibre5 pcalibre">Section 24.12</a>).</p>
+
+<h4 class="calibre8">Overview of IDEA</h4>
+
+<p class="calibre9">IDEA is a block cipher; it operates on 64-bit plaintext blocks. The key is 128
+bits long. The same algorithm is used for both encryption and decryption.</p>
+
+<p class="calibre9">As with all the other block ciphers we’ve seen, IDEA uses both confusion and
+diffusion. The design philosophy behind the algorithm is one of “mixing
+operations from different algebraic groups.” Three algebraic groups are being
+mixed, and they are all easily implemented in both hardware and software:</p>
+
+<ul class="calibre13">
+
+<li class="calibre14">XOR
+</li>
+<li class="calibre14">Addition modulo 2<sup class="calibre19">16</sup>
+</li>
+<li class="calibre14">Multiplication modulo 2<sup class="calibre19">16</sup> + 1. (This operation can be viewed as
+IDEA’s S-box.)
+</li>
+
+</ul>
+
+<p class="calibre9">All these operations (and these are the only operations in the algorithm — there
+are no bit-level permutations) operate on 16-bit sub-blocks. This algorithm is
+even efficient on 16-bit processors.</p>
+
+<h4 class="calibre8">Description of IDEA</h4>
+
+<p class="calibre9">Figure 13.9 is an overview of IDEA. The 64-bit data block is divided into four
+16-bit sub-blocks: <i class="calibre12">X</i><sub class="calibre15">1</sub>, <i class="calibre12">X</i><sub class="calibre15">2</sub>, <i class="calibre12">X</i><sub class="calibre15">3</sub>, and <i class="calibre12">X</i><sub class="calibre15">4</sub>. These four sub-blocks become the input to the first round of the algorithm. There are eight rounds total. In each round
+the four sub-blocks are XORed, added, and multiplied with one another and
+with six 16-bit subkeys. Between rounds, the second and third sub-blocks are
+swapped. Finally, the four sub-blocks are combined with four subkeys in an
+output transformation.</p>
+
+<div class="figure" id="figure-13-9">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-13-9.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 13.9</b> IDEA.</i></p>
+</div>
+
+<p class="calibre9">In each round, the sequence of events is as follows:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Multiply <i class="calibre12">X</i><sub class="calibre15">1</sub> and the first subkey.
+</li>
+<li class="calibre14">Add <i class="calibre12">X</i><sub class="calibre15">2</sub> and the second subkey.
+</li>
+<li class="calibre14">Add <i class="calibre12">X</i><sub class="calibre15">3</sub> and the third subkey.
+</li>
+<li class="calibre14">Multiply <i class="calibre12">X</i><sub class="calibre15">4</sub> and the fourth subkey.
+</li>
+<li class="calibre14">XOR the results of steps (1) and (3).
+</li>
+<li class="calibre14">XOR the results of steps (2) and (4).
+</li>
+<li class="calibre14">Multiply the results of step (5) with the fifth subkey.
+</li>
+<li class="calibre14">Add the results of steps (6) and (7).
+</li>
+<li class="calibre14">Multiply the results of step (8) with the sixth subkey.
+</li>
+<li class="calibre14">Add the results of steps (7) and (9).
+</li>
+<li class="calibre14">XOR the results of steps (1) and (9).
+</li>
+<li class="calibre14">XOR the results of steps (3) and (9).
+</li>
+<li class="calibre14">XOR the results of steps (2) and (10).
+</li>
+<li class="calibre14">XOR the results of steps (4) and (10).
+</li>
+
+</ol>
+
+<p class="calibre9">The output of the round is the four sub-blocks that are the results of steps (11),
+(12), (13), and (14). Swap the two inner blocks (except for the last round) and
+that’s the input to the next round.</p>
+
+<p class="calibre9">After the eighth round, there is a final output transformation:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14">Multiply <i class="calibre12">X</i><sub class="calibre15">1</sub> and the first subkey.
+</li>
+<li class="calibre14">Add <i class="calibre12">X</i><sub class="calibre15">2</sub> and the second subkey.
+</li>
+<li class="calibre14">Add <i class="calibre12">X</i><sub class="calibre15">3</sub> and the third subkey.
+</li>
+<li class="calibre14">Multiply <i class="calibre12">X</i><sub class="calibre15">4</sub> and the fourth subkey.
+</li>
+
+</ol>
+
+<p class="calibre9">Finally, the four sub-blocks are reattached to produce the ciphertext.</p>
+
+<p class="calibre9">Creating the subkeys is also easy. The algorithm uses 52 of them (six for each
+of the eight rounds and four more for the output transformation). First, the
+128-bit key is divided into eight 16-bit subkeys. These are the first eight
+subkeys for the algorithm (the six for the first round, and the first two for the
+second round). Then, the key is rotated 25 bits to the left and again divided
+into eight subkeys. The first four are used in round 2; the last four are used in
+round 3. The key is rotated another 25 bits to the left for the next eight
+subkeys, and so on until the end of the algorithm.</p>
+
+<p class="calibre9">Decryption is exactly the same, except that the subkeys are reversed and
+slightly different. The decryption subkeys are either the additive or
+multiplicative inverses of the encryption subkeys. (For the purposes of IDEA,
+the all-zero sub-block is considered to represent 2<sup class="calibre19">16</sup> = - 1 for multiplication
+modulo 2<sup class="calibre19">16</sup> + 1; thus the multiplicative inverse of 0 is 0.) Calculating these
+takes some doing, but you only have to do it once for each decryption key.
+Table 13.4 shows the encryption subkeys and the corresponding decryption
+subkeys.</p>
+
+<table class="data-table1" id="table-13-4">
+<caption class="calibre67">Table 13.4 - IDEA Encryption and Decryption Subkeys</caption>
+<tbody class="calibre24"><tr class="calibre68">
+<th class="calibre26">Round</th>
+<th class="calibre26">Encryption Subkeys</th>
+<th class="calibre26">Decryption Subkeys</th>
+</tr>
+<tr class="calibre25">
+<td class="calibre61">1st</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(1)</sup> Z<sub class="calibre15">2</sub><sup class="calibre47">(1)</sup> Z<sub class="calibre15">3</sub><sup class="calibre47">(1)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(1)</sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(1)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(1)</sup>
+</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(9)<sup class="calibre88">-1</sup></sup> -Z<sub class="calibre15">2</sub><sup class="calibre47">(9)</sup> -Z<sub class="calibre15">3</sub><sup class="calibre47">(9)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(9)<sup class="calibre88">-1</sup></sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(8)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(8)</sup>
+</td>
+</tr>
+<tr class="calibre25">
+<td class="calibre61">2nd</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(2)</sup> Z<sub class="calibre15">2</sub><sup class="calibre47">(2)</sup> Z<sub class="calibre15">3</sub><sup class="calibre47">(2)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(2)</sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(2)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(2)</sup>
+</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(8)<sup class="calibre88">-1</sup></sup> -Z<sub class="calibre15">3</sub><sup class="calibre47">(8)</sup> -Z<sub class="calibre15">2</sub><sup class="calibre47">(8)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(7)<sup class="calibre88">-1</sup></sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(7)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(7)</sup>
+</td>
+</tr>
+<tr class="calibre25">
+<td class="calibre61">3rd</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(3)</sup> Z<sub class="calibre15">2</sub><sup class="calibre47">(3)</sup> Z<sub class="calibre15">3</sub><sup class="calibre47">(3)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(3)</sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(3)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(3)</sup>
+</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(7)<sup class="calibre88">-1</sup></sup> -Z<sub class="calibre15">3</sub><sup class="calibre47">(7)</sup> -Z<sub class="calibre15">2</sub><sup class="calibre47">(7)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(7)<sup class="calibre88">-1</sup></sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(6)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(6)</sup>
+</td>
+</tr>
+<tr class="calibre25">
+<td class="calibre61">4th</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(4)</sup> Z<sub class="calibre15">2</sub><sup class="calibre47">(4)</sup> Z<sub class="calibre15">3</sub><sup class="calibre47">(4)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(4)</sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(4)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(4)</sup>
+</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(6)<sup class="calibre88">-1</sup></sup> -Z<sub class="calibre15">3</sub><sup class="calibre47">(6)</sup> -Z<sub class="calibre15">2</sub><sup class="calibre47">(6)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(6)<sup class="calibre88">-1</sup></sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(5)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(5)</sup>
+</td>
+</tr>
+<tr class="calibre25">
+<td class="calibre61">5th</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(5)</sup> Z<sub class="calibre15">2</sub><sup class="calibre47">(5)</sup> Z<sub class="calibre15">3</sub><sup class="calibre47">(5)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(5)</sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(5)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(5)</sup>
+</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(5)<sup class="calibre88">-1</sup></sup> -Z<sub class="calibre15">3</sub><sup class="calibre47">(5)</sup> -Z<sub class="calibre15">2</sub><sup class="calibre47">(5)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(5)<sup class="calibre88">-1</sup></sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(4)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(4)</sup>
+</td>
+</tr>
+<tr class="calibre25">
+<td class="calibre61">6th</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(6)</sup> Z<sub class="calibre15">2</sub><sup class="calibre47">(6)</sup> Z<sub class="calibre15">3</sub><sup class="calibre47">(6)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(6)</sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(6)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(6)</sup>
+</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(4)<sup class="calibre88">-1</sup></sup> -Z<sub class="calibre15">3</sub><sup class="calibre47">(4)</sup> -Z<sub class="calibre15">2</sub><sup class="calibre47">(4)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(4)<sup class="calibre88">-1</sup></sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(3)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(3)</sup>
+</td>
+</tr>
+<tr class="calibre25">
+<td class="calibre61">7th</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(7)</sup> Z<sub class="calibre15">2</sub><sup class="calibre47">(7)</sup> Z<sub class="calibre15">3</sub><sup class="calibre47">(7)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(7)</sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(7)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(7)</sup>
+</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(3)<sup class="calibre88">-1</sup></sup> -Z<sub class="calibre15">3</sub><sup class="calibre47">(3)</sup> -Z<sub class="calibre15">2</sub><sup class="calibre47">(3)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(3)<sup class="calibre88">-1</sup></sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(2)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(2)</sup>
+</td>
+</tr>
+<tr class="calibre71">
+<td class="calibre78">8th</td>
+<td class="calibre78">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(8)</sup> Z<sub class="calibre15">2</sub><sup class="calibre47">(8)</sup> Z<sub class="calibre15">3</sub><sup class="calibre47">(8)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(8)</sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(8)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(8)</sup>
+</td>
+<td class="calibre78">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(2)<sup class="calibre88">-1</sup></sup> -Z<sub class="calibre15">3</sub><sup class="calibre47">(2)</sup> -Z<sub class="calibre15">2</sub><sup class="calibre47">(2)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(2)<sup class="calibre88">-1</sup></sup> Z<sub class="calibre15">5</sub><sup class="calibre47">(1)</sup> Z<sub class="calibre15">6</sub><sup class="calibre47">(1)</sup>
+</td>
+</tr>
+<tr class="calibre25">
+<td class="calibre61">output transformation</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(9)</sup> Z<sub class="calibre15">2</sub><sup class="calibre47">(9)</sup> Z<sub class="calibre15">3</sub><sup class="calibre47">(9)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(9)</sup>
+</td>
+<td class="calibre61">
+Z<sub class="calibre15">1</sub><sup class="calibre47">(1)<sup class="calibre88">-1</sup></sup> -Z<sub class="calibre15">2</sub><sup class="calibre47">(1)</sup> -Z<sub class="calibre15">3</sub><sup class="calibre47">(1)</sup> Z<sub class="calibre15">4</sub><sup class="calibre47">(1)<sup class="calibre88">-1</sup></sup>
+</td>
+</tr>
+</tbody></table>
+
+<h4 class="calibre8">Speed of IDEA</h4>
+
+<p class="calibre9">Current software implementations of IDEA are about twice as fast as DES.
+IDEA on a 33 megahertz 386 machine encrypts data at 880 kilobits per second,
+and 2400 kilobits per second on a 66 megahertz 486 machine. You might think
+IDEA should be faster, but multiplications aren’t cheap. To multiply two
+32-bit numbers on a 486 requires 40 clock cycles (10 on a Pentium).</p>
+
+<p class="calibre9">A VLSI implementation of PES encrypts data at 55 megabits per second at 25
+megahertz [<a href="Applied%20Cryptography_split_035.html#r208" class="calibre5 pcalibre">208</a>,<a href="Applied%20Cryptography_split_035.html#r398" class="calibre5 pcalibre">398</a>]. Another VLSI chip developed at ETH Zurich,
+consisting of 251,000 transistors on a chip 107.8 square millimeters, encrypts
+data using the IDEA algorithm at a 177 megabit-per-second data rate when
+clocked at 25 megahertz [<a href="Applied%20Cryptography_split_036.html#r926" class="calibre5 pcalibre">926</a>,<a href="Applied%20Cryptography_split_035.html#r207" class="calibre5 pcalibre">207</a>,<a href="Applied%20Cryptography_split_035.html#r397" class="calibre5 pcalibre">397</a>].</p>
+
+<h4 class="calibre8">Cryptanalysis of IDEA</h4>
+
+<p class="calibre9">IDEA’s key length is 128 bits — over twice as long as DES. Assuming that a
+brute-force attack is the most efficient, it would require 2<sup class="calibre19">128</sup>(10<sup class="calibre19">38</sup>) encryptions
+to recover the key. Design a chip that can test a billion keys per second and
+throw a billion of them at the problem, and it will still take 10<sup class="calibre19">13</sup> years — that’s
+longer than the age of the universe. An array of 10<sup class="calibre19">24</sup> such chips can find the
+key in a day, but there aren’t enough silicon atoms in the universe to build
+such a machine. Now we’re getting somewhere — although I’d keep my eye on
+the dark matter debate.</p>
+
+<p class="calibre9">Perhaps brute force isn’t the best way to attack IDEA. The algorithm is still
+too new for any definitive cryptanalytic results. The designers have done their
+best to make the algorithm immune to differential cryptanalysis; they defined
+the concept of a Markov cipher and showed that resistance to differential
+cryptanalysis can be modeled and quantified [<a href="Applied%20Cryptography_split_036.html#r931" class="calibre5 pcalibre">931</a>,<a href="Applied%20Cryptography_split_036.html#r925" class="calibre5 pcalibre">925</a>]. (Figure 13.10 shows
+the original PES algorithm to be contrasted with the IDEA algorithm of Figure
+13.9 which was strengthened against differential cryptanalysis. It’s amazing
+how a few subtle changes can make such a big difference.) In [<a href="Applied%20Cryptography_split_036.html#r925" class="calibre5 pcalibre">925</a>], Lai
+argued (he gave evidence, not a proof) that IDEA is immune to differential
+cryptanalysis after only 4 of its 8 rounds. According to Biham, his related-key
+cryptanalytic attack doesn’t work against IDEA, either [<a href="Applied%20Cryptography_split_035.html#r160" class="calibre5 pcalibre">160</a>].</p>
+
+<div class="figure" id="figure-13-10">
+<div class="image1">
+<p class="calibre9"><img src="ac-figure-13-10.jpg" class="calibre11"/></p>
+</div>
+<p class="calibre9"><i class="calibre12"><b class="calibre10">Figure 13.10</b> PES.</i></p>
+</div>
+
+<p class="calibre9">Willi Meier examined the three algebraic operations of IDEA, and pointed out
+that while they are incompatible, there are instances where they can be
+simplified in such a way as to facilitate cryptanalysis some percentage of the
+time [<a href="Applied%20Cryptography_split_036.html#r1050" class="calibre5 pcalibre">1050</a>]. His attack is more efficient than brute-force for 2-round IDEA
+(2<sup class="calibre19">42</sup> operations), but less efficient for 3-round IDEA or higher. Normal IDEA,
+with 8 rounds, is safe.</p>
+
+<p class="calibre9">Joan Daemen discovered a class of weak keys for IDEA [<a href="Applied%20Cryptography_split_035.html#r406" class="calibre5 pcalibre">406</a>,<a href="Applied%20Cryptography_split_035.html#r409" class="calibre5 pcalibre">409</a>]. These are
+not weak keys in the sense of the DES weak keys; that is, the encryption
+function is self-inverse. They are weak in the sense that if they are used, an
+attacker can easily identify them in a chosen-plaintext attack. For example, a
+weak key is (in hex):</p>
+
+<pre class="calibre20">0000, 0000, 0<i class="calibre22">x</i>00, 0000, 0000, 000<i class="calibre22">x</i>, <i class="calibre22">xxxx</i>, <i class="calibre22">x</i>000
+</pre>
+
+<p class="calibre9">The number at the positions of “<i class="calibre12">x</i>” can be any number. If this key is used, the
+bit-wise XOR of certain plaintext pairs guarantees the bit-wise XOR of the
+resultant ciphertext pairs.</p>
+
+<p class="calibre9">In any case, the chance of accidentally generating one of these weak keys is
+very small: one in 2<sup class="calibre19">96</sup>. There is no danger if you choose keys at random. And
+it is easy to modify IDEA so that it doesn’t have any weak keys: XOR every
+subkey with the value <code class="calibre18">0x0dae</code> [<a href="Applied%20Cryptography_split_035.html#r409" class="calibre5 pcalibre">409</a>].</p>
+
+<p class="calibre9">I know of no other cryptanalytic results against IDEA, although many people
+have tried.</p>
+
+<h4 class="calibre8">IDEA Modes of Operation and Variants</h4>
+
+<p class="calibre9">IDEA can work within any block cipher mode discussed in <a href="Applied%20Cryptography_split_011.html#9" class="calibre5 pcalibre">Chapter 9</a>. Any
+double-IDEA implementation would be susceptible to the same
+meet-in-the-middle attack as DES (see <a href="Applied%20Cryptography_split_018.html#15.1" class="calibre5 pcalibre">Section 15.1</a>). However, because
+IDEA’s key length is more than double DES’s, the attack is impractical. It
+would require a storage space of 64*2<sup class="calibre19">128</sup> bits, or 10<sup class="calibre19">39</sup> bytes. Maybe there’s
+enough matter in the universe to create a memory device that large, but I doubt
+it.</p>
+
+<p class="calibre9">If you’re worried about parallel universes as well, use a triple-IDEA
+implementation (see <a href="Applied%20Cryptography_split_018.html#15.2" class="calibre5 pcalibre">Section 15.2</a>):</p>
+
+<p class="math"><i class="calibre12">C</i> = <i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">K</i><sub class="calibre16">3</sub></sub>(<i class="calibre12">D</i><sub class="calibre15"><i class="calibre22">K</i><sub class="calibre16">2</sub></sub>(<i class="calibre12">E</i><sub class="calibre15"><i class="calibre22">K</i><sub class="calibre16">1</sub></sub>(<i class="calibre12">P</i>)))
+</p>
+
+<p class="calibre9">It is immune to the meet-in-the-middle attack.</p>
+
+<p class="calibre9">There’s also no reason why you can’t implement IDEA with independent
+subkeys, especially if you have key-management tools to handle the longer
+key. IDEA needs a total of 52 16-bit keys, for a total key length of 832 bits.
+This variant is definitely more secure, but no one knows by how much.</p>
+
+<p class="calibre9">A naïve variation might double the block size. The algorithm would work just
+as well with 32-bit sub-blocks instead of 16-bit sub-blocks, and a 256-bit key.
+Encryption would be quicker and security would increase 2<sup class="calibre19">32</sup> times. Or would
+it? The theory behind the algorithm hinges on the fact that 2<sup class="calibre19">16</sup> + 1 is prime; 2<sup class="calibre19">32</sup> + 1 is not. 
+Perhaps the algorithm could be modified to work, but it would have
+very different security properties. Lai says it would be difficult to make it work
+[<a href="Applied%20Cryptography_split_036.html#r926" class="calibre5 pcalibre">926</a>].</p>
+
+<p class="calibre9">While IDEA appears to be significantly more secure than DES, it isn’t always
+easy to substitute one for the other in an existing application. If your database
+and message templates are hardwired to accept a 64-bit key, it may be
+impossible to implement IDEA’s 128-bit key.</p>
+
+<p class="calibre9">For those applications, generate a 128-bit key by concatenating the 64-bit key
+with itself. Remember that IDEA is weakened considerably by this
+modification.</p>
+
+<p class="calibre9">If you are more concerned with speed than security, you might consider a
+variant of IDEA with fewer rounds. Currently the best attack against IDEA is
+faster than brute force only for 2.5 rounds or less [<a href="Applied%20Cryptography_split_036.html#r1050" class="calibre5 pcalibre">1050</a>]; 4 round IDEA would
+be twice as fast and, as far as I know, just as secure.</p>
+
+<h4 class="calibre8">Caveat Emptor</h4>
+
+<p class="calibre9">IDEA is a relatively new algorithm, and many questions remain. Is IDEA a
+group? (Lai thinks not [<a href="Applied%20Cryptography_split_036.html#r926" class="calibre5 pcalibre">926</a>].) Are there any still-undiscovered ways of
+breaking this cipher? IDEA has a firm theoretical basis, but time and time
+again secure-looking algorithms have fallen to new forms of cryptanalysis.
+Several academic and military groups have cryptanalyzed IDEA. None of
+them has gone public about any successes they might have had. One
+might — someday.</p>
+
+<h4 class="calibre8">Patents and Licenses</h4>
+
+<p class="calibre9">IDEA is patented in Europe and the United States [<a href="Applied%20Cryptography_split_036.html#r1012" class="calibre5 pcalibre">1012</a>,<a href="Applied%20Cryptography_split_036.html#r1013" class="calibre5 pcalibre">1013</a>]. The patent is
+held by Ascom-Tech AG. No license fee is required for non-commercial use.
+Commercial users interested in licensing the algorithm should contact <code class="calibre18">Ascom
+Systec AG, Dept CMVV, Gewerbepark, CH-5506, Mägenwil, Switzerland <i class="calibre12">; </i>
++41 64 56 59 83 <i class="calibre12">; </i> Fax:+41 64 56 59 90 <i class="calibre12">; </i> idea@ascom.ch</code>.</p>
+
+<h3 id="13.10" class="calibre7">13.10 MMB</h3>
+
+<p class="calibre9">A complaint against IDEA, that it uses a 64-bit encryption block, was
+addressed by Joan Daemen in an algorithm called MMB (Modular
+Multiplication-based Block cipher) [<a href="Applied%20Cryptography_split_035.html#r385" class="calibre5 pcalibre">385</a>,<a href="Applied%20Cryptography_split_035.html#r405" class="calibre5 pcalibre">405</a>,<a href="Applied%20Cryptography_split_035.html#r406" class="calibre5 pcalibre">406</a>]. MMB is based on the
+same basic theory as IDEA: mixing operations of different algebraic groups.
+MMB is an iterative algorithm that mainly consists of linear steps (XOR and
+key applications) and the parallel applications of four large nonlinear invertible
+substitutions. These substitutions are determined by a multiplication modulo
+2<sup class="calibre19">32</sup> - 1 with constant factors. The result is an algorithm that has both a 128-bit
+key and a 128-bit block size.</p>
+
+<p class="calibre9">MMB operates on 32-bit sub-blocks of text (<i class="calibre12">x</i><sub class="calibre15">0</sub>, <i class="calibre12">x</i><sub class="calibre15">1</sub>, <i class="calibre12">x</i><sub class="calibre15">2</sub>, <i class="calibre12">x</i><sub class="calibre15">3</sub>) and 32-bit sub-blocks of key (<i class="calibre12">k</i><sub class="calibre15">0</sub>, <i class="calibre12">k</i><sub class="calibre15">1</sub>, <i class="calibre12">k</i><sub class="calibre15">2</sub>, <i class="calibre12">k</i><sub class="calibre15">3</sub>). This makes the algorithm well suited for implementation on modern, 32-bit processors. A nonlinear function, f, is
+applied six times alternating with XORing. Here it is (all index operations are
+mod 4):</p>
+
+<p class="math-left"><i class="calibre12">x</i><sub class="calibre15">i</sub> = <i class="calibre12">x</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">k</i><sub class="calibre15">i</sub>, for <i class="calibre12">i</i> = 0 to 3
+f(<i class="calibre12">x</i><sub class="calibre15">0</sub>, <i class="calibre12">x</i><sub class="calibre15">1</sub>, <i class="calibre12">x</i><sub class="calibre15">2</sub>, <i class="calibre12">x</i><sub class="calibre15">3</sub>)
+<i class="calibre12">x</i><sub class="calibre15">i</sub> = <i class="calibre12">x</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">k</i><sub class="calibre15">i + 1</sub>, for <i class="calibre12">i</i> = 0 to 3
+f(<i class="calibre12">x</i><sub class="calibre15">0</sub>, <i class="calibre12">x</i><sub class="calibre15">1</sub>, <i class="calibre12">x</i><sub class="calibre15">2</sub>, <i class="calibre12">x</i><sub class="calibre15">3</sub>)
+<i class="calibre12">x</i><sub class="calibre15">i</sub> = <i class="calibre12">x</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">k</i><sub class="calibre15">i + 2</sub>, for <i class="calibre12">i</i> = 0 to 3
+f(<i class="calibre12">x</i><sub class="calibre15">0</sub>, <i class="calibre12">x</i><sub class="calibre15">1</sub>, <i class="calibre12">x</i><sub class="calibre15">2</sub>, <i class="calibre12">x</i><sub class="calibre15">3</sub>)
+<i class="calibre12">x</i><sub class="calibre15">i</sub> = <i class="calibre12">x</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">k</i><sub class="calibre15">i</sub>, for <i class="calibre12">i</i> = 0 to 3
+f(<i class="calibre12">x</i><sub class="calibre15">0</sub>, <i class="calibre12">x</i><sub class="calibre15">1</sub>, <i class="calibre12">x</i><sub class="calibre15">2</sub>, <i class="calibre12">x</i><sub class="calibre15">3</sub>)
+<i class="calibre12">x</i><sub class="calibre15">i</sub> = <i class="calibre12">x</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">k</i><sub class="calibre15">i + 1</sub>, for <i class="calibre12">i</i> = 0 to 3
+f(<i class="calibre12">x</i><sub class="calibre15">0</sub>, <i class="calibre12">x</i><sub class="calibre15">1</sub>, <i class="calibre12">x</i><sub class="calibre15">2</sub>, <i class="calibre12">x</i><sub class="calibre15">3</sub>)
+<i class="calibre12">x</i><sub class="calibre15">i</sub> = <i class="calibre12">x</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">k</i><sub class="calibre15">i + 2</sub>, for <i class="calibre12">i</i> = 0 to 3
+f(<i class="calibre12">x</i><sub class="calibre15">0</sub>, <i class="calibre12">x</i><sub class="calibre15">1</sub>, <i class="calibre12">x</i><sub class="calibre15">2</sub>, <i class="calibre12">x</i><sub class="calibre15">3</sub>)
+</p>
+
+<p class="calibre9">The function f has three steps:</p>
+
+<ol class="calibre17">
+
+<li class="calibre14"> <i class="calibre12">x</i><sub class="calibre15">i</sub> = <i class="calibre12">c</i><sub class="calibre15">i</sub> * <i class="calibre12">x</i><sub class="calibre15">i</sub>, for <i class="calibre12">i</i> = 0 to 3 (If the input to the multiplication is all 1s, the output is also all 1s.)
+</li>
+<li class="calibre14">If the least significant bit of <i class="calibre12">x</i><sub class="calibre15">0</sub> = 1, then <i class="calibre12">x</i><sub class="calibre15">0</sub> = <i class="calibre12">x</i><sub class="calibre15">0</sub> ⊕ C. If the least significant byte of <i class="calibre12">x</i><sub class="calibre15">3</sub> = 0, then <i class="calibre12">x</i><sub class="calibre15">3</sub> = <i class="calibre12">x</i><sub class="calibre15">3</sub> ⊕ C.
+</li>
+<li class="calibre14"> <i class="calibre12">x</i><sub class="calibre15">i</sub> = <i class="calibre12">x</i><sub class="calibre15">i - 1</sub> ⊕ <i class="calibre12">x</i><sub class="calibre15">i</sub> ⊕ <i class="calibre12">x</i><sub class="calibre15">i + 1</sub>, for <i class="calibre12">i</i> = 0 to 3
+</li>
+
+</ol>
+
+<p class="calibre9">All index operations are mod 4. The multiplication operation in step (1)
+is modulo 2<sup class="calibre19">32</sup> - 1. For the purposes of the algorithm, if the second
+operand is 2<sup class="calibre19">32</sup> - 1, then the result is 2<sup class="calibre19">32</sup> - 1. The various constants are:</p>
+
+<p class="math-left"><i class="calibre12">C</i> = <code class="calibre18">2aaaaaaa</code>
+<i class="calibre12">c</i><sub class="calibre15">0</sub> = <code class="calibre18">025f1cdb</code>
+<i class="calibre12">c</i><sub class="calibre15">1</sub> = 2<i class="calibre12">c</i><sub class="calibre15">0</sub>
+<i class="calibre12">c</i><sub class="calibre15">2</sub> = 2<sup class="calibre19">3</sup><i class="calibre12">c</i><sub class="calibre15">0</sub>
+<i class="calibre12">c</i><sub class="calibre15">3</sub> = 2<sup class="calibre19">7</sup><i class="calibre12">c</i><sub class="calibre15">0</sub>
+</p>
+
+<p class="calibre9">The constant <i class="calibre12">C</i> is the “simplest” constant with a high ternary weight, a
+least-significant bit of zero, and no circular symmetry. The constant <i class="calibre12">c</i><sub class="calibre15">0</sub> has
+certain other characteristics. The constants <i class="calibre12">c</i><sub class="calibre15">1</sub>, <i class="calibre12">c</i><sub class="calibre15">2</sub>, and <i class="calibre12">c</i><sub class="calibre15">3</sub> are shifted versions of
+<i class="calibre12">c</i><sub class="calibre15">0</sub>, preventing attacks based on symmetry. See [<a href="Applied%20Cryptography_split_035.html#r405" class="calibre5 pcalibre">405</a>] for more details.</p>
+
+<p class="calibre9">Decryption is the reverse process. Steps (2) and (3) are their own inverse. Step
+(1) uses <i class="calibre12">c</i><sub class="calibre15">i</sub><sup class="calibre19">-1</sup> instead of <i class="calibre12">c</i><sub class="calibre15">i</sub>. The value of <i class="calibre12">c</i><sub class="calibre15">0</sub><sup class="calibre19">-1</sup> is <code class="calibre18">0dad4694</code>.</p>
+
+<h4 class="calibre8">Security of MMB</h4>
+
+<p class="calibre9">The design of MMB ensures that each round has considerable diffusion
+independent of the key. In IDEA, the amount of diffusion is to some extent
+dependent on the particular subkeys. MMB was also designed not to have any
+weak keys as IDEA has.</p>
+
+<p class="calibre9">MMB is dead [<a href="Applied%20Cryptography_split_035.html#r402" class="calibre5 pcalibre">402</a>]. Although no cryptanalysis has been published, this is true
+for several reasons. First, it was not designed to be resistant to linear
+cryptanalysis. The multiplication factors were chosen to be resistant to
+differential cryptanalysis, but the algorithm’s authors were unaware of linear
+cryptanalysis.</p>
+
+<p class="calibre9">Second, Eli Biham has an effective chosen-key attack [<a href="Applied%20Cryptography_split_035.html#r160" class="calibre5 pcalibre">160</a>], which exploits
+the fact that all rounds are identical and that the key schedule is just a cyclic
+shift by 32 bits. Third, even though MMB would be very efficient in software,
+the algorithm would be less efficient than DES in hardware.</p>
+
+<p class="calibre9">Daemen suggests that anyone interested in improving MMB should first do an
+analysis of modular multiplication with respect to linear cryptanalysis and
+choose a new multiplication factor, and then make the constant <i class="calibre12">C</i> different for
+each round [<a href="Applied%20Cryptography_split_035.html#r402" class="calibre5 pcalibre">402</a>]. Then, improve the key scheduling by adding constants to the
+round keys to remove the bias. He’s not going to do it; he designed 3-Way
+instead (see <a href="Applied%20Cryptography_split_017.html#14.5" class="calibre5 pcalibre">Section 14.5</a>).</p>
+
+<h3 id="13.11" class="calibre7">13.11 CA-1.1</h3>
+
+<p class="calibre9">CA is a block cipher built on cellular automata, designed by Howard Gutowitz
+[<a href="Applied%20Cryptography_split_035.html#r677" class="calibre5 pcalibre">677</a>,<a href="Applied%20Cryptography_split_035.html#r678" class="calibre5 pcalibre">678</a>,<a href="Applied%20Cryptography_split_035.html#r679" class="calibre5 pcalibre">679</a>]. It encrypts plaintext in 384-bit blocks and has a 1088-bit key
+(it’s really two keys, a 1024-bit key and a 64-bit key). Because of the nature of
+cellular automata, the algorithm is most efficient when implemented in
+massively parallel integrated circuits.</p>
+
+<p class="calibre9">CA-1.1 uses both reversible and irreversible cellular automaton rules. Under a
+reversible rule, each state of the lattice comes from a unique predecessor state,
+while under an irreversible rule, each state can have many predecessor states.
+During encryption, irreversible rules are iterated backward in time. To go
+backward from a given state, one of the possible predecessor states is selected
+at random. This process can be repeated many times. Backward iteration thus
+serves to mix random information with the message information. CA-1.1 uses
+a particular kind of partially linear irreversible rule, which is such that a
+random predecessor state for any given state can be rapidly built. Reversible
+rules are also used for some stages of encryption.</p>
+
+<p class="calibre9">The reversible rules (simple parallel permutations on sub-blocks of the state)
+are nonlinear. The irreversible rules are derived entirely from information in
+the key, while the reversible rules depend both on key information and on the
+random information inserted during the stages of encryption with irreversible
+rules.</p>
+
+<p class="calibre9">CA-1.1 is built around a block-link structure. That is, the processing of the
+message block is partially segregated from the processing of the stream of
+random information inserted during encryption. This random information
+serves to link stages of encryption together. It can also be used to chain
+together a ciphertext stream. The information in the link is generated as part of
+encryption.</p>
+
+<p class="calibre9">Because CA-1.1 is a new algorithm, it is too early to make any
+pronouncements on its security. Gutowitz discusses some possible attacks,
+including differential cryptanalysis, but is unable to break the algorithm. As an
+incentive, Gutowitz has offered a $1000 prize to “the first person who
+develops a tractable procedure to break CA-1.1.”</p>
+
+<p class="calibre9">CA-1.1 is patented [<a href="Applied%20Cryptography_split_035.html#r678" class="calibre5 pcalibre">678</a>], but is available free for non-commercial use.
+Anyone interested in either licensing the algorithm or in the cryptanalysis prize
+should contact <code class="calibre18">Howard Gutowitz, ESPCI, Laboratoire d’ƒlectronique, 10 rue
+Vauquelin, 75005 Paris, France</code>.</p>
+
+<h3 id="13.12" class="calibre7">13.12 Skipjack</h3>
+
+<p class="calibre9">Skipjack is the NSA-developed encryption algorithm for the Clipper and
+Capstone chips (see <a href="Applied%20Cryptography_split_028.html#24.16" class="calibre5 pcalibre">Sections 24.16</a> and <a href="Applied%20Cryptography_split_028.html#24.17" class="calibre5 pcalibre">24.17</a>). Since the algorithm is
+classified Secret, its details have never been published. It will only be
+implemented in tamperproof hardware.</p>
+
+<p class="calibre9">The algorithm is classified Secret, not because that enhances its security, but
+because the NSA doesn’t want Skipjack being used without the Clipper
+key-escrow mechanism. They don’t want the algorithm implemented in
+software and spread around the world.</p>
+
+<p class="calibre9">Is Skipjack secure? If the NSA wants to produce a secure algorithm, they
+presumably can. On the other hand, if the NSA wants to design an algorithm
+with a trapdoor, they can do that as well.</p>
+
+<p class="calibre9">Here’s what has been published [<a href="Applied%20Cryptography_split_036.html#r1154" class="calibre5 pcalibre">1154</a>,<a href="Applied%20Cryptography_split_035.html#r462" class="calibre5 pcalibre">462</a>].</p>
+
+<ul class="calibre13">
+
+<li class="calibre14">It’s an iterative block cipher.
+</li>
+<li class="calibre14">The block size is 64 bits.
+</li>
+<li class="calibre14">It has an 80-bit key.
+</li>
+<li class="calibre14">It can be used in ECB, CBC, 64-bit OFB, or 1-, 8-, 16-, 32- or 64-bit
+CFB modes.
+</li>
+<li class="calibre14">There are 32 rounds of processing per single encrypt or decrypt
+operation.
+</li>
+<li class="calibre14">NSA started the design in 1985 and completed the evaluation in
+1990.
+</li>
+
+</ul>
+
+<p class="calibre9">The documentation for the Mykotronx Clipper chip says that the latency for
+the Skipjack algorithm is 64 clock cycles. This means that each round consists
+of two clock cycles: presumably one for the S-box substitution and another for
+the final XOR at the end of the round. (Remember: permutations take no time
+in hardware.) The Mykotronx documentation calls this two-clock-cycle
+operation a “G-box, ” and the whole thing a “shift.” (Some part of the G-box is
+called an “F-table, ” probably a table of constants but maybe a table of
+functions.)</p>
+
+<p class="calibre9">I heard a rumor that Skipjack uses 16 S-boxes, and another that the total
+memory requirement for storing the S-boxes is 128 bytes. It is unlikely that
+both of these rumors are true.</p>
+
+<p class="calibre9">Another rumor implies that Skipjack’s rounds, unlike DES’s, do not operate on
+half of the block size. This, combined with the notion of “shifts, ” an
+inadvertent statement made at Crypto ’94 that Skipjack has “a 48-bit internal
+structure, ” implies that it is similar in design to SHA (see <a href="Applied%20Cryptography_split_021.html#18.7" class="calibre5 pcalibre">Section 18.7</a>) but
+with four 16-bit sub-blocks: three sub-blocks go through a key-dependent
+one-way function to produce 16 bits, which are XORed with the remaining
+sub-block; then the whole block is circularly shifted 16 bits to become the
+input to the next round, or shift. This also implies 128 bytes of S-box data. I
+suspect that the S-boxes are key-dependent.</p>
+
+<p class="calibre9">The structure of Skipjack is probably similar to DES. The NSA realizes that
+their tamperproof hardware will be reverse-engineered eventually; they won’t
+risk any advanced cryptographic techniques.</p>
+
+<p class="calibre9">The fact that the NSA is planning to use the Skipjack algorithm to encrypt
+their Defense Messaging System (DMS) implies that the algorithm is secure.
+To convince the skeptics, NIST allowed a panel of “respected experts from
+outside the government...access to the confidential details of the algorithm to
+assess its capabilities and publicly report its findings” [<a href="Applied%20Cryptography_split_035.html#r812" class="calibre5 pcalibre">812</a>].</p>
+
+<p class="calibre9">The preliminary report of these experts [<a href="Applied%20Cryptography_split_035.html#r262" class="calibre5 pcalibre">262</a>] (there never was a final report,
+and probably never will be) concluded that:</p>
+
+<p class="quote">Under an assumption that the cost of processing power is halved
+every 18 months, it will be 36 years before the difficulty of
+breaking Skipjack by exhaustive search will be equal to the
+difficulty of breaking DES today. Thus, there is no significant risk
+that Skipjack will be broken by exhaustive search in the next
+30–40 years.
+<br class="calibre3"/><br class="calibre3"/>
+There is no significant risk that Skipjack can be broken through a
+shortcut method of attack, including differential cryptanalysis.
+There are no weak keys; there is no complementation property.
+The experts, not having time to evaluate the algorithm to any
+great extent, instead evaluated NSA’s own design and evaluation
+process.
+<br class="calibre3"/><br class="calibre3"/>
+The strength of Skipjack against a cryptanalytic attack does not
+depend on the secrecy of the algorithm.</p>
+
+<p class="calibre9">Of course, the panelists did not look at the algorithm long enough to come to
+any conclusions themselves. All they could do was to look at the results that
+the NSA showed to them.</p>
+
+<p class="calibre9">One unanswered question is whether the Skipjack keyspace is flat (see <a href="Applied%20Cryptography_split_010.html#8.2" class="calibre5 pcalibre">Section 8.2</a>). 
+Even if Skipjack has no weak keys in the DES sense, some artifact of the
+key-scheduling process could make some keys stronger than others. Skipjack
+could have 270 strong keys, far more than DES; the odds of choosing one of
+those strong keys at random would still be about 1 in 1000. Personally, I think
+the Skipjack keyspace is flat, but the fact that no one has ever said this publicly
+is worrisome.</p>
+
+<p class="calibre9">Skipjack is patented, but the patent is being withheld from distribution by a
+patent secrecy agreement [<a href="Applied%20Cryptography_split_036.html#r1122" class="calibre5 pcalibre">1122</a>]. The patent will only be issued when and if
+the Skipjack algorithm is successfully reverse-engineered. This gives the
+government the best of both worlds: the protection of a patent and the
+confidentiality of a trade secret.</p>
+
+<div class="calibre6" id="calibre_pb_32"></div>
+</div>
+
+
+
+
+
+
+</body></html>

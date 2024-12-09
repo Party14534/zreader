@@ -1,0 +1,190 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Applied Cryptography, Second Edition: Protocols, Algorithms, and Source Code in C</title>
+    <meta content="Bruce Schneier" name="author"/>
+    <meta content="An introduction to cryptography." name="description"/>
+    <meta content="programming,cryptography" name="keywords"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body class="calibre">
+<div id="book" class="calibre1">
+<div class="calibre2">
+<h1 id="foreword" class="calibre99">Foreword By Whitfield Diffie</h1>
+
+<p class="calibre9">The literature of cryptography has a curious history. Secrecy, of course, has
+always played a central role, but until the First World War, important
+developments appeared in print in a more or less timely fashion and the field
+moved forward in much the same way as other specialized disciplines. As late
+as 1918, one of the most influential cryptanalytic papers of the twentieth
+century, William F. Friedman’s monograph <i class="calibre12">The Index of Coincidence and Its Applications in Cryptography</i>, 
+appeared as a research report of the private
+Riverbank Laboratories [<a href="Applied%20Cryptography_split_035.html#r577" class="calibre5 pcalibre">577</a>]. And this, despite the fact that the work had been
+done as part of the war effort. In the same year Edward H. Hebern of Oakland,
+California filed the first patent for a rotor machine [<a href="Applied%20Cryptography_split_035.html#r710" class="calibre5 pcalibre">710</a>], the device destined to
+be a mainstay of military cryptography for nearly 50 years.</p>
+
+<p class="calibre9">After the First World War, however, things began to change. U.S. Army and
+Navy organizations, working entirely in secret, began to make fundamental
+advances in cryptography. During the thirties and forties a few basic papers
+did appear in the open literature and several treatises on the subject were
+published, but the latter were farther and farther behind the state of the art. By
+the end of the war the transition was complete. With one notable exception, the
+public literature had died. That exception was Claude Shannon’s paper “The
+Communication Theory of Secrecy Systems,” which appeared in the <i class="calibre12">Bell System Technical Journal</i> 
+in 1949 [<a href="Applied%20Cryptography_split_036.html#r1432" class="calibre5 pcalibre">1432</a>]. It was similar to Friedman’s 1918
+paper, in that it grew out of wartime work of Shannon’s. After the Second
+World War ended it was declassified, possibly by mistake.</p>
+
+<p class="calibre9">From 1949 until 1967 the cryptographic literature was barren. In that year a
+different sort of contribution appeared: David Kahn’s history, <i class="calibre12">The Codebreakers</i> [<a href="Applied%20Cryptography_split_035.html#r794" class="calibre5 pcalibre">794</a>]. 
+It didn’t contain any new technical ideas, but it did
+contain a remarkably complete history of what had gone before, including
+mention of some things that the government still considered secret. The
+significance of <i class="calibre12">The Codebreakers</i> lay not just in its remarkable scope, but also in the fact that it enjoyed good sales and made tens of thousands of people,
+who had never given the matter a moment’s thought, aware of cryptography. A
+trickle of new cryptographic papers began to be written.</p>
+
+<p class="calibre9">At about the same time, Horst Feistel, who had earlier worked on identification
+friend or foe devices for the Air Force, took his lifelong passion for
+cryptography to the IBM Watson Laboratory in Yorktown Heights, New York.
+There, he began development of what was to become the U.S. Data Encryption
+Standard; by the early 1970s several technical reports on this subject by Feistel
+and his colleagues had been made public by IBM [<a href="Applied%20Cryptography_split_036.html#r1482" class="calibre5 pcalibre">1482</a>,<a href="Applied%20Cryptography_split_036.html#r1484" class="calibre5 pcalibre">1484</a>,<a href="Applied%20Cryptography_split_035.html#r552" class="calibre5 pcalibre">552</a>].</p>
+
+<p class="calibre9">This was the situation when I entered the field in late 1972. The cryptographic
+literature wasn’t abundant, but what there was included some very shiny
+nuggets.</p>
+
+<p class="calibre9">Cryptology presents a difficulty not found in normal academic disciplines: the
+need for the proper interaction of cryptography and cryptanalysis. This arises
+out of the fact that in the absence of real communications requirements, it is
+easy to propose a system that appears unbreakable. Many academic designs are
+so complex that the would–be cryptanalyst doesn’t know where to start;
+exposing flaws in these designs is far harder than designing them in the first
+place. The result is that the competitive process, which is one strong
+motivation in academic research, cannot take hold.</p>
+
+<p class="calibre9">When Martin Hellman and I proposed public–key cryptography in 1975 [<a href="Applied%20Cryptography_split_035.html#r496" class="calibre5 pcalibre">496</a>],
+one of the indirect aspects of our contribution was to introduce a problem that
+does not even appear easy to solve. Now an aspiring cryptosystem designer
+could produce something that would be recognized as clever — something that
+did more than just turn meaningful text into nonsense. The result has been a
+spectacular increase in the number of people working in cryptography, the
+number of meetings held, and the number of books and papers published.</p>
+
+<p class="calibre9">In my acceptance speech for the Donald E. Fink award — given for the best
+expository paper to appear in an IEEE journal — which I received jointly with
+Hellman in 1980, I told the audience that in writing “Privacy and
+Authentication,” I had an experience that I suspected was rare even among the
+prominent scholars who populate the IEEE awards ceremony: I had written the
+paper I had wanted to study, but could not find, when I first became seriously
+interested in cryptography. Had I been able to go to the Stanford bookstore and
+pick up a modern cryptography text, I would probably have learned about the
+field years earlier. But the only things available in the fall of 1972 were a few
+classic papers and some obscure technical reports.</p>
+
+<p class="calibre9">The contemporary researcher has no such problem. The problem now is
+choosing where to start among the thousands of papers and dozens of books.
+The contemporary researcher, yes, but what about the contemporary
+programmer or engineer who merely wants to use cryptography? Where does
+that person turn? Until now, it has been necessary to spend long hours hunting
+out and then studying the research literature before being able to design the
+sort of cryptographic utilities glibly described in popular articles.</p>
+
+<p class="calibre9">This is the gap that Bruce Schneier’s <i class="calibre12">Applied Cryptography</i> has come to fill.
+Beginning with the objectives of communication security and elementary
+examples of programs used to achieve these objectives, Schneier gives us a
+panoramic view of the fruits of 20 years of public research. The title says it all;
+from the mundane objective of having a secure conversation the very first time
+you call someone to the possibilities of digital money and cryptographically
+secure elections, this is where you’ll find it.</p>
+
+<p class="calibre9">Not satisfied that the book was about the real world merely because it went all
+the way down to the code, Schneier has included an account of the world in
+which cryptography is developed and applied, and discusses entities ranging
+from the International Association for Cryptologic Research to the NSA.</p>
+
+<p class="calibre9">When public interest in cryptography was just emerging in the late seventies
+and early eighties, the National Security Agency (NSA), America’s official
+cryptographic organ, made several attempts to quash it. The first was a letter
+from a long–time NSA employee allegedly, avowedly, and apparently acting
+on his own. The letter was sent to the IEEE and warned that the publication of
+cryptographic material was a violation of the International Traffic in Arms
+Regulations (ITAR). This viewpoint turned out not even to be supported by the
+regulations themselves — which contained an explicit exemption for published
+material — but gave both the public practice of cryptography and the 1977
+Information Theory Workshop lots of unexpected publicity.</p>
+
+<p class="calibre9">A more serious attempt occurred in 1980, when the NSA funded the American
+Council on Education to examine the issue with a view to persuading Congress
+to give it legal control of publications in the field of cryptography. The results
+fell far short of NSA’s ambitions and resulted in a program of voluntary
+review of cryptographic papers; researchers were requested to ask the NSA’s
+opinion on whether disclosure of results would adversely affect the national
+interest before publication.</p>
+
+<p class="calibre9">As the eighties progressed, pressure focused more on the practice than the
+study of cryptography. Existing laws gave the NSA the power, through the
+Department of State, to regulate the export of cryptographic equipment. As
+business became more and more international and the American fraction of the
+world market declined, the pressure to have a single product in both domestic
+and offshore markets increased. Such single products were subject to export
+control and thus the NSA acquired substantial influence not only over what
+was exported, but also over what was sold in the United States.
+As this is written, a new challenge confronts the public practice of
+cryptography. The government has augmented the widely published and
+available Data Encryption Standard, with a secret algorithm implemented in
+tamper–resistant chips. These chips will incorporate a codified mechanism of
+government monitoring. The negative aspects of this “key–escrow” program
+range from a potentially disastrous impact on personal privacy to the high cost
+of having to add hardware to products that had previously encrypted in
+software. So far key escrow products are enjoying less than stellar sales and
+the scheme has attracted widespread negative comment, especially from the
+independent cryptographers. Some people, however, see more future in
+programming than politicking and have redoubled their efforts to provide the
+world with strong cryptography that is accessible to public scrutiny.</p>
+
+<p class="calibre9">A sharp step back from the notion that export control law could supersede the
+First Amendment seemed to have been taken in 1980 when the <i class="calibre12">Federal Register</i> 
+announcement of a revision to ITAR included the statement:
+“...provision has been added to make it clear that the regulation of the export
+of technical data does not purport to interfere with the First Amendment rights
+of individuals.” But the fact that tension between the First Amendment and the
+export control laws has not gone away should be evident from statements at a
+conference held by RSA Data Security. NSA’s representative from the export
+control office expressed the opinion that people who published cryptographic
+programs were “in a grey area” with respect to the law. If that is so, it is a grey
+area on which the first edition of this book has shed some light. Export
+applications for the book itself have been granted, with acknowledgement that
+published material lay beyond the authority of the Munitions Control Board.
+Applications to export the enclosed programs on disk, however, have been
+denied.</p>
+
+<p class="calibre9">The shift in the NSA’s strategy, from attempting to control cryptographic
+research to tightening its grip on the development and deployment of
+cryptographic products, is presumably due to its realization that all the great
+cryptographic papers in the world do not protect a single bit of traffic. Sitting
+on the shelf, this volume may be able to do no better than the books and papers
+that preceded it, but sitting next to a workstation, where a programmer is
+writing cryptographic code, it just may.</p>
+
+<p class="signature">
+Whitfield Diffie<br class="calibre3"/>
+Mountain View,<br class="calibre3"/>
+CA
+</p>
+<br class="calibre3"/><br class="calibre3"/><br class="calibre3"/><br class="calibre3"/>
+
+</div>
+
+</div>
+
+
+
+
+
+
+</body></html>
