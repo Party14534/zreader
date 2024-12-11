@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"gioui.org/app"
 	"github.com/Party14534/zReader/internal/app/ebook"
 	"github.com/Party14534/zReader/internal/app/ereader"
 )
@@ -21,7 +20,7 @@ func main() {
     }
 
     // Ebook is loaded in and we can now read the first page
-    text, err := ebook.ReadEBook(book, 0)
+    text, err := ebook.ReadEBook(book, 4)
     if err != nil {
         panic(err)
     }
@@ -29,6 +28,4 @@ func main() {
     fmt.Println(text)
 
     ereader.CurrentPageText = text
-    ereader.StartGio()
-    app.Main()
 }

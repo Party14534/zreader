@@ -4,6 +4,8 @@
     - Unmarshal the container.xml file and create structs to hold the data
 - [X] Use the container.xml file to find and open the content.opf file
     - Create structs to hold unmarshalled data
+- [X] Load a Page into Gio
+- [X] Create parser for html files
 
 ## Resources and Notes
 - [Epub Resource](https://opensource.com/article/22/8/epub-file) 
