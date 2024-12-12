@@ -6,6 +6,7 @@
     - Create structs to hold unmarshalled data
 - [X] Load a Page into Gio
 - [X] Create parser for html files
+    - [ ] Add support for inline elements
     - [ ] Add classes to parsed html elements
         - Add string array to struct
     - [ ] Add styling to parsed html elements
