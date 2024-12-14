@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"log"
 	"os"
+	"strconv"
 
 	"gioui.org/app"
 	"gioui.org/io/key"
@@ -29,7 +30,6 @@ var currentBook ebooktype.EBook
 var textWidth unit.Dp = 550
 var marginWidth unit.Dp
 var fontSize unit.Sp = 35
-var stepSize unit.Dp = 2
 var scrollStepSize unit.Dp = 50
 var scrollY unit.Dp = 0
 var pageText string
@@ -63,10 +63,6 @@ func run(window *app.Window) error {
     var nextPageButton widget.Clickable
     var previousPageButton widget.Clickable
 
-    list := &widget.List{
-        List: layout.List{Axis: layout.Vertical},
-    }
-
     // Read first page
     readPage(theme)
 
@@ -78,6 +74,8 @@ func run(window *app.Window) error {
         case app.FrameEvent:
             // This graphics context is used for managing the rendering state
             gtx := app.NewContext(&ops, e)
+
+            scrollStepSize = unit.Dp(float32(gtx.Constraints.Max.Y) * 0.95)
 
             // Handle key events
             handleKeyEvents(&gtx, theme)
@@ -95,11 +93,12 @@ func run(window *app.Window) error {
             paint.Fill(&ops, color.NRGBA{R: 0, G: 0, B: 0, A: 255})
 
             // Drawing to screen
-            /*flexCol := layout.Flex {
+            flexCol := layout.Flex {
                 Axis: layout.Vertical,
+                Spacing: layout.SpaceStart,
             }
 
-            var visList = layout.List{
+            /*var visList = layout.List{
                 Axis: layout.Vertical,
                 Position: layout.Position{
                     Offset: int(scrollY),
@@ -140,8 +139,23 @@ func run(window *app.Window) error {
                     },
                 ),
             )*/
+
+            flexCol.Layout(gtx,
+                layout.Rigid(
+                    func(gtx C) D{
+                        numberFontSize := fontSize / 2
+                        if numberFontSize < 0 { numberFontSize = 0 }
+                        chapterNumber := material.Label(theme, numberFontSize, strconv.Itoa(pageNumber) + " ")
+                        chapterNumber.Font.Typeface = "monospace"
+
+                        chapterNumber.Alignment = text.End
+                        chapterNumber.Color = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+                        return chapterNumber.Layout(gtx)
+                    },
+                ),
+            )
             
-            layoutList(gtx, theme, list)
+            layoutList(gtx, theme)
 
             // Pass the drawing operations to the GPU
             e.Frame(gtx.Ops)
@@ -247,25 +261,27 @@ func chunkString(input string) (chunks []string) {
 }
 
 func buildPageLayout(theme *material.Theme) {
+    
     labelStyles = labelStyles[:0]
     for _, chunk := range pageChunks {
         label := material.Label(theme, unit.Sp(fontSize), chunk)
 
         label.Alignment = text.Middle
         label.Color = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+        label.Font.Typeface = "monospace"
 
         labelStyles = append(labelStyles, label)
     }
 }
 
 // layoutList handles the layout of the list
-func layoutList(gtx layout.Context, theme *material.Theme, list *widget.List) {
+func layoutList(gtx layout.Context, theme *material.Theme) {
     textWidth = unit.Dp(gtx.Constraints.Max.X) * 0.95
     marginWidth = (unit.Dp(gtx.Constraints.Max.X) - textWidth) / 2
     pageMargins := layout.Inset {
         Left:   marginWidth,
         Right:  marginWidth,
-        Top:    unit.Dp(0),
+        Top:    unit.Dp(12),
         Bottom: unit.Dp(0),
     }
 
@@ -276,17 +292,14 @@ func layoutList(gtx layout.Context, theme *material.Theme, list *widget.List) {
         },
     }
 
-    visList.Layout(gtx, 1, 
-        func(gtx C, index int) D {
-            return material.List(theme, list).Layout(gtx, len(pageChunks), func(gtx layout.Context, i int) layout.Dimensions {
-                // Render each item in the list
-                return layout.UniformInset(unit.Dp(0)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-                    return pageMargins.Layout(gtx, 
-                        func(gtx C) D {
-                            return labelStyles[i].Layout(gtx)
-                        },  
-                    )
-                },)
+    visList.Layout(gtx, len(pageChunks), func(gtx layout.Context, i int) layout.Dimensions {
+            // Render each item in the list
+            return layout.UniformInset(unit.Dp(0)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+                return pageMargins.Layout(gtx, 
+                    func(gtx C) D {
+                        return labelStyles[i].Layout(gtx)
+                    },  
+                )
             },)
         },
     )

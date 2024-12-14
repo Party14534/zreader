@@ -188,7 +188,7 @@ func parseHTMLTag(i *int, html *string, element *HTMLElement, elements *[]HTMLEl
                     // Move past the forward slash and add a new single line 
                     // tag code to elements
                     *i = j + 1
-                    code, ok := HtmlTagMap[element.Tag]
+                    code, ok := HtmlInlineTagMap[element.Tag]
                     if ok {
                         element.TagCode = code
                         element.Content = singleLineTagCodeToContent(element.TagCode)
