@@ -25,13 +25,5 @@ func main() {
         panic(err)
     }
 
-    // Ebook is loaded in and we can now read the first page
-    text, err := ebook.ReadEBook(book, pageNumber)
-    if err != nil {
-        panic(err)
-    }
-
-    fmt.Println(text)
-
-    ereader.CurrentPageText = text
+    ereader.StartReader(book, pageNumber)
 }

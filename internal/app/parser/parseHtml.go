@@ -185,7 +185,9 @@ func parseHTMLTag(i *int, html *string, element *HTMLElement, elements *[]HTMLEl
                 if (*html)[j] == '"' { 
                     inQuotes = !inQuotes 
                 } else if (*html)[j] == '/' && !inQuotes {
-                    *i = j + 2
+                    // Move past the forward slash and add a new single line 
+                    // tag code to elements
+                    *i = j + 1
                     code, ok := HtmlTagMap[element.Tag]
                     if ok {
                         element.TagCode = code
@@ -224,6 +226,8 @@ func parseHTMLElementContent(i *int, html *string, element *HTMLElement, element
             j++
             var subElement HTMLElement
             parseHTMLElement(&j, html, &subElement, elements)
+            
+            // Move to the end of the sub element
             for ; j < len(*html) && subElement.TagCode != Single; j++ {
                 if (*html)[j] == '>' {
                     if (*html)[j+1] == '\n' { 

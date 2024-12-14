@@ -52,8 +52,18 @@ func LoadEpubBook(path, dest string, e *ebooktype.EBook) error {
     e.Creator = content.Meta.Creator
     e.Language = content.Meta.Language
     
+    // Need to modify file paths if content.obf file is not in root folder
+    contentFilePath := ""
+    rootFilePathSlice := strings.Split(container.RootFile.FullPath, "/")
+    if len(rootFilePathSlice) > 1 {
+        for i, path := range rootFilePathSlice {
+            if i == len(rootFilePathSlice) - 1 { break }
+            contentFilePath += path + string(os.PathSeparator)
+        }
+    }
+
     // Only add pages to list when they link to html
-    e.Pages = filterLinksWithCorrectExtension(content.Links)
+    e.Pages = filterLinksWithCorrectExtension(content.Links, contentFilePath)
 
     return nil
 }
@@ -163,11 +173,11 @@ func unzipEpub(path, dest string) (string, error) {
     return ebookPath, nil
 }
 
-func filterLinksWithCorrectExtension(slice []ManifestLink) (result []string) {
+func filterLinksWithCorrectExtension(slice []ManifestLink, contentFilePath string) (result []string) {
     for _, link := range slice {
         if strings.Compare(path.Ext(link.Link), ".html") == 0 ||
             strings.Compare(path.Ext(link.Link), ".xhtml") == 0 {
-            result = append(result, link.Link)
+            result = append(result, contentFilePath + link.Link)
         }
     }
 

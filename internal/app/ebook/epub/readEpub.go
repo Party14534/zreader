@@ -1,7 +1,6 @@
 package epub
 
 import (
-	"fmt"
 	"os"
 
 	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
@@ -15,7 +14,6 @@ func ReadPage(ebook ebooktype.EBook, page int) (string, error) {
 
     // Convert the html into html elements and parse it for the text
     htmlElements := parser.ParseHTML(string(text))
-    fmt.Println(htmlElements)
 
     parsedText := ElementsToText(htmlElements)
     
@@ -39,7 +37,6 @@ func ElementsToText(elements []parser.HTMLElement) (parsedText string) {
         }
         if isInline || nextIsInline  {
             lineBreak = ""
-            fmt.Println(element.Tag)
         }
 
         parsedText = parsedText + element.Content + lineBreak

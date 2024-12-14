@@ -5,6 +5,8 @@
 - [X] Use the container.xml file to find and open the content.opf file
     - Create structs to hold unmarshalled data
 - [X] Load a Page into Gio
+    - [X] Make page pretty
+    - [X] Add controls
 - [X] Create parser for html files
     - [X] Add support for inline elements
     - [ ] Add classes to parsed html elements
