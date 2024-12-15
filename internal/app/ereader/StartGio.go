@@ -23,10 +23,13 @@ import (
 type C = layout.Context
 type D = layout.Dimensions
 
-var CurrentPageText string
-
-var pageNumber int
+var chapterNumber int
 var currentBook ebooktype.EBook
+var chapterProgress []int
+var numberOfChapters int
+
+var chapterChunks []string
+var imageIndices []int
 
 var textWidth unit.Dp = 550
 var marginWidth unit.Dp
@@ -34,8 +37,6 @@ var fontSize unit.Sp = 35
 var smallScrollStepSize unit.Dp = 50
 var largeScrollStepSize unit.Dp = 50
 var scrollY unit.Dp = 0
-var pageChunks []string
-var imageIndices []int
 var labelStyles []material.LabelStyle
 var atBottom bool = false
 
@@ -48,8 +49,10 @@ var lightModeBackgroundColor uint8 = 255
 var isDarkMode bool = true
 
 
-func StartReader(book ebooktype.EBook, page int) {
-    pageNumber = page
+func StartReader(book ebooktype.EBook, chapter int) {
+    chapterNumber = chapter
+    numberOfChapters = len(book.Chapters)
+    chapterProgress = make([]int, len(book.Chapters))
 
     go func() {
         currentBook = book
@@ -73,8 +76,8 @@ func run(window *app.Window) error {
 
     smallScrollStepSize = 32
 
-    // Read first page
-    readPage(theme)
+    // Read first chapter
+    readChapter(theme)
 
     if isDarkMode {
         textColor = darkModeTextColor
@@ -112,7 +115,7 @@ func run(window *app.Window) error {
                     func(gtx C) D{
                         numberFontSize := fontSize / 2
                         if numberFontSize < 0 { numberFontSize = 0 }
-                        chapterNumber := material.Label(theme, numberFontSize, strconv.Itoa(pageNumber) + " ")
+                        chapterNumber := material.Label(theme, numberFontSize, strconv.Itoa(chapterNumber) + " ")
                         chapterNumber.Font.Typeface = "RobotoMono Nerd Font"
 
                         chapterNumber.Alignment = text.End
@@ -173,19 +176,27 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
         switch ev.Name {
         case key.Name("L"):
             if ev.State == key.Release { 
-                pageNumber++ 
-                scrollY = 0
-                readPage(theme)
+                chapterProgress[chapterNumber] = int(scrollY)
+
+                chapterNumber++ 
+                if chapterNumber >= numberOfChapters { 
+                    chapterNumber = numberOfChapters - 1
+                } else {
+                    scrollY = 0
+                    readChapter(theme)
+                }
             }
 
         case key.Name("H"):
             if ev.State == key.Release { 
-                pageNumber--
-                if pageNumber < 0 { 
-                    pageNumber = 0 
+                chapterProgress[chapterNumber] = int(scrollY)
+
+                chapterNumber--
+                if chapterNumber < 0 { 
+                    chapterNumber = 0 
                 } else {
                     scrollY = 0
-                    readPage(theme)
+                    readChapter(theme)
                 }
             }
             
@@ -239,13 +250,16 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
     }
 }
 
-func readPage(theme *material.Theme) {
+func readChapter(theme *material.Theme) {
     var err error
 
-    pageChunks, imageIndices, err = ebook.ReadEBookChunks(currentBook, pageNumber)
+    chapterChunks, imageIndices, err = ebook.ReadEBookChunks(currentBook, chapterNumber)
     if err != nil { panic(err) }
 
     buildPageLayout(theme)
+
+    // Set to previous scroll
+    scrollY = unit.Dp(chapterProgress[chapterNumber])
 }
 
 func chunkString(input string) (chunks []string) {
@@ -267,7 +281,7 @@ func chunkString(input string) (chunks []string) {
 func buildPageLayout(theme *material.Theme) {
     
     labelStyles = labelStyles[:0]
-    for _, chunk := range pageChunks {
+    for _, chunk := range chapterChunks {
         label := material.Label(theme, unit.Sp(fontSize), chunk)
 
         label.Alignment = text.Middle
@@ -297,7 +311,7 @@ func layoutList(gtx layout.Context, ops *op.Ops) {
     }
 
     imageIndex := 0
-    visList.Layout(gtx, len(pageChunks), func(gtx C, i int) D {
+    visList.Layout(gtx, len(chapterChunks), func(gtx C, i int) D {
             // Render each item in the list
             return pageMargins.Layout(gtx, func(gtx C) D{
                 if imageIndex < len(imageIndices) && i == imageIndices[imageIndex] {

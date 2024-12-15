@@ -24,19 +24,19 @@ func LoadFile(ebookPath, dest string) (ebooktype.EBook, error) {
     return ebook, err
 }
 
-func ReadEBook(ebook ebooktype.EBook, page int) (string, error) {
+func ReadEBook(ebook ebooktype.EBook, chapter int) (string, error) {
     switch ebook.Type {
         case ebooktype.EPUB:
-            return epub.ReadPage(ebook, page)            
+            return epub.ReadChapter(ebook, chapter)            
     }
 
     return "", fmt.Errorf("Ebook type not supported\n")
 }
 
-func ReadEBookChunks(ebook ebooktype.EBook, page int) ([]string, []int, error) {
+func ReadEBookChunks(ebook ebooktype.EBook, chapter int) ([]string, []int, error) {
     switch ebook.Type {
         case ebooktype.EPUB:
-            return epub.ReadPageChunks(ebook, page)            
+            return epub.ReadChapterChunks(ebook, chapter)            
     }
 
     return nil, nil, fmt.Errorf("Ebook type not supported\n")

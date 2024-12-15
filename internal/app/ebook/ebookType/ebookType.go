@@ -16,7 +16,7 @@ type EBook struct {
     Creator string
     Language string
 
-    // Pages
-    Pages []string
+    // Chapters
+    Chapters []string
 }
 
