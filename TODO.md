@@ -13,6 +13,8 @@
         - Add string array to struct
     - [ ] Add styling to parsed html elements
 - [X] Add support for unicode decimal code in html
+- [X] Add support for images
+- [X] Add darkmode and lightmode
 
 ## Resources and Notes
 - [Epub Resource](https://opensource.com/article/22/8/epub-file) 

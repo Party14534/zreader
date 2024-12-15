@@ -2,6 +2,7 @@ package parser
 
 import (
 	"html"
+	"strings"
 )
 
 const (
@@ -186,6 +187,11 @@ func parseHTMLTag(i *int, html *string, element *HTMLElement, elements *[]HTMLEl
             }
             element.TagCode = tagCode
 
+            // Return early for img tags
+            if strings.Compare(element.Tag, "img") == 0 {
+                getImageContent(*i, html, element)
+            }
+
             for ; j < len(*html); j++ {
                 // Don't read tags from single line elements
                 if (*html)[j] == '"' { 
@@ -197,7 +203,7 @@ func parseHTMLTag(i *int, html *string, element *HTMLElement, elements *[]HTMLEl
                     code, ok := HtmlInlineTagMap[element.Tag]
                     if ok {
                         element.TagCode = code
-                        element.Content = singleLineTagCodeToContent(element.TagCode)
+                        getSingleLineTagContent(element)
                         // Append here to not fuck up the content parser
                         (*elements) = append((*elements), *element)
                     }
@@ -218,10 +224,18 @@ func parseHTMLTag(i *int, html *string, element *HTMLElement, elements *[]HTMLEl
 
 func parseHTMLElementContent(i *int, html *string, element *HTMLElement, elements *[]HTMLElement) {
     hasDecimalCode := false
+    hasSplit := false
     for j := *i; j < len(*html); j++ {
         // Correctly parse unicode decimal code
-        if j < len(*html) - 1 && (*html)[j] == '&' && (*html)[j+1] == '#' {
-           hasDecimalCode = true 
+        if j < len(*html) - 1 && (*html)[j] == '&' {
+            for k := j+1; k < len(*html); k++ {
+                if (*html)[k] == ' ' || (*html)[k] == '\n'{
+                    break
+                } else if (*html)[k] == ';' {
+                    hasDecimalCode = true
+                    break
+                }
+            } 
         } else // If there is an element inside the element create a new element
         if (*html)[j] == '<' && (*html)[j+1] != '/' {
             // Create a copy of the current element before sub-element
@@ -230,10 +244,14 @@ func parseHTMLElementContent(i *int, html *string, element *HTMLElement, element
             copyElement.TagCode = element.TagCode
 
             copyElement.Content = (*html)[*i:j]
+
             if hasDecimalCode { replaceDecimalCode(&copyElement.Content) }
+            if !hasSplit { addRunesForInlineElements(&copyElement) }
+
             *elements = append((*elements), copyElement)
 
             hasDecimalCode = false
+            hasSplit = true
             //fmt.Printf("Copy: %v\n", copyElement.Content)
 
             // Parse and add sub-element to elements
@@ -267,16 +285,11 @@ func parseHTMLElementContent(i *int, html *string, element *HTMLElement, element
                 }   
             }
 
-            // Add extra runes for inline variables
-            switch element.TagCode {
-                case Sup:
-                    element.Content = "^" + element.Content 
-                case Sub:
-                    element.Content = "_" + element.Content
-            }
-
             // If the element has a decimal code replace it
             if hasDecimalCode { replaceDecimalCode(&element.Content) }
+
+            // Add extra runes for inline variables
+            if !hasSplit { addRunesForInlineElements(element) }
 
             (*elements) = append((*elements), *element)
             *i = j + 1
@@ -287,15 +300,27 @@ func parseHTMLElementContent(i *int, html *string, element *HTMLElement, element
     }
 }
 
+func addRunesForInlineElements(element *HTMLElement) {
+    switch element.TagCode {
+        case Sup:
+            element.Content = "^" + element.Content 
+        case Sub:
+            element.Content = "_" + element.Content
+    }
+}
+
 func replaceDecimalCode(text *string) {
     var newText string
     start := 0
     for i := 0; i < len(*text); i++ {
-        if i < len(*text) - 1 && (*text)[i] == '&' && (*text)[i+1] == '#' {
-            newText += (*text)[start:i]
+        if i < len(*text) - 1 && (*text)[i] == '&' {
             startOfCode := i
             for ; i < len(*text); i++ {
+                if (*text)[i] == ' ' || (*text)[i] == '\n'{ 
+                    break
+                }
                 if (*text)[i] == ';' {
+                    newText += (*text)[start:startOfCode]
                     newText += html.UnescapeString((*text)[startOfCode:i+1])
                     break
                 }
@@ -310,12 +335,10 @@ func replaceDecimalCode(text *string) {
     *text = newText
 }
 
-func singleLineTagCodeToContent(code int) string {
-    switch code {
+func getSingleLineTagContent(element *HTMLElement) {
+    switch element.TagCode {
         case Br:
-            return "\n"
-        default:
-            return ""
+            element.Content = "\n"
     }
 }
 
@@ -334,5 +357,30 @@ func removeNewLineFromContent(element HTMLElement) (newContent string) {
     }
 
     return newContent
+}
+
+func getImageContent(i int, s *string, element *HTMLElement) {
+    for ; i < len(*s); i++ {
+        if i < len(*s) - 3 && (*s)[i] == 's' && (*s)[i+1] == 'r' && (*s)[i+2] == 'c' {
+            i = i+3
+            var start int
+            for ; i < len(*s); i++ {
+                if (*s)[i] == '"' {
+                    start = i+1
+                    i++
+                    break
+                }
+            }
+
+            for ; i < len(*s); i++ {
+                if (*s)[i] == '"' {
+                    element.Content = (*s)[start:i]
+                    return
+                }
+            }
+
+            return
+        }
+    }
 }
 

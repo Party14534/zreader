@@ -1,12 +1,14 @@
 package ereader
 
 import (
+	"image"
 	"image/color"
 	"log"
 	"os"
 	"strconv"
 
 	"gioui.org/app"
+	"gioui.org/f32"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -32,10 +34,18 @@ var fontSize unit.Sp = 35
 var smallScrollStepSize unit.Dp = 50
 var largeScrollStepSize unit.Dp = 50
 var scrollY unit.Dp = 0
-var pageText string
 var pageChunks []string
+var imageIndices []int
 var labelStyles []material.LabelStyle
 var atBottom bool = false
+
+var textColor uint8 = 255
+var backgroundColor uint8 = 0
+var darkModeTextColor uint8 = 255
+var darkModeBackgroundColor uint8 = 0
+var lightModeTextColor uint8 = 0
+var lightModeBackgroundColor uint8 = 255
+var isDarkMode bool = true
 
 
 func StartReader(book ebooktype.EBook, page int) {
@@ -66,6 +76,14 @@ func run(window *app.Window) error {
     // Read first page
     readPage(theme)
 
+    if isDarkMode {
+        textColor = darkModeTextColor
+        backgroundColor = darkModeBackgroundColor
+    } else {
+        textColor = lightModeTextColor
+        backgroundColor = lightModeBackgroundColor
+    }
+
     for {
         switch e := window.Event().(type) {
         case app.DestroyEvent:
@@ -81,54 +99,13 @@ func run(window *app.Window) error {
             handleKeyEvents(&gtx, theme)
 
             // Drawing to screen
-            paint.Fill(&ops, color.NRGBA{R: 0, G: 0, B: 0, A: 255})
+            paint.Fill(&ops, color.NRGBA{R: backgroundColor,
+                        G: backgroundColor, B: backgroundColor, A: 255})
 
             flexCol := layout.Flex {
                 Axis: layout.Vertical,
                 Spacing: layout.SpaceStart,
             }
-
-            /*var visList = layout.List{
-                Axis: layout.Vertical,
-                Position: layout.Position{
-                    Offset: int(scrollY),
-                },
-            }
-
-            textWidth = unit.Dp(gtx.Constraints.Max.X) * 0.95
-            marginWidth = (unit.Dp(gtx.Constraints.Max.X) - textWidth) / 2
-            pageMargins := layout.Inset {
-                Left:   marginWidth,
-                Right:  marginWidth,
-                Top:    unit.Dp(0),
-                Bottom: unit.Dp(0),
-            }
-
-            
-            flexCol.Layout(gtx,
-                layout.Rigid(
-                    func(gtx C) D {
-                        return visList.Layout(gtx, 1, 
-                            func(gtx C, index int) D {
-                                return pageMargins.Layout(gtx, 
-                                    func(gtx layout.Context) layout.Dimensions {
-                                        page := material.Label(theme, fontSize, pageText)
-
-                                        // Change the position of the label
-                                        page.Alignment = text.Middle
-
-                                        page.Color = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
-
-                                        // Draw the title to the context
-                                        return page.Layout(gtx)
-                                        return material.Label(theme, fontSize, "Hello").Layout(gtx)
-                                    },
-                                )
-                            },
-                        )
-                    },
-                ),
-            )*/
 
             flexCol.Layout(gtx,
                 layout.Rigid(
@@ -139,13 +116,14 @@ func run(window *app.Window) error {
                         chapterNumber.Font.Typeface = "RobotoMono Nerd Font"
 
                         chapterNumber.Alignment = text.End
-                        chapterNumber.Color = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+                        chapterNumber.Color = color.NRGBA{R: textColor,
+                                    G: textColor, B: textColor, A: 255}
                         return chapterNumber.Layout(gtx)
                     },
                 ),
             )
             
-            layoutList(gtx)
+            layoutList(gtx, &ops)
 
             // Pass the drawing operations to the GPU
             e.Frame(gtx.Ops)
@@ -182,6 +160,9 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
             },
             key.Filter {
                 Name: "=",
+            },
+            key.Filter{
+                Name: key.NameSpace,
             },
         )
         if !ok { break }
@@ -238,16 +219,32 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
                 fontSize += 2
                 buildPageLayout(theme)
             }
+
+        case key.NameSpace:
+            if ev.State == key.Release {
+                isDarkMode = !isDarkMode
+
+                if isDarkMode {
+                    textColor = darkModeTextColor
+                    backgroundColor = darkModeBackgroundColor
+                } else {
+                    textColor = lightModeTextColor
+                    backgroundColor = lightModeBackgroundColor
+                }
+
+                buildPageLayout(theme)
+            }
+
         }
     }
-
 }
 
 func readPage(theme *material.Theme) {
     var err error
-    pageText, err = ebook.ReadEBook(currentBook, pageNumber)
+
+    pageChunks, imageIndices, err = ebook.ReadEBookChunks(currentBook, pageNumber)
     if err != nil { panic(err) }
-    pageChunks = chunkString(pageText)
+
     buildPageLayout(theme)
 }
 
@@ -274,7 +271,7 @@ func buildPageLayout(theme *material.Theme) {
         label := material.Label(theme, unit.Sp(fontSize), chunk)
 
         label.Alignment = text.Middle
-        label.Color = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+        label.Color = color.NRGBA{R: textColor, G: textColor, B: textColor, A: 255}
         label.Font.Typeface = "RobotoMono Nerd Font"
 
         labelStyles = append(labelStyles, label)
@@ -282,13 +279,14 @@ func buildPageLayout(theme *material.Theme) {
 }
 
 // layoutList handles the layout of the list
-func layoutList(gtx layout.Context) {
+func layoutList(gtx layout.Context, ops *op.Ops) {
     textWidth = unit.Dp(gtx.Constraints.Max.X) * 0.95
     marginWidth = (unit.Dp(gtx.Constraints.Max.X) - textWidth) / 2
     pageMargins := layout.Inset {
         Left:   marginWidth,
         Right:  marginWidth,
         Top: unit.Dp(12),
+        Bottom: unit.Dp(12),
     }
 
     var visList = layout.List {
@@ -298,12 +296,48 @@ func layoutList(gtx layout.Context) {
         },
     }
 
+    imageIndex := 0
     visList.Layout(gtx, len(pageChunks), func(gtx C, i int) D {
             // Render each item in the list
             return pageMargins.Layout(gtx, func(gtx C) D{
-                return labelStyles[i].Layout(gtx)
+                if imageIndex < len(imageIndices) && i == imageIndices[imageIndex] {
+                    imageIndex++
+                    // Draw the image in the window
+                    return layout.Center.Layout(gtx, func(gtx C) D {
+                        // Build image 
+                        img := loadImage(labelStyles[i].Text)
+                        imgOp := paint.NewImageOp(img)
+                        imgOp.Filter = paint.FilterNearest
+                        imgOp.Add(ops)
+
+                        scale := 2
+                        fScale := float32(scale)
+                        imgSize := img.Bounds().Size()
+                        imgSize.X *= scale
+                        imgSize.Y *= scale
+
+                        op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), 
+                            f32.Pt(fScale, fScale))).Add(ops)
+                        paint.PaintOp{}.Add(gtx.Ops)
+                        return layout.Dimensions{Size: imgSize}
+                    })
+                } else {
+                    return labelStyles[i].Layout(gtx)
+                }
             },)
         },
     )
+}
 
+func loadImage(filename string) image.Image {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("failed to open image: %v", err)
+	}
+	defer file.Close()
+	img, _, err := image.Decode(file)
+	if err != nil {
+		log.Fatalf("failed to decode image: %v", err)
+	}
+	return img
 }

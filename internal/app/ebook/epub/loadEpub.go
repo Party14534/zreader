@@ -61,6 +61,7 @@ func LoadEpubBook(path, dest string, e *ebooktype.EBook) error {
             contentFilePath += path + string(os.PathSeparator)
         }
     }
+    e.ContentFilePath = epubDest + string(os.PathSeparator) + contentFilePath
 
     // Only add pages to list when they link to html
     e.Pages = filterLinksWithCorrectExtension(content.Links, contentFilePath)

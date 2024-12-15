@@ -8,6 +8,7 @@ const (
 type EBook struct {
     // File Info
     Dest string
+    ContentFilePath string
     Type int
     
     // Book metadata

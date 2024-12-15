@@ -32,3 +32,12 @@ func ReadEBook(ebook ebooktype.EBook, page int) (string, error) {
 
     return "", fmt.Errorf("Ebook type not supported\n")
 }
+
+func ReadEBookChunks(ebook ebooktype.EBook, page int) ([]string, []int, error) {
+    switch ebook.Type {
+        case ebooktype.EPUB:
+            return epub.ReadPageChunks(ebook, page)            
+    }
+
+    return nil, nil, fmt.Errorf("Ebook type not supported\n")
+}
