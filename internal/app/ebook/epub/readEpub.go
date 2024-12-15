@@ -24,7 +24,6 @@ func ElementsToText(elements []parser.HTMLElement) (parsedText string) {
     for i := 0; i < len(elements); i++ {
         element := elements[i]
 
-        if element.TagCode == parser.Br { continue }
         //if element.TagCode == parser.Undefined { continue }
 
         // If it is an inline element or next element is

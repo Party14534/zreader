@@ -1,5 +1,9 @@
 package parser
 
+import (
+	"html"
+)
+
 const (
     P = iota + 1
     Div
@@ -168,7 +172,7 @@ func parseHTMLElement(i *int, html *string, element *HTMLElement, elements *[]HT
 func parseHTMLTag(i *int, html *string, element *HTMLElement, elements *[]HTMLElement) {
     inQuotes := false
     for j := *i; j < len(*html); j++ {
-        if (*html)[j] == ' ' || (*html)[j] == '>' {
+        if (*html)[j] == ' ' || (*html)[j] == '>' || (*html)[j] == '/' {
             element.Tag = (*html)[*i:j]
             tagCode, ok := HtmlTagMap[element.Tag]
             if !ok {
@@ -213,15 +217,23 @@ func parseHTMLTag(i *int, html *string, element *HTMLElement, elements *[]HTMLEl
 }
 
 func parseHTMLElementContent(i *int, html *string, element *HTMLElement, elements *[]HTMLElement) {
+    hasDecimalCode := false
     for j := *i; j < len(*html); j++ {
-        // If there is an element inside the element create a new element
+        // Correctly parse unicode decimal code
+        if j < len(*html) - 1 && (*html)[j] == '&' && (*html)[j+1] == '#' {
+           hasDecimalCode = true 
+        } else // If there is an element inside the element create a new element
         if (*html)[j] == '<' && (*html)[j+1] != '/' {
             // Create a copy of the current element before sub-element
             var copyElement HTMLElement
             copyElement.Tag = element.Tag
             copyElement.TagCode = element.TagCode
+
             copyElement.Content = (*html)[*i:j]
+            if hasDecimalCode { replaceDecimalCode(&copyElement.Content) }
             *elements = append((*elements), copyElement)
+
+            hasDecimalCode = false
             //fmt.Printf("Copy: %v\n", copyElement.Content)
 
             // Parse and add sub-element to elements
@@ -263,6 +275,9 @@ func parseHTMLElementContent(i *int, html *string, element *HTMLElement, element
                     element.Content = "_" + element.Content
             }
 
+            // If the element has a decimal code replace it
+            if hasDecimalCode { replaceDecimalCode(&element.Content) }
+
             (*elements) = append((*elements), *element)
             *i = j + 1
 
@@ -270,6 +285,29 @@ func parseHTMLElementContent(i *int, html *string, element *HTMLElement, element
             return
         }
     }
+}
+
+func replaceDecimalCode(text *string) {
+    var newText string
+    start := 0
+    for i := 0; i < len(*text); i++ {
+        if i < len(*text) - 1 && (*text)[i] == '&' && (*text)[i+1] == '#' {
+            newText += (*text)[start:i]
+            startOfCode := i
+            for ; i < len(*text); i++ {
+                if (*text)[i] == ';' {
+                    newText += html.UnescapeString((*text)[startOfCode:i+1])
+                    break
+                }
+            }
+
+            start = i + 1
+        } 
+    }
+
+    newText += (*text)[start:]
+
+    *text = newText
 }
 
 func singleLineTagCodeToContent(code int) string {
