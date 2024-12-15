@@ -12,6 +12,8 @@
     - [ ] Add classes to parsed html elements
         - Add string array to struct
     - [ ] Add styling to parsed html elements
+- [ ] Add support for unicode decimal code in html
+    - ex: &#8221;
 
 ## Resources and Notes
 - [Epub Resource](https://opensource.com/article/22/8/epub-file) 

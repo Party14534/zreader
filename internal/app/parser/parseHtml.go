@@ -48,6 +48,7 @@ const (
     U
     Var
     Wbr
+    Img
     Undefined
     Single
 )
@@ -118,6 +119,7 @@ func initMap() {
         "u" : U,
         "var" : Var,
         "wbr" : Wbr,
+        "img" : Img,
     }
 
     mapMade = true
@@ -230,7 +232,7 @@ func parseHTMLElementContent(i *int, html *string, element *HTMLElement, element
             // Move to the end of the sub element
             for ; j < len(*html) && subElement.TagCode != Single; j++ {
                 if (*html)[j] == '>' {
-                    if (*html)[j+1] == '\n' { 
+                    if j + 1 < len(*html) && (*html)[j+1] == '\n' { 
                         j++ 
                     }
                     break

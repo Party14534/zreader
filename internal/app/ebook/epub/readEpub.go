@@ -44,3 +44,4 @@ func ElementsToText(elements []parser.HTMLElement) (parsedText string) {
 
     return parsedText
 }
+

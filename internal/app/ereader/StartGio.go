@@ -13,7 +13,6 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/unit"
-	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/Party14534/zReader/internal/app/ebook"
 	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
@@ -30,11 +29,13 @@ var currentBook ebooktype.EBook
 var textWidth unit.Dp = 550
 var marginWidth unit.Dp
 var fontSize unit.Sp = 35
-var scrollStepSize unit.Dp = 50
+var smallScrollStepSize unit.Dp = 50
+var largeScrollStepSize unit.Dp = 50
 var scrollY unit.Dp = 0
 var pageText string
 var pageChunks []string
 var labelStyles []material.LabelStyle
+var atBottom bool = false
 
 
 func StartReader(book ebooktype.EBook, page int) {
@@ -60,8 +61,7 @@ func run(window *app.Window) error {
     theme := material.NewTheme()
     var ops op.Ops
 
-    var nextPageButton widget.Clickable
-    var previousPageButton widget.Clickable
+    smallScrollStepSize = 32
 
     // Read first page
     readPage(theme)
@@ -75,24 +75,14 @@ func run(window *app.Window) error {
             // This graphics context is used for managing the rendering state
             gtx := app.NewContext(&ops, e)
 
-            scrollStepSize = unit.Dp(float32(gtx.Constraints.Max.Y) * 0.95)
+            largeScrollStepSize = unit.Dp(float32(gtx.Constraints.Max.Y) * 0.95)
 
             // Handle key events
             handleKeyEvents(&gtx, theme)
 
-            // Logic
-            if nextPageButton.Clicked(gtx) {
-                pageNumber++
-            }
-            if previousPageButton.Clicked(gtx) {
-                if pageNumber > 0 {
-                    pageNumber--
-                }
-            }
-
+            // Drawing to screen
             paint.Fill(&ops, color.NRGBA{R: 0, G: 0, B: 0, A: 255})
 
-            // Drawing to screen
             flexCol := layout.Flex {
                 Axis: layout.Vertical,
                 Spacing: layout.SpaceStart,
@@ -146,7 +136,7 @@ func run(window *app.Window) error {
                         numberFontSize := fontSize / 2
                         if numberFontSize < 0 { numberFontSize = 0 }
                         chapterNumber := material.Label(theme, numberFontSize, strconv.Itoa(pageNumber) + " ")
-                        chapterNumber.Font.Typeface = "monospace"
+                        chapterNumber.Font.Typeface = "RobotoMono Nerd Font"
 
                         chapterNumber.Alignment = text.End
                         chapterNumber.Color = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
@@ -155,7 +145,7 @@ func run(window *app.Window) error {
                 ),
             )
             
-            layoutList(gtx, theme)
+            layoutList(gtx)
 
             // Pass the drawing operations to the GPU
             e.Frame(gtx.Ops)
@@ -167,22 +157,30 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
     // Handle key events
     for {
         keyEvent, ok := gtx.Event(
-            key.Filter{
+            key.Filter {
                 Name: "L",
             },
-            key.Filter{
+            key.Filter {
                 Name: "H",
             },
-            key.Filter{
+            key.Filter {
                 Name: "J",
             },
-            key.Filter{
+            key.Filter {
                 Name: "K",
             },
-            key.Filter{
+            key.Filter {
+                Name: "D",
+                Required: key.ModCtrl,
+            },
+            key.Filter {
+                Name: "U",
+                Required: key.ModCtrl,
+            },
+            key.Filter {
                 Name: "-",
             },
-            key.Filter{
+            key.Filter {
                 Name: "=",
             },
         )
@@ -211,11 +209,20 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
             }
             
         case key.Name("J"):
-            if ev.State == key.Release { scrollY += scrollStepSize }
+            if ev.State == key.Release && !atBottom { scrollY += smallScrollStepSize }
 
         case key.Name("K"):
             if ev.State == key.Release { 
-                scrollY -= scrollStepSize 
+                scrollY -= smallScrollStepSize 
+                if scrollY < 0 { scrollY = 0 }
+            }
+
+        case key.Name("D"):
+            if ev.State == key.Release && !atBottom { scrollY += largeScrollStepSize }
+
+        case key.Name("U"):
+            if ev.State == key.Release { 
+                scrollY -= largeScrollStepSize 
                 if scrollY < 0 { scrollY = 0 }
             }
 
@@ -250,7 +257,7 @@ func chunkString(input string) (chunks []string) {
 	for i := 1; i < len(input); i++ {
         if input[i] == '\n' && !alreadyChunked {
             chunks = append(chunks, input[start:i])
-            start = i
+            start = i+1
             alreadyChunked = true
         } else { alreadyChunked = false }
 	}
@@ -268,21 +275,20 @@ func buildPageLayout(theme *material.Theme) {
 
         label.Alignment = text.Middle
         label.Color = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
-        label.Font.Typeface = "monospace"
+        label.Font.Typeface = "RobotoMono Nerd Font"
 
         labelStyles = append(labelStyles, label)
     }
 }
 
 // layoutList handles the layout of the list
-func layoutList(gtx layout.Context, theme *material.Theme) {
+func layoutList(gtx layout.Context) {
     textWidth = unit.Dp(gtx.Constraints.Max.X) * 0.95
     marginWidth = (unit.Dp(gtx.Constraints.Max.X) - textWidth) / 2
     pageMargins := layout.Inset {
         Left:   marginWidth,
         Right:  marginWidth,
-        Top:    unit.Dp(12),
-        Bottom: unit.Dp(0),
+        Top: unit.Dp(12),
     }
 
     var visList = layout.List {
@@ -292,14 +298,10 @@ func layoutList(gtx layout.Context, theme *material.Theme) {
         },
     }
 
-    visList.Layout(gtx, len(pageChunks), func(gtx layout.Context, i int) layout.Dimensions {
+    visList.Layout(gtx, len(pageChunks), func(gtx C, i int) D {
             // Render each item in the list
-            return layout.UniformInset(unit.Dp(0)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-                return pageMargins.Layout(gtx, 
-                    func(gtx C) D {
-                        return labelStyles[i].Layout(gtx)
-                    },  
-                )
+            return pageMargins.Layout(gtx, func(gtx C) D{
+                return labelStyles[i].Layout(gtx)
             },)
         },
     )

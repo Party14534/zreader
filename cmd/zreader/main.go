@@ -26,4 +26,5 @@ func main() {
     }
 
     ereader.StartReader(book, pageNumber)
+    //ereader.StartFyneReader(book, pageNumber)
 }

@@ -1,6 +1,6 @@
 module github.com/Party14534/zReader
 
-go 1.23.0
+go 1.22.5
 
 require gioui.org v0.7.1
 
