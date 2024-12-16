@@ -201,16 +201,16 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
             }
             
         case key.Name("J"):
-            if ev.State == key.Release && !atBottom { scrollY += smallScrollStepSize }
+            if !atBottom { scrollY += smallScrollStepSize }
 
         case key.Name("K"):
-            if ev.State == key.Release { 
-                scrollY -= smallScrollStepSize 
-                if scrollY < 0 { scrollY = 0 }
-            }
+            scrollY -= smallScrollStepSize 
+            if scrollY < 0 { scrollY = 0 }
 
         case key.Name("D"):
-            if ev.State == key.Release && !atBottom { scrollY += largeScrollStepSize }
+            if ev.State == key.Release && !atBottom { 
+                scrollY += largeScrollStepSize 
+            }
 
         case key.Name("U"):
             if ev.State == key.Release { 
@@ -312,35 +312,37 @@ func layoutList(gtx layout.Context, ops *op.Ops) {
 
     imageIndex := 0
     visList.Layout(gtx, len(chapterChunks), func(gtx C, i int) D {
-            // Render each item in the list
-            return pageMargins.Layout(gtx, func(gtx C) D{
-                if imageIndex < len(imageIndices) && i == imageIndices[imageIndex] {
-                    imageIndex++
-                    // Draw the image in the window
-                    return layout.Center.Layout(gtx, func(gtx C) D {
-                        // Build image 
-                        img := loadImage(labelStyles[i].Text)
-                        imgOp := paint.NewImageOp(img)
-                        imgOp.Filter = paint.FilterNearest
-                        imgOp.Add(ops)
+          // Render each item in the list
+          return pageMargins.Layout(gtx, func(gtx C) D{
+              if imageIndex < len(imageIndices) && i == imageIndices[imageIndex] {
+                  imageIndex++
+                  // Draw the image in the window
+                  return layout.Center.Layout(gtx, func(gtx C) D {
+                      // Build image 
+                      img := loadImage(labelStyles[i].Text)
+                      imgOp := paint.NewImageOp(img)
+                      imgOp.Filter = paint.FilterNearest
+                      imgOp.Add(ops)
 
-                        scale := 2
-                        fScale := float32(scale)
-                        imgSize := img.Bounds().Size()
-                        imgSize.X *= scale
-                        imgSize.Y *= scale
+                      scale := 2
+                      fScale := float32(scale)
+                      imgSize := img.Bounds().Size()
+                      imgSize.X *= scale
+                      imgSize.Y *= scale
 
-                        op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), 
-                            f32.Pt(fScale, fScale))).Add(ops)
-                        paint.PaintOp{}.Add(gtx.Ops)
-                        return layout.Dimensions{Size: imgSize}
-                    })
-                } else {
-                    return labelStyles[i].Layout(gtx)
-                }
-            },)
-        },
-    )
+                      op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), 
+                          f32.Pt(fScale, fScale))).Add(ops)
+                      paint.PaintOp{}.Add(gtx.Ops)
+                      return layout.Dimensions{Size: imgSize}
+                  })
+              } else {
+                  return labelStyles[i].Layout(gtx)
+              }
+          },)
+      },)
+
+      // To prevent overscroll
+      atBottom = !visList.Position.BeforeEnd
 }
 
 func loadImage(filename string) image.Image {
@@ -355,3 +357,4 @@ func loadImage(filename string) image.Image {
 	}
 	return img
 }
+

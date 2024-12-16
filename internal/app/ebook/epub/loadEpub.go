@@ -94,7 +94,7 @@ func getContainerXMLFile(epubDest string) (EpubContainerXML, error) {
 }
 
 func validateMIMEType (epubDest string) error {
-    file, err := os.ReadFile(epubDest + "/mimetype")
+    file, err := os.ReadFile(epubDest + string(os.PathSeparator) + "mimetype")
     if err != nil {
         return err
     }
