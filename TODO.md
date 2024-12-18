@@ -15,6 +15,20 @@
 - [X] Add support for unicode decimal code in html
 - [X] Add support for images
 - [X] Add darkmode and lightmode
+- [ ] Store unzipped epubs in a specific install location regardless of where the program is run
+- [ ] Add support for saving reading history
+    - Chapter number
+    - Scroll for each page
+    - Font size
+    - Font
+    - etc
+- [ ] Add config file
+- [ ] Add main menu
+    - Change font
+    - Load epubs
+    - etc
+
+- [ ] PDF support?!?
 
 ## Resources and Notes
 - [Epub Resource](https://opensource.com/article/22/8/epub-file) 
