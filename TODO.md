@@ -10,6 +10,7 @@
 - [X] Create parser for html files
     - [X] Add support for inline elements
     - [ ] Add classes to parsed html elements
+        - Use layout.Widget struct to hold different types
         - Add string array to struct
     - [ ] Add styling to parsed html elements
 - [X] Add support for unicode decimal code in html
