@@ -348,6 +348,7 @@ func removeNewLineFromContent(element HTMLElement) (newContent string) {
         return element.Content
     }
 
+    // Replace newlines with spaces
     for _, r := range element.Content {
         if r != '\n' { 
             newContent += string(r)
