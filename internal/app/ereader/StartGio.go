@@ -18,6 +18,7 @@ import (
 	"gioui.org/widget/material"
 	"github.com/Party14534/zReader/internal/app/ebook"
 	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
+	"github.com/Party14534/zReader/internal/app/parser"
 )
 
 type C = layout.Context
@@ -29,11 +30,11 @@ var chapterProgress []int
 var numberOfChapters int
 
 var chapterChunks []string
-var imageIndices []int
+var chunkTypes []int
 
 var textWidth unit.Dp = 550
 var marginWidth unit.Dp
-var fontSize unit.Sp = 35
+var fontScale unit.Sp = 1.0
 var smallScrollStepSize unit.Dp = 50
 var largeScrollStepSize unit.Dp = 50
 var scrollY unit.Dp = 0
@@ -113,11 +114,10 @@ func run(window *app.Window) error {
             flexCol.Layout(gtx,
                 layout.Rigid(
                     func(gtx C) D{
-                        numberFontSize := fontSize / 2
-                        if numberFontSize < 0 { numberFontSize = 0 }
-                        chapterNumber := material.Label(theme, numberFontSize, strconv.Itoa(chapterNumber) + " ")
+                        chapterNumber := material.Body2(theme, strconv.Itoa(chapterNumber) + " ")
                         chapterNumber.Font.Typeface = "RobotoMono Nerd Font"
 
+                        chapterNumber.TextSize *= fontScale
                         chapterNumber.Alignment = text.End
                         chapterNumber.Color = color.NRGBA{R: textColor,
                                     G: textColor, B: textColor, A: 255}
@@ -220,14 +220,14 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
 
         case key.Name("-"):
             if ev.State == key.Release {
-                fontSize -= 2
-                if fontSize < 0 { fontSize = 0 }
+                fontScale -= 0.05
+                if fontScale < 0.05 { fontScale = 0.05 }
                 buildPageLayout(theme)
             }
 
         case key.Name("="):
             if ev.State == key.Release {
-                fontSize += 2
+                fontScale += 0.05
                 buildPageLayout(theme)
             }
 
@@ -253,7 +253,7 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
 func readChapter(theme *material.Theme) {
     var err error
 
-    chapterChunks, imageIndices, err = ebook.ReadEBookChunks(currentBook, chapterNumber)
+    chapterChunks, chunkTypes, err = ebook.ReadEBookChunks(currentBook, chapterNumber)
     if err != nil { panic(err) }
 
     buildPageLayout(theme)
@@ -280,12 +280,33 @@ func chunkString(input string) (chunks []string) {
 
 func buildPageLayout(theme *material.Theme) {
     labelStyles = labelStyles[:0]
-    for _, chunk := range chapterChunks {
-        label := material.Label(theme, unit.Sp(fontSize), chunk)
+    for i, chunk := range chapterChunks {
+        var label material.LabelStyle
+        switch chunkTypes[i] {
+        case parser.H1:
+            label = material.H1(theme, chunk)
+        case parser.H2:
+            label = material.H2(theme, chunk)
+        case parser.H3:
+            label = material.H3(theme, chunk)
+        case parser.H4:
+            label = material.H4(theme, chunk)
+        case parser.H5:
+            label = material.H5(theme, chunk)
+        case parser.H6:
+            label = material.H6(theme, chunk)
+        case parser.Img:
+            // Separating in case I need to make changes to label
+            label = material.Body1(theme, chunk)
+        default:
+            label = material.Body1(theme, chunk)
+        }
 
-        label.Alignment = text.Middle
-        label.Color = color.NRGBA{R: textColor, G: textColor, B: textColor, A: 255}
         label.Font.Typeface = "RobotoMono Nerd Font"
+        label.TextSize *= fontScale
+        label.Alignment = text.Middle
+
+        label.Color = color.NRGBA{R: textColor, G: textColor, B: textColor, A: 255}
 
         labelStyles = append(labelStyles, label)
     }
@@ -309,12 +330,10 @@ func layoutList(gtx layout.Context, ops *op.Ops) {
         },
     }
 
-    imageIndex := 0
     visList.Layout(gtx, len(chapterChunks), func(gtx C, i int) D {
           // Render each item in the list
           return pageMargins.Layout(gtx, func(gtx C) D{
-              if imageIndex < len(imageIndices) && i == imageIndices[imageIndex] {
-                  imageIndex++
+              if chunkTypes[i] == parser.Img {
                   // Draw the image in the window
                   return layout.Center.Layout(gtx, func(gtx C) D {
                       // Build image 

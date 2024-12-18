@@ -9,9 +9,8 @@
     - [X] Add controls
 - [X] Create parser for html files
     - [X] Add support for inline elements
-    - [ ] Add classes to parsed html elements
-        - Use layout.Widget struct to hold different types
-        - Add string array to struct
+    - [X] Add html element types to parsed html elements
+        - Use material.LabelStyle struct to hold different types
     - [ ] Add styling to parsed html elements
 - [X] Add support for unicode decimal code in html
 - [X] Add support for images

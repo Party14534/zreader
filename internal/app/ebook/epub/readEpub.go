@@ -39,9 +39,9 @@ func ReadChapterChunks(ebook ebooktype.EBook, chapter int) (parsedChunks []strin
 
     imageDomain := ebook.Dest + string(os.PathSeparator) + fileDomain
 
-    chunks, indices := ElementsToChunks(htmlElements, imageDomain)
+    chunks, types := ElementsToChunks(htmlElements, imageDomain)
     
-    return chunks, indices, err
+    return chunks, types, err
 }
 
 func ElementsToText(elements []parser.HTMLElement) (parsedText string) {
@@ -68,8 +68,9 @@ func ElementsToText(elements []parser.HTMLElement) (parsedText string) {
     return parsedText
 }
 
-func ElementsToChunks(elements []parser.HTMLElement, imageDomain string) (parsedChunks []string, imageIndices []int) {
+func ElementsToChunks(elements []parser.HTMLElement, imageDomain string) (parsedChunks []string, chunkTypes []int) {
     var chunk string
+    var previousChunkType int
     for i := 0; i < len(elements); i++ {
         element := elements[i]
 
@@ -93,11 +94,11 @@ func ElementsToChunks(elements []parser.HTMLElement, imageDomain string) (parsed
                 // create a new chunk
                 if chunk != "" {
                     parsedChunks = append(parsedChunks, chunk)
+                    chunkTypes = append(chunkTypes, previousChunkType)
                     chunk = ""
                 }
 
                 chunk += imageDomain
-                imageIndices = append(imageIndices, len(parsedChunks))
             }
 
             chunk += element.Content
@@ -108,11 +109,14 @@ func ElementsToChunks(elements []parser.HTMLElement, imageDomain string) (parsed
             }
 
             parsedChunks = append(parsedChunks, chunk)
+            chunkTypes = append(chunkTypes, element.TagCode)
+
+            previousChunkType = element.TagCode
             chunk = ""
         }
     }
 
-    return parsedChunks, imageIndices
+    return parsedChunks, chunkTypes
 }
 
 func removeDoublePeriodsInPath(path string) string {
