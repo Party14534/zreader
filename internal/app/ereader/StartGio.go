@@ -265,21 +265,20 @@ func readChapter(theme *material.Theme) {
 func chunkString(input string) (chunks []string) {
     start := 0
     alreadyChunked := false
-	for i := 1; i < len(input); i++ {
-        if input[i] == '\n' && !alreadyChunked {
-            chunks = append(chunks, input[start:i])
-            start = i+1
-            alreadyChunked = true
-        } else { alreadyChunked = false }
-	}
+    for i := 1; i < len(input); i++ {
+          if input[i] == '\n' && !alreadyChunked {
+              chunks = append(chunks, input[start:i])
+              start = i+1
+              alreadyChunked = true
+          } else { alreadyChunked = false }
+    }
 
     chunks = append(chunks, input[start:])
 
-	return chunks
+	  return chunks
 }
 
 func buildPageLayout(theme *material.Theme) {
-    
     labelStyles = labelStyles[:0]
     for _, chunk := range chapterChunks {
         label := material.Label(theme, unit.Sp(fontSize), chunk)
