@@ -109,7 +109,7 @@ func ElementsToChunks(elements []parser.HTMLElement, imageDomain string) (parsed
                 chunk += imageDomain
             }
 
-            if element.Content == "" {
+            if element.Content == "" && chunk == "" {
                 continue
             }
 
