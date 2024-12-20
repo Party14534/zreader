@@ -280,7 +280,7 @@ func parseHTMLElementContent(i *int, html *string, element *HTMLElement, element
             for ; *i < len(*html); *i++ {
                 if (*html)[*i] == '>' {
                     if *i < len(*html) - 1 &&
-                        (*html)[*i+1] == '\n' {
+                        (*html)[*i+1] == '\n' && element.TagCode == P {
                         element.Content += " " 
                     }
                     break

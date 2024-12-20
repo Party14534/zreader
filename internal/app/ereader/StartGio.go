@@ -30,7 +30,9 @@ var chapterNumber int
 var currentBook ebooktype.EBook
 var numberOfChapters int
 
-var chapterProgress []unit.Dp
+var chapterProgress []float64
+var scrollY unit.Dp
+
 var chapterChunks [][]string
 var chunkTypes [][]int
 var chapterLengths []unit.Dp
@@ -42,6 +44,7 @@ var smallScrollStepSize unit.Dp = 50
 var largeScrollStepSize unit.Dp = 50
 var labelStyles []material.LabelStyle
 var atBottom bool = false
+var needToUpdateScroll bool = false
 
 var textColor uint8 = 255
 var backgroundColor uint8 = 0
@@ -55,7 +58,7 @@ var ereaderFont string = "RobotoMono Nerd Font, Times New Roman"
 func StartReader(book ebooktype.EBook, chapter int) {
     chapterNumber = chapter
     numberOfChapters = len(book.Chapters)
-    chapterProgress = make([]unit.Dp, len(book.Chapters))
+    chapterProgress = make([]float64, len(book.Chapters))
     chapterChunks = make([][]string, len(book.Chapters))
     chunkTypes = make([][]int, len(book.Chapters))
     chapterLengths = make([]unit.Dp, len(book.Chapters))
@@ -117,7 +120,13 @@ func run(window *app.Window) error {
                 chapterLengths[chapterNumber] = getChapterLength(gtx, &ops)
 
                 gtx.Reset()
-            } 
+            }
+
+            // Set scrollY to correct value after changing pages
+            if needToUpdateScroll {
+                scrollY = chapterLengths[chapterNumber] * unit.Dp(chapterProgress[chapterNumber]) 
+                needToUpdateScroll = false
+            }
 
             /*
                 Prevent overscroll here instead of in the the event handler
@@ -126,8 +135,8 @@ func run(window *app.Window) error {
                 progress was at the previous chapters old length
             */
             if chapterLengths[chapterNumber] > 0 &&
-                chapterProgress[chapterNumber] > chapterLengths[chapterNumber] {
-                chapterProgress[chapterNumber] = chapterLengths[chapterNumber]
+                scrollY > chapterLengths[chapterNumber] {
+                scrollY = chapterLengths[chapterNumber]
             }
 
             // Drawing to screen
@@ -160,7 +169,7 @@ func run(window *app.Window) error {
                         if chapterLengths[chapterNumber] <= 0 {
                             percentage = 1.0
                         } else {
-                            percentage = float64(chapterProgress[chapterNumber] /
+                            percentage = float64(scrollY /
                                 chapterLengths[chapterNumber])
                         }
                         completion := " " + fmt.Sprintf("%.0f", percentage * 100) + 
@@ -225,6 +234,8 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
         switch ev.Name {
         case key.Name("L"):
             if ev.State == key.Release { 
+                setChapterProgress()
+
                 chapterNumber++ 
                 if chapterNumber >= numberOfChapters { 
                     chapterNumber = numberOfChapters - 1
@@ -235,6 +246,8 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
 
         case key.Name("H"):
             if ev.State == key.Release { 
+                setChapterProgress()
+
                 chapterNumber--
                 if chapterNumber < 0 { 
                     chapterNumber = 0 
@@ -246,49 +259,53 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
         case key.Name("J"):
             if ev.State == key.Release { continue }
             if !atBottom { 
-                chapterProgress[chapterNumber] += smallScrollStepSize 
+                scrollY += smallScrollStepSize 
 
                 // Prevent overscroll
-                if chapterLengths[chapterNumber] > 0 && chapterProgress[chapterNumber] > chapterLengths[chapterNumber] {
-                    chapterProgress[chapterNumber] = chapterLengths[chapterNumber]
+                if chapterLengths[chapterNumber] > 0 && scrollY > chapterLengths[chapterNumber] {
+                    scrollY = chapterLengths[chapterNumber]
                 }
             }
 
         case key.Name("K"):
             if ev.State == key.Release { continue }
-            chapterProgress[chapterNumber] -= smallScrollStepSize 
-            if chapterProgress[chapterNumber] < 0 { chapterProgress[chapterNumber] = 0 }
+            scrollY -= smallScrollStepSize 
+            if scrollY < 0 { scrollY = 0 }
 
         case key.Name("D"):
             if ev.State == key.Release && !atBottom { 
-                chapterProgress[chapterNumber] += largeScrollStepSize 
+                scrollY += largeScrollStepSize 
 
                 // Prevent overscroll
-                if chapterLengths[chapterNumber] > 0 && chapterProgress[chapterNumber] > chapterLengths[chapterNumber] {
-                    chapterProgress[chapterNumber] = chapterLengths[chapterNumber]
+                if chapterLengths[chapterNumber] > 0 && scrollY > chapterLengths[chapterNumber] {
+                    scrollY = chapterLengths[chapterNumber]
                 }
             }
 
         case key.Name("U"):
             if ev.State == key.Release { 
-                chapterProgress[chapterNumber] -= largeScrollStepSize 
-                if chapterProgress[chapterNumber] < 0 { chapterProgress[chapterNumber] = 0 }
+                scrollY -= largeScrollStepSize 
+                if scrollY < 0 { scrollY = 0 }
             }
 
         case key.Name("["):
             if ev.State == key.Release {
+                setChapterProgress()
+                needToUpdateScroll = true
+
                 fontScale -= 0.05
                 if fontScale < 0.05 { fontScale = 0.05 }
                 buildPageLayout(theme)
-                resetScrollsAfterScaleChange(fontScale + 0.05)
                 clearChapterLengths()
             }
 
         case key.Name("]"):
             if ev.State == key.Release {
+                setChapterProgress()
+                needToUpdateScroll = true
+
                 fontScale += 0.05
                 buildPageLayout(theme)
-                resetScrollsAfterScaleChange(fontScale - 0.05)
                 clearChapterLengths()
             }
 
@@ -323,7 +340,7 @@ func readChapter(theme *material.Theme) {
     buildPageLayout(theme)
 
     // Set to previous scroll
-    chapterProgress[chapterNumber] = unit.Dp(chapterProgress[chapterNumber])
+    needToUpdateScroll = true
 }
 
 func buildPageLayout(theme *material.Theme) {
@@ -333,27 +350,33 @@ func buildPageLayout(theme *material.Theme) {
         switch chunkTypes[chapterNumber][i] {
         case parser.H1:
             label = material.H1(theme, chunk)
+            label.Alignment = text.Middle
         case parser.H2:
             label = material.H2(theme, chunk)
+            label.Alignment = text.Middle
         case parser.H3:
             label = material.H3(theme, chunk)
+            label.Alignment = text.Middle
         case parser.H4:
             label = material.H4(theme, chunk)
+            label.Alignment = text.Middle
         case parser.H5:
             label = material.H5(theme, chunk)
+            label.Alignment = text.Middle
         case parser.H6:
             label = material.H6(theme, chunk)
+            label.Alignment = text.Middle
         case parser.Img:
             // Separating in case I need to make changes to label
             label = material.Body1(theme, chunk)
         default:
             label = material.Body1(theme, chunk)
+            label.Alignment = text.Middle
         }
 
         label.Font.Typeface = font.Typeface(ereaderFont)
         label.TextSize *= fontScale
         label.LineHeight *= fontScale // Idk if this does anything but it feels nice to have
-        label.Alignment = text.Middle
 
         label.Color = color.NRGBA{R: textColor, G: textColor, B: textColor, A: 255}
 
@@ -375,13 +398,13 @@ func layoutList(gtx layout.Context, ops *op.Ops) {
     var visList = layout.List {
         Axis: layout.Vertical,
         Position: layout.Position {
-            Offset: int(chapterProgress[chapterNumber]),
+            Offset: int(scrollY),
         },
     }
 
-    visList.Layout(gtx, len(labelStyles), func(gtx C, i int) D {
-        // Render each item in the list
-        return pageMargins.Layout(gtx, func(gtx C) D{
+    pageMargins.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+        return visList.Layout(gtx, len(labelStyles), func(gtx C, i int) D {
+            // Render each item in the list
             if chunkTypes[chapterNumber][i] == parser.Img {
                 // Draw the image in the window
                 return layout.Center.Layout(gtx, func(gtx C) D {
@@ -407,7 +430,7 @@ func layoutList(gtx layout.Context, ops *op.Ops) {
                 return labelStyles[i].Layout(gtx)
             }
         },)
-    },)
+    })
 
     // To prevent overscroll
     atBottom = !visList.Position.BeforeEnd
@@ -424,7 +447,7 @@ func getChapterLength(gtx C, ops *op.Ops) unit.Dp {
     var visList = layout.List {
         Axis: layout.Vertical,
         Position: layout.Position {
-            Offset: int(chapterProgress[chapterNumber]),
+            Offset: int(0),
         },
     }
 
@@ -433,8 +456,8 @@ func getChapterLength(gtx C, ops *op.Ops) unit.Dp {
     }
 
     emptyList.Layout(gtx, 1, func(gtx layout.Context, index int) layout.Dimensions {
-        return visList.Layout(gtx, len(labelStyles), func(gtx C, i int) D {
-            return pageMargins.Layout(gtx, func(gtx C) D {
+        return pageMargins.Layout(gtx, func(gtx C) D {
+            return visList.Layout(gtx, len(labelStyles), func(gtx C, i int) D {
                 if chunkTypes[chapterNumber][i] == parser.Img {
                     // Draw the image in the window
                     return layout.Center.Layout(gtx, func(gtx C) D {
@@ -485,11 +508,9 @@ func clearChapterLengths() {
     }
 }
 
-func resetScrollsAfterScaleChange(previousScale unit.Sp) {
-    ratio := fontScale / previousScale
-    for i := range chapterProgress {
-        chapterProgress[i] *= unit.Dp(ratio)
-    }
+func setChapterProgress() {
+    ratio := scrollY / chapterLengths[chapterNumber]
+    chapterProgress[chapterNumber] = float64(ratio)
 }
 
 func chunkString(input string) (chunks []string) {
