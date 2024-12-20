@@ -32,7 +32,6 @@
     - Change font
     - Load epubs
     - etc
-
 - [ ] PDF support?!?
 
 ## Resources and Notes
