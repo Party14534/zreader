@@ -54,6 +54,7 @@ const (
     Var
     Wbr
     Img
+    Base
     Undefined
     Single
 )
@@ -93,6 +94,7 @@ func initMap() {
         "meta" : Meta,
         "link" : Link,
         "body" : Body,
+        "base" : Base,
     }
     HtmlInlineTagMap = map[string]int {
         "a" : A,
@@ -147,9 +149,9 @@ func ParseHTML(html string) (elements []HTMLElement) {
         // If it is a structure node do not include its content
         _, ok := HtmlStructureTagMap[element.Tag];
 
-        // Remove all line breaks from content
-        element.Content = removeNewLineFromContent(element)
         if !ok { 
+            // Remove all line breaks from content
+            element.Content = removeNewLineFromContent(element)
             elements = append(elements, element)
         }
     }

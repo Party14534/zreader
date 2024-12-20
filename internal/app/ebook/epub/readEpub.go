@@ -74,13 +74,20 @@ func ElementsToChunks(elements []parser.HTMLElement, imageDomain string) (parsed
     for i := 0; i < len(elements); i++ {
         element := elements[i]
 
-        // If element is an inline element or next element is
-        // an inline element do not chunk
+        // If element is an inline element or next element is an inline element do not chunk
+        // Treat unknown elements as inline
         _, isInline := parser.HtmlInlineTagMap[element.Tag]
+        
+        if element.TagCode == parser.Undefined {
+            isInline = true
+        }
+
         nextIsInline := false 
         var nextCode int
         if i < len(elements) - 1 {
             nextCode, nextIsInline = parser.HtmlInlineTagMap[elements[i+1].Tag]
+
+            // If element is an image it is not inline
             if nextCode == parser.Img {
                 nextIsInline = false
             }
@@ -88,6 +95,7 @@ func ElementsToChunks(elements []parser.HTMLElement, imageDomain string) (parsed
 
         if (isInline || nextIsInline) && element.TagCode != parser.Img {
             chunk += element.Content
+            previousChunkType = element.TagCode
         } else {
             if element.TagCode == parser.Img {
                 // If we get to an image while inside an inline element 
@@ -99,6 +107,10 @@ func ElementsToChunks(elements []parser.HTMLElement, imageDomain string) (parsed
                 }
 
                 chunk += imageDomain
+            }
+
+            if element.Content == "" {
+                continue
             }
 
             chunk += element.Content

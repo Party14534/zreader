@@ -15,6 +15,11 @@
 - [X] Add support for unicode decimal code in html
 - [X] Add support for images
 - [X] Add darkmode and lightmode
+- [X] Remove unnecessary spaces in ereader
+- [X] Don't show metadata tags
+- [X] Save already parsed chunks in memory
+- [X] Don't render chunks with no text
+- [X] Treat unknown elements as inline
 - [ ] Store unzipped epubs in a specific install location regardless of where the program is run
 - [ ] Add support for saving reading history
     - Chapter number
