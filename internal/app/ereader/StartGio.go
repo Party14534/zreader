@@ -244,6 +244,7 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
             }
             
         case key.Name("J"):
+            if ev.State == key.Release { continue }
             if !atBottom { 
                 chapterProgress[chapterNumber] += smallScrollStepSize 
 
@@ -254,6 +255,7 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
             }
 
         case key.Name("K"):
+            if ev.State == key.Release { continue }
             chapterProgress[chapterNumber] -= smallScrollStepSize 
             if chapterProgress[chapterNumber] < 0 { chapterProgress[chapterNumber] = 0 }
 
