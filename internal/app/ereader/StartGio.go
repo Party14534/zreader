@@ -126,6 +126,8 @@ func run(window *app.Window) error {
             // Before drawing get chapter length so we can reset the ops after
             if chapterLengths[chapterNumber] == 0 || needToBuildPages {
                 chapterLengths[chapterNumber] = buildChapterPages(gtx, &ops)
+                pageNumber = min(pageNumber, len(pageLabelStyles[chapterNumber]) - 1)
+
                 gtx.Reset()
                 needToBuildPages = false
             }
@@ -409,8 +411,6 @@ func layoutList(gtx layout.Context, ops *op.Ops) {
             }
         },)
     })
-
-
 }
 
 func buildChapterPages(gtx C, ops *op.Ops) unit.Dp {
@@ -438,13 +438,14 @@ func buildChapterPages(gtx C, ops *op.Ops) unit.Dp {
     }
 
     // Prevents text from being cut off
-    maxPageHeight := gtx.Constraints.Max.Y - 50
+    maxPageHeight := gtx.Constraints.Max.Y - int(gtx.Metric.PxPerDp * 24)
 
     height := 0
     startIndex := 0
     emptyList.Layout(gtx, 1, func(gtx layout.Context, index int) layout.Dimensions {
         return pageMargins.Layout(gtx, func(gtx C) D {
             return visList.Layout(gtx, len(labelStyles), func(gtx C, i int) D {
+                isLast := i + 1 == len(labelStyles)
                 if chunkTypes[chapterNumber][i] == parser.Img {
                     // Draw the image in the window
                     return layout.Center.Layout(gtx, func(gtx C) D {
@@ -464,11 +465,11 @@ func buildChapterPages(gtx C, ops *op.Ops) unit.Dp {
                             f32.Pt(fScale, fScale))).Add(ops)
                         paint.PaintOp{}.Add(gtx.Ops)
 
-                        if height + imgSize.Y > maxPageHeight || i + 1 == len(labelStyles) {
+                        if height + imgSize.Y > maxPageHeight {
                             if height == 0 { 
                                 pageLabelStyles[chapterNumber] = append(pageLabelStyles[chapterNumber], pageStyleIndices{
                                     start: startIndex,
-                                    end: startIndex + 1,
+                                    end: i + 1,
                                 })
 
                                 startIndex = i + 1
@@ -478,11 +479,24 @@ func buildChapterPages(gtx C, ops *op.Ops) unit.Dp {
                                     end: i,
                                 })
 
+                                if isLast {
+                                    pageLabelStyles[chapterNumber] = append(pageLabelStyles[chapterNumber], pageStyleIndices{
+                                        start: i,
+                                        end: i + 1,
+                                    })
+                                }
+
                                 startIndex = i
                                 height = imgSize.Y
                             }
                         } else {
                             height += imgSize.Y
+                            if isLast {
+                                pageLabelStyles[chapterNumber] = append(pageLabelStyles[chapterNumber], pageStyleIndices{
+                                    start: startIndex,
+                                    end: i + 1,
+                                })
+                            }
                         }
 
                         return layout.Dimensions{Size: imgSize}
@@ -490,11 +504,11 @@ func buildChapterPages(gtx C, ops *op.Ops) unit.Dp {
                 } else {
                     dim := labelStyles[i].Layout(gtx)
 
-                    if height + dim.Size.Y > maxPageHeight || i + 1 == len(labelStyles) {
+                    if height + dim.Size.Y > maxPageHeight {
                         if height == 0 { 
                             pageLabelStyles[chapterNumber] = append(pageLabelStyles[chapterNumber], pageStyleIndices{
                                 start: startIndex,
-                                end: startIndex + 1,
+                                end: i + 1,
                             })
 
                             startIndex = i + 1
@@ -504,11 +518,24 @@ func buildChapterPages(gtx C, ops *op.Ops) unit.Dp {
                                 end: i,
                             })
 
+                            if isLast {
+                                pageLabelStyles[chapterNumber] = append(pageLabelStyles[chapterNumber], pageStyleIndices{
+                                    start: i,
+                                    end: i + 1,
+                                })
+                            }
+
                             startIndex = i
                             height = dim.Size.Y
                         }
                     } else {
                         height += dim.Size.Y
+                        if isLast {
+                            pageLabelStyles[chapterNumber] = append(pageLabelStyles[chapterNumber], pageStyleIndices{
+                                start: startIndex,
+                                end: i + 1,
+                            })
+                        }
                     }
 
                     return dim
@@ -539,6 +566,7 @@ func clearChapterLengths() {
     }
 }
 
+/*
 func chunkString(input string) (chunks []string) {
     start := 0
     alreadyChunked := false
@@ -553,5 +581,6 @@ func chunkString(input string) (chunks []string) {
     chunks = append(chunks, input[start:])
 
 	return chunks
-}
+} 
+*/
 

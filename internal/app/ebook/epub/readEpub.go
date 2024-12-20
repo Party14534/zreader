@@ -69,7 +69,7 @@ func ElementsToText(elements []parser.HTMLElement) (parsedText string) {
 }
 
 func ElementsToChunks(elements []parser.HTMLElement, imageDomain string) (parsedChunks []string, chunkTypes []int) {
-    var chunk string
+    var chunk string = ""
     var previousChunkType int
     for i := 0; i < len(elements); i++ {
         element := elements[i]

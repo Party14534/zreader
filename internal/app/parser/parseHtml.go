@@ -138,6 +138,11 @@ func ParseHTML(html string) (elements []HTMLElement) {
     var allElements []HTMLElement
     for i := 0; i < len(html); i++ {
         if html[i] == '<' {
+            if i + 1 < len(html) {
+                if html[i+1] == '?' || html[i+1] == '!' {
+                    continue
+                }
+            }
             i++
             var element HTMLElement
             parseHTMLElement(&i, &html, &element, &allElements)
