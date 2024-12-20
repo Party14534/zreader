@@ -18,6 +18,7 @@ const (
     H6
     Li
     Ol
+    Figcaption
     Br
     Title
     Xml
@@ -83,6 +84,7 @@ func initMap() {
         "h6" : H6,
         "li" : Li,
         "ol" : Ol,
+        "figcaption" : Figcaption,
     }
     HtmlStructureTagMap = map[string]int {
         "xml" : Xml,
