@@ -1,6 +1,7 @@
 package ereader
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"log"
@@ -27,18 +28,18 @@ type D = layout.Dimensions
 
 var chapterNumber int
 var currentBook ebooktype.EBook
-var chapterProgress []int
 var numberOfChapters int
 
+var chapterProgress []unit.Dp
 var chapterChunks [][]string
 var chunkTypes [][]int
+var chapterLengths []unit.Dp
 
 var textWidth unit.Dp = 550
 var marginWidth unit.Dp
 var fontScale unit.Sp = 1.0
 var smallScrollStepSize unit.Dp = 50
 var largeScrollStepSize unit.Dp = 50
-var scrollY unit.Dp = 0
 var labelStyles []material.LabelStyle
 var atBottom bool = false
 
@@ -54,9 +55,10 @@ var ereaderFont string = "RobotoMono Nerd Font, Times New Roman"
 func StartReader(book ebooktype.EBook, chapter int) {
     chapterNumber = chapter
     numberOfChapters = len(book.Chapters)
-    chapterProgress = make([]int, len(book.Chapters))
+    chapterProgress = make([]unit.Dp, len(book.Chapters))
     chapterChunks = make([][]string, len(book.Chapters))
     chunkTypes = make([][]int, len(book.Chapters))
+    chapterLengths = make([]unit.Dp, len(book.Chapters))
 
     go func() {
         currentBook = book
@@ -105,15 +107,36 @@ func run(window *app.Window) error {
             // Handle key events
             handleKeyEvents(&gtx, theme)
 
-            // Drawing to screen
-            paint.Fill(&ops, color.NRGBA{R: backgroundColor,
-                        G: backgroundColor, B: backgroundColor, A: 255})
-
             flexCol := layout.Flex {
                 Axis: layout.Vertical,
                 Spacing: layout.SpaceStart,
             }
 
+            // Before drawing get chapter length so we can reset the ops after
+            if chapterLengths[chapterNumber] == 0 {
+                chapterLengths[chapterNumber] = getChapterLength(gtx, &ops)
+
+                gtx.Reset()
+            } 
+
+            /*
+                Prevent overscroll here instead of in the the event handler
+                to prevent going over 100% chapter progress when making the
+                font scale smaller then going back to a previous chapter whose
+                progress was at the previous chapters old length
+            */
+            if chapterLengths[chapterNumber] > 0 &&
+                chapterProgress[chapterNumber] > chapterLengths[chapterNumber] {
+                chapterProgress[chapterNumber] = chapterLengths[chapterNumber]
+            }
+
+            // Drawing to screen
+            paint.Fill(&ops, color.NRGBA{R: backgroundColor,
+                        G: backgroundColor, B: backgroundColor, A: 255})
+            
+            layoutList(gtx, &ops)
+
+            // Chapter number
             flexCol.Layout(gtx,
                 layout.Rigid(
                     func(gtx C) D{
@@ -128,8 +151,31 @@ func run(window *app.Window) error {
                     },
                 ),
             )
-            
-            layoutList(gtx, &ops)
+
+            // Chapter completion percent
+            flexCol.Layout(gtx,
+                layout.Rigid(
+                    func(gtx C) D{
+                        percentage := 0.0
+                        if chapterLengths[chapterNumber] <= 0 {
+                            percentage = 1.0
+                        } else {
+                            percentage = float64(chapterProgress[chapterNumber] /
+                                chapterLengths[chapterNumber])
+                        }
+                        completion := " " + fmt.Sprintf("%.0f", percentage * 100) + 
+                            "%"
+                        chapterNumber := material.Body2(theme, completion)
+                        chapterNumber.Font.Typeface = font.Typeface(ereaderFont)
+
+                        chapterNumber.TextSize *= fontScale
+                        chapterNumber.Alignment = text.Start
+                        chapterNumber.Color = color.NRGBA{R: textColor,
+                                    G: textColor, B: textColor, A: 255}
+                        return chapterNumber.Layout(gtx)
+                    },
+                ),           
+            )
 
             // Pass the drawing operations to the GPU
             e.Frame(gtx.Ops)
@@ -179,46 +225,52 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
         switch ev.Name {
         case key.Name("L"):
             if ev.State == key.Release { 
-                chapterProgress[chapterNumber] = int(scrollY)
-
                 chapterNumber++ 
                 if chapterNumber >= numberOfChapters { 
                     chapterNumber = numberOfChapters - 1
                 } else {
-                    scrollY = 0
                     readChapter(theme)
                 }
             }
 
         case key.Name("H"):
             if ev.State == key.Release { 
-                chapterProgress[chapterNumber] = int(scrollY)
-
                 chapterNumber--
                 if chapterNumber < 0 { 
                     chapterNumber = 0 
                 } else {
-                    scrollY = 0
                     readChapter(theme)
                 }
             }
             
         case key.Name("J"):
-            if !atBottom { scrollY += smallScrollStepSize }
+            if !atBottom { 
+                chapterProgress[chapterNumber] += smallScrollStepSize 
+
+                // Prevent overscroll
+                if chapterLengths[chapterNumber] > 0 && chapterProgress[chapterNumber] > chapterLengths[chapterNumber] {
+                    chapterProgress[chapterNumber] = chapterLengths[chapterNumber]
+                }
+            }
 
         case key.Name("K"):
-            scrollY -= smallScrollStepSize 
-            if scrollY < 0 { scrollY = 0 }
+            chapterProgress[chapterNumber] -= smallScrollStepSize 
+            if chapterProgress[chapterNumber] < 0 { chapterProgress[chapterNumber] = 0 }
 
         case key.Name("D"):
             if ev.State == key.Release && !atBottom { 
-                scrollY += largeScrollStepSize 
+                chapterProgress[chapterNumber] += largeScrollStepSize 
+
+                // Prevent overscroll
+                if chapterLengths[chapterNumber] > 0 && chapterProgress[chapterNumber] > chapterLengths[chapterNumber] {
+                    chapterProgress[chapterNumber] = chapterLengths[chapterNumber]
+                }
             }
 
         case key.Name("U"):
             if ev.State == key.Release { 
-                scrollY -= largeScrollStepSize 
-                if scrollY < 0 { scrollY = 0 }
+                chapterProgress[chapterNumber] -= largeScrollStepSize 
+                if chapterProgress[chapterNumber] < 0 { chapterProgress[chapterNumber] = 0 }
             }
 
         case key.Name("["):
@@ -226,12 +278,16 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
                 fontScale -= 0.05
                 if fontScale < 0.05 { fontScale = 0.05 }
                 buildPageLayout(theme)
+                resetScrollsAfterScaleChange(fontScale + 0.05)
+                clearChapterLengths()
             }
 
         case key.Name("]"):
             if ev.State == key.Release {
                 fontScale += 0.05
                 buildPageLayout(theme)
+                resetScrollsAfterScaleChange(fontScale - 0.05)
+                clearChapterLengths()
             }
 
         case key.NameSpace:
@@ -265,23 +321,7 @@ func readChapter(theme *material.Theme) {
     buildPageLayout(theme)
 
     // Set to previous scroll
-    scrollY = unit.Dp(chapterProgress[chapterNumber])
-}
-
-func chunkString(input string) (chunks []string) {
-    start := 0
-    alreadyChunked := false
-    for i := 1; i < len(input); i++ {
-          if input[i] == '\n' && !alreadyChunked {
-              chunks = append(chunks, input[start:i])
-              start = i+1
-              alreadyChunked = true
-          } else { alreadyChunked = false }
-    }
-
-    chunks = append(chunks, input[start:])
-
-	return chunks
+    chapterProgress[chapterNumber] = unit.Dp(chapterProgress[chapterNumber])
 }
 
 func buildPageLayout(theme *material.Theme) {
@@ -310,6 +350,7 @@ func buildPageLayout(theme *material.Theme) {
 
         label.Font.Typeface = font.Typeface(ereaderFont)
         label.TextSize *= fontScale
+        label.LineHeight *= fontScale // Idk if this does anything but it feels nice to have
         label.Alignment = text.Middle
 
         label.Color = color.NRGBA{R: textColor, G: textColor, B: textColor, A: 255}
@@ -331,42 +372,96 @@ func layoutList(gtx layout.Context, ops *op.Ops) {
 
     var visList = layout.List {
         Axis: layout.Vertical,
-        Position: layout.Position{
-            Offset: int(scrollY),
+        Position: layout.Position {
+            Offset: int(chapterProgress[chapterNumber]),
         },
     }
 
     visList.Layout(gtx, len(labelStyles), func(gtx C, i int) D {
-          // Render each item in the list
-          return pageMargins.Layout(gtx, func(gtx C) D{
-              if chunkTypes[chapterNumber][i] == parser.Img {
-                  // Draw the image in the window
-                  return layout.Center.Layout(gtx, func(gtx C) D {
-                      // Build image 
-                      img := loadImage(labelStyles[i].Text)
-                      imgOp := paint.NewImageOp(img)
-                      imgOp.Filter = paint.FilterNearest
-                      imgOp.Add(ops)
+        // Render each item in the list
+        return pageMargins.Layout(gtx, func(gtx C) D{
+            if chunkTypes[chapterNumber][i] == parser.Img {
+                // Draw the image in the window
+                return layout.Center.Layout(gtx, func(gtx C) D {
+                    // Build image 
+                    img := loadImage(labelStyles[i].Text)
+                    imgOp := paint.NewImageOp(img)
+                    imgOp.Filter = paint.FilterNearest
+                    imgOp.Add(ops)
 
-                      scale := 2
-                      fScale := float32(scale)
-                      imgSize := img.Bounds().Size()
-                      imgSize.X *= scale
-                      imgSize.Y *= scale
+                    scale := 2
+                    fScale := float32(scale)
+                    imgSize := img.Bounds().Size()
+                    imgSize.X *= scale
+                    imgSize.Y *= scale
 
-                      op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), 
-                          f32.Pt(fScale, fScale))).Add(ops)
-                      paint.PaintOp{}.Add(gtx.Ops)
-                      return layout.Dimensions{Size: imgSize}
-                  })
-              } else {
-                  return labelStyles[i].Layout(gtx)
-              }
-          },)
-      },)
+                    op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), 
+                        f32.Pt(fScale, fScale))).Add(ops)
+                    paint.PaintOp{}.Add(gtx.Ops)
 
-      // To prevent overscroll
-      atBottom = !visList.Position.BeforeEnd
+                    return layout.Dimensions{Size: imgSize}
+                })
+            } else {
+                return labelStyles[i].Layout(gtx)
+            }
+        },)
+    },)
+
+    // To prevent overscroll
+    atBottom = !visList.Position.BeforeEnd
+}
+
+func getChapterLength(gtx C, ops *op.Ops) unit.Dp {
+    pageMargins := layout.Inset {
+        Left:   marginWidth,
+        Right:  marginWidth,
+        Top: unit.Dp(12),
+        Bottom: unit.Dp(12),
+    }
+
+    var visList = layout.List {
+        Axis: layout.Vertical,
+        Position: layout.Position {
+            Offset: int(chapterProgress[chapterNumber]),
+        },
+    }
+
+    var emptyList = layout.List {
+        Axis: layout.Vertical,
+    }
+
+    emptyList.Layout(gtx, 1, func(gtx layout.Context, index int) layout.Dimensions {
+        return visList.Layout(gtx, len(labelStyles), func(gtx C, i int) D {
+            return pageMargins.Layout(gtx, func(gtx C) D {
+                if chunkTypes[chapterNumber][i] == parser.Img {
+                    // Draw the image in the window
+                    return layout.Center.Layout(gtx, func(gtx C) D {
+                        // Build image 
+                        img := loadImage(labelStyles[i].Text)
+                        imgOp := paint.NewImageOp(img)
+                        imgOp.Filter = paint.FilterNearest
+                        imgOp.Add(ops)
+
+                        scale := 2
+                        fScale := float32(scale)
+                        imgSize := img.Bounds().Size()
+                        imgSize.X *= scale
+                        imgSize.Y *= scale
+
+                        op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), 
+                            f32.Pt(fScale, fScale))).Add(ops)
+                        paint.PaintOp{}.Add(gtx.Ops)
+
+                        return layout.Dimensions{Size: imgSize}
+                    })
+                } else {
+                    return labelStyles[i].Layout(gtx)
+                }
+            })
+        })
+    })
+
+    return unit.Dp(emptyList.Position.OffsetLast * -1)
 }
 
 func loadImage(filename string) image.Image {
@@ -380,5 +475,34 @@ func loadImage(filename string) image.Image {
 		log.Fatalf("failed to decode image: %v", err)
 	}
 	return img
+}
+
+func clearChapterLengths() {
+    for i := range chapterLengths {
+        chapterLengths[i] = 0
+    }
+}
+
+func resetScrollsAfterScaleChange(previousScale unit.Sp) {
+    ratio := fontScale / previousScale
+    for i := range chapterProgress {
+        chapterProgress[i] *= unit.Dp(ratio)
+    }
+}
+
+func chunkString(input string) (chunks []string) {
+    start := 0
+    alreadyChunked := false
+    for i := 1; i < len(input); i++ {
+          if input[i] == '\n' && !alreadyChunked {
+              chunks = append(chunks, input[start:i])
+              start = i+1
+              alreadyChunked = true
+          } else { alreadyChunked = false }
+    }
+
+    chunks = append(chunks, input[start:])
+
+	return chunks
 }
 
