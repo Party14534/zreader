@@ -25,43 +25,51 @@ import (
 
 type C = layout.Context
 type D = layout.Dimensions
+type pageStyleIndices struct {
+    start int
+    end int
+}
 
+// EBook metadata
 var chapterNumber int
 var currentBook ebooktype.EBook
 var numberOfChapters int
 
-var chapterProgress []float64
-var scrollY unit.Dp
-
+// Current chapter data
 var chapterChunks [][]string
 var chunkTypes [][]int
 var chapterLengths []unit.Dp
+var labelStyles []material.LabelStyle
+var pageLabelStyles [][]pageStyleIndices
+// TODO: var chapterProgress []int
+var pageNumber int = 0
 
+// Page design
 var textWidth unit.Dp = 550
 var marginWidth unit.Dp
+// var smallScrollStepSize unit.Dp = 50
+// var largeScrollStepSize unit.Dp = 50
 var fontScale unit.Sp = 1.0
-var smallScrollStepSize unit.Dp = 50
-var largeScrollStepSize unit.Dp = 50
-var labelStyles []material.LabelStyle
-var atBottom bool = false
-var needToUpdateScroll bool = false
-
+var ereaderFont string = "RobotoMono Nerd Font, Times New Roman"
 var textColor uint8 = 255
 var backgroundColor uint8 = 0
 var darkModeTextColor uint8 = 255
 var darkModeBackgroundColor uint8 = 0
 var lightModeTextColor uint8 = 0
 var lightModeBackgroundColor uint8 = 255
+
+// Booleans
 var isDarkMode bool = true
-var ereaderFont string = "RobotoMono Nerd Font, Times New Roman"
+// var atBottom bool = false
+var needToBuildPages bool
 
 func StartReader(book ebooktype.EBook, chapter int) {
     chapterNumber = chapter
     numberOfChapters = len(book.Chapters)
-    chapterProgress = make([]float64, len(book.Chapters))
     chapterChunks = make([][]string, len(book.Chapters))
     chunkTypes = make([][]int, len(book.Chapters))
     chapterLengths = make([]unit.Dp, len(book.Chapters))
+    pageLabelStyles = make([][]pageStyleIndices, len(book.Chapters))
 
     go func() {
         currentBook = book
@@ -83,7 +91,7 @@ func run(window *app.Window) error {
     theme := material.NewTheme()
     var ops op.Ops
 
-    smallScrollStepSize = 32
+    // smallScrollStepSize = 32
 
     // Read first chapter
     readChapter(theme)
@@ -105,7 +113,7 @@ func run(window *app.Window) error {
             // This graphics context is used for managing the rendering state
             gtx := app.NewContext(&ops, e)
 
-            largeScrollStepSize = unit.Dp(float32(gtx.Constraints.Max.Y) * 0.95)
+            // largeScrollStepSize = unit.Dp(float32(gtx.Constraints.Max.Y) * 0.95)
 
             // Handle key events
             handleKeyEvents(&gtx, theme)
@@ -116,27 +124,10 @@ func run(window *app.Window) error {
             }
 
             // Before drawing get chapter length so we can reset the ops after
-            if chapterLengths[chapterNumber] == 0 {
-                chapterLengths[chapterNumber] = getChapterLength(gtx, &ops)
-
+            if chapterLengths[chapterNumber] == 0 || needToBuildPages {
+                chapterLengths[chapterNumber] = buildChapterPages(gtx, &ops)
                 gtx.Reset()
-            }
-
-            // Set scrollY to correct value after changing pages
-            if needToUpdateScroll {
-                scrollY = chapterLengths[chapterNumber] * unit.Dp(chapterProgress[chapterNumber]) 
-                needToUpdateScroll = false
-            }
-
-            /*
-                Prevent overscroll here instead of in the the event handler
-                to prevent going over 100% chapter progress when making the
-                font scale smaller then going back to a previous chapter whose
-                progress was at the previous chapters old length
-            */
-            if chapterLengths[chapterNumber] > 0 &&
-                scrollY > chapterLengths[chapterNumber] {
-                scrollY = chapterLengths[chapterNumber]
+                needToBuildPages = false
             }
 
             // Drawing to screen
@@ -169,8 +160,8 @@ func run(window *app.Window) error {
                         if chapterLengths[chapterNumber] <= 0 {
                             percentage = 1.0
                         } else {
-                            percentage = float64(scrollY /
-                                chapterLengths[chapterNumber])
+                            percentage = float64(pageNumber) /
+                                float64(len(pageLabelStyles[chapterNumber]) - 1)
                         }
                         completion := " " + fmt.Sprintf("%.0f", percentage * 100) + 
                             "%"
@@ -209,14 +200,6 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
                 Name: "K",
             },
             key.Filter {
-                Name: "D",
-                Required: key.ModCtrl,
-            },
-            key.Filter {
-                Name: "U",
-                Required: key.ModCtrl,
-            },
-            key.Filter {
                 Name: "[",
             },
             key.Filter {
@@ -234,8 +217,6 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
         switch ev.Name {
         case key.Name("L"):
             if ev.State == key.Release { 
-                setChapterProgress()
-
                 chapterNumber++ 
                 if chapterNumber >= numberOfChapters { 
                     chapterNumber = numberOfChapters - 1
@@ -246,8 +227,6 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
 
         case key.Name("H"):
             if ev.State == key.Release { 
-                setChapterProgress()
-
                 chapterNumber--
                 if chapterNumber < 0 { 
                     chapterNumber = 0 
@@ -257,21 +236,22 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
             }
             
         case key.Name("J"):
-            if ev.State == key.Release { continue }
-            if !atBottom { 
-                scrollY += smallScrollStepSize 
-
-                // Prevent overscroll
-                if chapterLengths[chapterNumber] > 0 && scrollY > chapterLengths[chapterNumber] {
-                    scrollY = chapterLengths[chapterNumber]
+            if ev.State == key.Release { 
+                pageNumber--
+                if pageNumber < 0 {
+                    pageNumber = 0
                 }
             }
 
         case key.Name("K"):
-            if ev.State == key.Release { continue }
-            scrollY -= smallScrollStepSize 
-            if scrollY < 0 { scrollY = 0 }
+            if ev.State == key.Release { 
+                pageNumber++
+                if pageNumber >= len(pageLabelStyles[chapterNumber]) {
+                    pageNumber = len(pageLabelStyles[chapterNumber]) - 1
+                }
+            }
 
+        /* Not needed anymore
         case key.Name("D"):
             if ev.State == key.Release && !atBottom { 
                 scrollY += largeScrollStepSize 
@@ -287,25 +267,22 @@ func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
                 scrollY -= largeScrollStepSize 
                 if scrollY < 0 { scrollY = 0 }
             }
+        */
 
         case key.Name("["):
             if ev.State == key.Release {
-                setChapterProgress()
-                needToUpdateScroll = true
-
                 fontScale -= 0.05
                 if fontScale < 0.05 { fontScale = 0.05 }
                 buildPageLayout(theme)
+                needToBuildPages = true
                 clearChapterLengths()
             }
 
         case key.Name("]"):
             if ev.State == key.Release {
-                setChapterProgress()
-                needToUpdateScroll = true
-
                 fontScale += 0.05
                 buildPageLayout(theme)
+                needToBuildPages = true
                 clearChapterLengths()
             }
 
@@ -337,10 +314,9 @@ func readChapter(theme *material.Theme) {
         if err != nil { panic(err) }
     }
 
-    buildPageLayout(theme)
+    pageNumber = 0
 
-    // Set to previous scroll
-    needToUpdateScroll = true
+    buildPageLayout(theme)
 }
 
 func buildPageLayout(theme *material.Theme) {
@@ -397,14 +373,16 @@ func layoutList(gtx layout.Context, ops *op.Ops) {
 
     var visList = layout.List {
         Axis: layout.Vertical,
-        Position: layout.Position {
-            Offset: int(scrollY),
-        },
+        Alignment: layout.Start,
     }
 
+    indices := pageLabelStyles[chapterNumber][pageNumber]
+    page := labelStyles[indices.start:indices.end]
+    
     pageMargins.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-        return visList.Layout(gtx, len(labelStyles), func(gtx C, i int) D {
+        return visList.Layout(gtx, len(page), func(gtx C, index int) D {
             // Render each item in the list
+            i := indices.start + index 
             if chunkTypes[chapterNumber][i] == parser.Img {
                 // Draw the image in the window
                 return layout.Center.Layout(gtx, func(gtx C) D {
@@ -432,11 +410,15 @@ func layoutList(gtx layout.Context, ops *op.Ops) {
         },)
     })
 
-    // To prevent overscroll
-    atBottom = !visList.Position.BeforeEnd
+
 }
 
-func getChapterLength(gtx C, ops *op.Ops) unit.Dp {
+func buildChapterPages(gtx C, ops *op.Ops) unit.Dp {
+    // Clear page label styles
+    pageLabelStyles[chapterNumber] = pageLabelStyles[chapterNumber][:0]
+
+    textWidth = unit.Dp(gtx.Constraints.Max.X) * 0.95
+    marginWidth = (unit.Dp(gtx.Constraints.Max.X) - textWidth) / 2
     pageMargins := layout.Inset {
         Left:   marginWidth,
         Right:  marginWidth,
@@ -455,6 +437,11 @@ func getChapterLength(gtx C, ops *op.Ops) unit.Dp {
         Axis: layout.Vertical,
     }
 
+    // Prevents text from being cut off
+    maxPageHeight := gtx.Constraints.Max.Y - 50
+
+    height := 0
+    startIndex := 0
     emptyList.Layout(gtx, 1, func(gtx layout.Context, index int) layout.Dimensions {
         return pageMargins.Layout(gtx, func(gtx C) D {
             return visList.Layout(gtx, len(labelStyles), func(gtx C, i int) D {
@@ -477,10 +464,54 @@ func getChapterLength(gtx C, ops *op.Ops) unit.Dp {
                             f32.Pt(fScale, fScale))).Add(ops)
                         paint.PaintOp{}.Add(gtx.Ops)
 
+                        if height + imgSize.Y > maxPageHeight || i + 1 == len(labelStyles) {
+                            if height == 0 { 
+                                pageLabelStyles[chapterNumber] = append(pageLabelStyles[chapterNumber], pageStyleIndices{
+                                    start: startIndex,
+                                    end: startIndex + 1,
+                                })
+
+                                startIndex = i + 1
+                            } else {
+                                pageLabelStyles[chapterNumber] = append(pageLabelStyles[chapterNumber], pageStyleIndices{
+                                    start: startIndex,
+                                    end: i,
+                                })
+
+                                startIndex = i
+                                height = imgSize.Y
+                            }
+                        } else {
+                            height += imgSize.Y
+                        }
+
                         return layout.Dimensions{Size: imgSize}
                     })
                 } else {
-                    return labelStyles[i].Layout(gtx)
+                    dim := labelStyles[i].Layout(gtx)
+
+                    if height + dim.Size.Y > maxPageHeight || i + 1 == len(labelStyles) {
+                        if height == 0 { 
+                            pageLabelStyles[chapterNumber] = append(pageLabelStyles[chapterNumber], pageStyleIndices{
+                                start: startIndex,
+                                end: startIndex + 1,
+                            })
+
+                            startIndex = i + 1
+                        } else {
+                            pageLabelStyles[chapterNumber] = append(pageLabelStyles[chapterNumber], pageStyleIndices{
+                                start: startIndex,
+                                end: i,
+                            })
+
+                            startIndex = i
+                            height = dim.Size.Y
+                        }
+                    } else {
+                        height += dim.Size.Y
+                    }
+
+                    return dim
                 }
             })
         })
@@ -506,11 +537,6 @@ func clearChapterLengths() {
     for i := range chapterLengths {
         chapterLengths[i] = 0
     }
-}
-
-func setChapterProgress() {
-    ratio := scrollY / chapterLengths[chapterNumber]
-    chapterProgress[chapterNumber] = float64(ratio)
 }
 
 func chunkString(input string) (chunks []string) {
