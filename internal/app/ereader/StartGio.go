@@ -19,6 +19,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget/material"
 	"github.com/Party14534/zReader/internal/app/ebook"
+	bookstate "github.com/Party14534/zReader/internal/app/ebook/bookState"
 	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
 	"github.com/Party14534/zReader/internal/app/parser"
 )
@@ -62,17 +63,20 @@ var lightModeBackgroundColor uint8 = 255
 var isDarkMode bool = true
 // var atBottom bool = false
 var needToBuildPages bool
+var justStarted bool = true
 
-func StartReader(book ebooktype.EBook, chapter int) {
-    chapterNumber = chapter
+func StartReader(book ebooktype.EBook) {
+    currentBook = book
     numberOfChapters = len(book.Chapters)
     chapterChunks = make([][]string, len(book.Chapters))
     chunkTypes = make([][]int, len(book.Chapters))
     chapterLengths = make([]unit.Dp, len(book.Chapters))
     pageLabelStyles = make([][]pageStyleIndices, len(book.Chapters))
 
+    // Load history
+    loadEbookHistory()
+
     go func() {
-        currentBook = book
         window := new(app.Window)
         window.Option(app.Title("ZReader"))
 
@@ -93,9 +97,6 @@ func run(window *app.Window) error {
 
     // smallScrollStepSize = 32
 
-    // Read first chapter
-    readChapter(theme)
-
     if isDarkMode {
         textColor = darkModeTextColor
         backgroundColor = darkModeBackgroundColor
@@ -104,10 +105,17 @@ func run(window *app.Window) error {
         backgroundColor = lightModeBackgroundColor
     }
 
+    // Read first chapter
+    readChapter(theme)
+
     for {
         switch e := window.Event().(type) {
         case app.DestroyEvent:
+            quitEreader()
             return e.Err
+
+        case app.ConfigEvent: 
+            needToBuildPages = true 
 
         case app.FrameEvent:
             // This graphics context is used for managing the rendering state
@@ -316,7 +324,11 @@ func readChapter(theme *material.Theme) {
         if err != nil { panic(err) }
     }
 
-    pageNumber = 0
+    if !justStarted {
+        pageNumber = 0
+    } else {
+        justStarted = false
+    }
 
     buildPageLayout(theme)
 }
@@ -564,6 +576,28 @@ func clearChapterLengths() {
     for i := range chapterLengths {
         chapterLengths[i] = 0
     }
+}
+
+func loadEbookHistory() {
+    state, err := ebook.GetEBookHistory(currentBook)
+    if err != nil { 
+        return 
+    }
+
+    chapterNumber = state.ChapterNumber
+    pageNumber = state.PageNumber
+    fontScale = unit.Sp(state.FontScale)
+    isDarkMode = state.DarkMode
+}
+
+func quitEreader() {
+    state := bookstate.BookState{
+        ChapterNumber: chapterNumber,
+        PageNumber: pageNumber,
+        FontScale: float64(fontScale),
+        DarkMode: isDarkMode,
+    }
+    ebook.SaveEBookHistory(currentBook, state)
 }
 
 /*

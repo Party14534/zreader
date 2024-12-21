@@ -3,28 +3,30 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
+	"path/filepath"
 
 	"github.com/Party14534/zReader/internal/app/ebook"
 	"github.com/Party14534/zReader/internal/app/ereader"
+	"github.com/Party14534/zReader/internal/pkg"
 )
 
 func main() {
-    if len(os.Args) != 3 {
+    if len(os.Args) != 2 {
         panic(fmt.Errorf("Invalid number of arguments"))
     }
 
     epubPath := os.Args[1]
-    pageNumber, err := strconv.Atoi(os.Args[2])
+
+    // Get the base path of the ebook metadata
+    basePath, err := pkg.GetAppDataDir("zreader")
     if err != nil {
         panic(err)
     }
 
-    book ,err := ebook.LoadFile(epubPath, ".ebookfiles")
+    book ,err := ebook.LoadFile(epubPath, filepath.Join(basePath, ".ebookfiles"))
     if err != nil {
         panic(err)
     }
 
-    ereader.StartReader(book, pageNumber)
-    //ereader.StartFyneReader(book, pageNumber)
+    ereader.StartReader(book)
 }
