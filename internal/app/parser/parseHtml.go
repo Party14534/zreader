@@ -312,9 +312,9 @@ func parseHTMLElementContent(i *int, html *string, element *HTMLElement, element
 func addRunesForInlineElements(element *HTMLElement) {
     switch element.TagCode {
         case Sup:
-            element.Content = "^" + element.Content 
+            element.Content = "^(" + element.Content + ")"
         case Sub:
-            element.Content = "_" + element.Content
+            element.Content = "_(" + element.Content + ")"
     }
 }
 
