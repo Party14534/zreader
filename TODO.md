@@ -27,6 +27,7 @@
     - Font size
     - Font
     - etc
+- [ ] Update readme.md
 - [ ] Add main menu ??
     - Change font
     - Load epubs
