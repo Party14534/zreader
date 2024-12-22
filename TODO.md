@@ -27,7 +27,7 @@
     - Font size
     - Font
     - etc
-- [X] Add main menu ??
+- [X] Add main menu
     - Load epubs
 - [ ] Add config file support
     - Set default font
