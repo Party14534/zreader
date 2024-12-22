@@ -1,12 +1,14 @@
 package ereader
 
 import (
+	"log"
 	"math"
 
 	"gioui.org/io/key"
 )
 
 func handleMenuEvents(gtx *C) {
+    if inFileMenu { return }
     // Handle key events
     for {
         keyEvent, ok := gtx.Event(
@@ -38,14 +40,20 @@ func handleMenuEvents(gtx *C) {
         case key.Name("K"):
             if ev.State == key.Release {
                 menuBookIndex++
-                menuBookIndex = min(menuBookIndex, len(menuBooks) - 1)
+                menuBookIndex = min(menuBookIndex, len(menuBooks))
             }
 
         case key.NameReturn:
             if ev.State != key.Release {
-                initializeEReader(menuBooks[menuBookIndex])
-                readingBook = true
-                switched = true
+                if menuBookIndex != len(menuBooks) {
+                    initializeEReader(menuBooks[menuBookIndex])
+                    switched = true
+                } else {
+                    err := openFileViewer()
+                    if err != nil {
+                        log.Println(err)
+                    }
+                }
             }
 
         case key.NameSpace:
@@ -188,7 +196,6 @@ func handleEReaderEvents(gtx *C) {
         case key.NameEscape:
             quitEReader()
             initializeMenu()
-            readingBook = false
             switched = true
 
         case key.NameSpace:

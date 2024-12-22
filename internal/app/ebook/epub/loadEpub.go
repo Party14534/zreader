@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
+	ebooktype "github.com/Party14534/zreader/internal/app/ebook/ebookType"
 )
 
 const (
@@ -130,7 +130,8 @@ func unzipEpub(path, dest string) (string, error) {
         }
     }()
 
-    ebookPath := dest + string(os.PathSeparator) + path
+
+    ebookPath := filepath.Join(dest, filepath.Base(path))
     if _, err := os.Stat(ebookPath); !os.IsNotExist(err) {
         return ebookPath, nil
     }

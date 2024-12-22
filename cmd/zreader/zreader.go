@@ -4,9 +4,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Party14534/zReader/internal/app/ebook"
-	"github.com/Party14534/zReader/internal/app/ereader"
-	"github.com/Party14534/zReader/internal/pkg"
+	"github.com/Party14534/zreader/internal/app/ebook"
+	"github.com/Party14534/zreader/internal/app/ereader"
+	"github.com/Party14534/zreader/internal/pkg"
 )
 
 func main() {

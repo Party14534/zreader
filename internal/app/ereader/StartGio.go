@@ -14,9 +14,9 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
-	"github.com/Party14534/zReader/internal/app/ebook"
-	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
-	"github.com/Party14534/zReader/internal/app/parser"
+	"github.com/Party14534/zreader/internal/app/ebook"
+	ebooktype "github.com/Party14534/zreader/internal/app/ebook/ebookType"
+	"github.com/Party14534/zreader/internal/app/parser"
 )
 
 var readingBook bool = false
@@ -25,7 +25,6 @@ var switched bool = false
 func StartReader(book ebooktype.EBook) {
     theme = material.NewTheme()
 
-    readingBook = true
     initializeEReader(book)
 
     go func() {
@@ -46,7 +45,6 @@ func StartReader(book ebooktype.EBook) {
 func StartMenu() {
     theme = material.NewTheme()
 
-    readingBook = false
     initializeMenu()
 
     go func() {

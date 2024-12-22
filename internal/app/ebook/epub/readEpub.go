@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
-	"github.com/Party14534/zReader/internal/app/parser"
+	ebooktype "github.com/Party14534/zreader/internal/app/ebook/ebookType"
+	"github.com/Party14534/zreader/internal/app/parser"
 )
 
 func ReadChapter(ebook ebooktype.EBook, chapter int) (string, error) {

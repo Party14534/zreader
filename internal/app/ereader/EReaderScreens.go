@@ -3,6 +3,7 @@ package ereader
 import (
 	"fmt"
 	"image/color"
+	"log"
 	"path/filepath"
 
 	"gioui.org/f32"
@@ -12,6 +13,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 var flexCol layout.Flex = layout.Flex {
@@ -30,6 +32,9 @@ var bookMenuMargins layout.Inset = layout.Inset {
     Right: unit.Dp(12),
 }
 
+var loadEBookButton widget.Clickable
+var inFileMenu bool = false
+
 
 func drawMenuScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) {
     handleMenuEvents(gtx)
@@ -37,6 +42,14 @@ func drawMenuScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) {
     // Drawing to screen
     paint.Fill(ops, color.NRGBA{R: backgroundColor,
                 G: backgroundColor, B: backgroundColor, A: 255})
+
+    // Handle button press
+    if loadEBookButton.Clicked(*gtx) {
+        err := openFileViewer()
+        if err != nil {
+            log.Println(err)
+        }
+    }
 
     // Main layout
     menuFlexCol.Layout(*gtx,
@@ -55,7 +68,7 @@ func drawMenuScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) {
         // Books
         layout.Rigid( func(gtx C) D {
             return bookMenuMargins.Layout(gtx, func(gtx C) D {
-                if len(menuBooks) > 0 {
+                if menuBookIndex < len(menuBooks) {
                     return layout.Center.Layout(gtx, func(gtx C) D {
                         // Build image 
                         coverPath := filepath.Join(menuBooks[menuBookIndex].Dest,
@@ -87,22 +100,22 @@ func drawMenuScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) {
 
                         return layout.Dimensions{Size: imgSize}
                     }) 
-                } else {
-                    message := material.Body1(theme, "No ebooks in library.")
-                    message.Font.Typeface = font.Typeface(ereaderFont)
+                } 
 
-                    message.TextSize *= fontScale
-                    message.Alignment = text.Middle
-                    message.Color = color.NRGBA{R: textColor,
-                                G: textColor, B: textColor, A: 255}
-                    return message.Layout(gtx)
-                }
+                return layout.Inset {
+                    Left: unit.Dp(500),
+                    Right: unit.Dp(500),
+                }.Layout(gtx, func(gtx C) D {
+                    loadBtn := material.Button(theme, &loadEBookButton, "Load Book")
+                    loadBtn.Font.Typeface = font.Typeface(ereaderFont)
+                    return loadBtn.Layout(gtx)
+                })
             })
         }),
 
         // Book Info
         layout.Rigid( func(gtx C) D {
-            if len(menuBooks) > 0 {
+            if menuBookIndex < len(menuBooks) {
                 book := menuBooks[menuBookIndex]
                 infoText := book.Title + "\n" + book.Creator
                 info := material.Body1(theme, infoText)
@@ -114,24 +127,15 @@ func drawMenuScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) {
                             G: textColor, B: textColor, A: 255}
                 return info.Layout(gtx)
             }
-
-                message := material.Body1(theme, "You can add ebooks via the commandline.")
-                message.Font.Typeface = font.Typeface(ereaderFont)
-
-                message.TextSize *= fontScale
-                message.Alignment = text.Middle
-                message.Color = color.NRGBA{R: textColor,
-                            G: textColor, B: textColor, A: 255}
-                return message.Layout(gtx)
+            return layout.Spacer{Height: 1}.Layout(gtx)
         },),
 
         // Spacer
         layout.Rigid( func(gtx C) D {
-            spacer := layout.Spacer{}
-            spacer.Height = 1
-            return spacer.Layout(gtx)
+            return layout.Spacer{Height: 1}.Layout(gtx)
         }),
     )
+
 }
 
 func drawEReaderScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) {

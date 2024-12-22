@@ -7,9 +7,9 @@ import (
 	"path"
 	"path/filepath"
 
-	bookstate "github.com/Party14534/zReader/internal/app/ebook/bookState"
-	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
-	"github.com/Party14534/zReader/internal/app/ebook/epub"
+	bookstate "github.com/Party14534/zreader/internal/app/ebook/bookState"
+	ebooktype "github.com/Party14534/zreader/internal/app/ebook/ebookType"
+	"github.com/Party14534/zreader/internal/app/ebook/epub"
 )
 
 func LoadFile(ebookPath, dest string) (ebooktype.EBook, error) {

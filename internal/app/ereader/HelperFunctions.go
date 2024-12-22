@@ -1,16 +1,19 @@
 package ereader
 
 import (
+	"fmt"
 	"image"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 
 	"gioui.org/unit"
-	"github.com/Party14534/zReader/internal/app/ebook"
-	bookstate "github.com/Party14534/zReader/internal/app/ebook/bookState"
-	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
-	"github.com/Party14534/zReader/internal/pkg"
+	"github.com/Party14534/zreader/internal/app/ebook"
+	bookstate "github.com/Party14534/zreader/internal/app/ebook/bookState"
+	ebooktype "github.com/Party14534/zreader/internal/app/ebook/ebookType"
+	"github.com/Party14534/zreader/internal/pkg"
+	"github.com/rymdport/portal/filechooser"
 )
 
 func loadImage(filename string) (image.Image, error) {
@@ -24,6 +27,45 @@ func loadImage(filename string) (image.Image, error) {
         return img, err
 	}
 	return img, nil
+}
+
+func openFileViewer() error {
+    inFileMenu = true
+
+    options := filechooser.OpenFileOptions{Multiple: false}
+    file, err := filechooser.OpenFile("", "Select EBook", &options)
+    if err == nil && len(file) != 0 {
+        // Load the file into the reader
+        err = loadBook(file[0][7:])
+    }
+
+    inFileMenu = false
+    return err
+}
+
+func loadBook(filename string) (error) {
+    // Format the filename
+    fmt.Println(filename)
+    filename, err := url.QueryUnescape(filename)
+    if err != nil {
+        return err
+    }
+    fmt.Println(filename)
+
+    basePath, err := pkg.GetAppDataDir("zreader")
+    if err != nil {
+        return err
+    }
+
+    book, err := ebook.LoadFile(filename, filepath.Join(basePath, ".ebookfiles"))
+    if err != nil {
+        return err
+    }
+
+    switched = true
+    initializeEReader(book)
+
+    return nil
 }
 
 func clearChapterLengths() {
@@ -66,6 +108,7 @@ func quitEReader() {
 func initializeEReader(book ebooktype.EBook) {
     needToBuildPages = true
     justStarted = true
+    readingBook = true
 
     currentBook = book
     numberOfChapters = len(book.Chapters)
@@ -79,6 +122,8 @@ func initializeEReader(book ebooktype.EBook) {
 }
 
 func initializeMenu() {
+    readingBook = false
+
     err := getEBooks()
     if err != nil {
         log.Print(err)

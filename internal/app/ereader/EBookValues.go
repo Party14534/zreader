@@ -4,7 +4,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
-	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
+	ebooktype "github.com/Party14534/zreader/internal/app/ebook/ebookType"
 )
 
 type C = layout.Context

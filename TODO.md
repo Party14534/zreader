@@ -29,12 +29,14 @@
     - etc
 - [X] Add main menu
     - Load epubs
+    - [X] Add ability to load files from filesystem
 - [X] Add scrolling if content on page is too long
 - [X] Show Title and author on menu page
 - [X] Instead of chapter numbers get the chapter names
 - [ ] Show progress in book on menu screen
 - [ ] Add config file support
     - Set default font
+    - Color schemes
     - etc
 - [ ] Update readme.md
 - [ ] PDF support?!?
