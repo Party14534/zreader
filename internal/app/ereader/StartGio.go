@@ -109,6 +109,8 @@ func run(window *app.Window) error {
 
 func readChapter() {
     var err error
+
+    scrollY = 0
     
     if chapterChunks[chapterNumber] == nil {
         chapterChunks[chapterNumber], chunkTypes[chapterNumber], err =
@@ -174,6 +176,9 @@ func layoutList(gtx layout.Context, ops *op.Ops) {
     var visList = layout.List {
         Axis: layout.Vertical,
         Alignment: layout.Start,
+        Position: layout.Position{
+            Offset: scrollY,
+        },
     }
 
     indices := pageLabelStyles[chapterNumber][pageNumber]
@@ -187,7 +192,11 @@ func layoutList(gtx layout.Context, ops *op.Ops) {
                 // Draw the image in the window
                 return layout.Center.Layout(gtx, func(gtx C) D {
                     // Build image 
-                    img := loadImage(labelStyles[i].Text)
+                    img, err := loadImage(labelStyles[i].Text)
+                    if err != nil {
+                        return labelStyles[i].Layout(gtx)
+                    }
+
                     imgOp := paint.NewImageOp(img)
                     imgOp.Filter = paint.FilterNearest
                     imgOp.Add(ops)
@@ -209,6 +218,8 @@ func layoutList(gtx layout.Context, ops *op.Ops) {
             }
         },)
     })
+
+    beforeEnd = visList.Position.BeforeEnd
 }
 
 func buildChapterPages(gtx C, ops *op.Ops) unit.Dp {
@@ -248,7 +259,10 @@ func buildChapterPages(gtx C, ops *op.Ops) unit.Dp {
                     // Draw the image in the window
                     return layout.Center.Layout(gtx, func(gtx C) D {
                         // Build image 
-                        img := loadImage(labelStyles[i].Text)
+                        img, err := loadImage(labelStyles[i].Text)
+                        if err != nil {
+                            return labelStyles[i].Layout(gtx)
+                        }
                         imgOp := paint.NewImageOp(img)
                         imgOp.Filter = paint.FilterNearest
                         imgOp.Add(ops)

@@ -1,7 +1,9 @@
 package epub
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
@@ -29,7 +31,7 @@ func ReadChapterChunks(ebook ebooktype.EBook, chapter int) (parsedChunks []strin
     // Convert the html into html elements and parse it for the text
     htmlElements := parser.ParseHTML(string(text))
     
-    fileDomainSlice := strings.Split(chapterName, string(os.PathSeparator))
+    fileDomainSlice := splitFilePath(chapterName)
     fileDomain := ""
     for i, dir := range fileDomainSlice {
         if i == len(fileDomainSlice) - 1 { continue }
@@ -37,11 +39,27 @@ func ReadChapterChunks(ebook ebooktype.EBook, chapter int) (parsedChunks []strin
         fileDomain += dir + string(os.PathSeparator)
     }
 
-    imageDomain := ebook.Dest + string(os.PathSeparator) + fileDomain
+    imageDomain := filepath.Join(ebook.Dest, fileDomain) + string(os.PathSeparator)
 
     chunks, types := ElementsToChunks(htmlElements, imageDomain)
     
     return chunks, types, err
+}
+
+func splitFilePath(name string) (slice []string) {
+    startIndex := 0
+    for i, r := range name {
+        if r == '/' || r == '\\' {
+            slice = append(slice, name[startIndex:i])
+            startIndex = i + 1
+        }
+    } 
+    
+    if startIndex != len(name) - 1 {
+        slice = append(slice, name[startIndex:len(name)])
+    }
+
+    return slice
 }
 
 func ElementsToText(elements []parser.HTMLElement) (parsedText string) {
@@ -139,7 +157,11 @@ func removeDoublePeriodsInPath(path string) string {
         if strings.Compare(dirs[i], "..") == 0 {
             dirs = append(dirs[:i-1], dirs[i+1:]...)
             continue
-        } 
+        } else if strings.Compare(dirs[i], ".") == 0 {
+            fmt.Println(dirs)
+            dirs = append(dirs[:i], dirs[i+1:]...)
+            fmt.Println(dirs)
+        }
     }
 
     for i, dir := range dirs {

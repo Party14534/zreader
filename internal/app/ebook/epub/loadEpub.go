@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -106,8 +107,12 @@ func validateMIMEType (epubDest string) error {
         return err
     }
 
+    if file[len(file) - 1] == '\n' || file[len(file) - 1] == ' ' {
+        file = file[:len(file) - 1]
+    }
+
     if compare := strings.Compare(string(file), EPUBMIMETYPE); compare != 0 {
-        return fmt.Errorf("EPUB could not be verified\n")
+        log.Println("EPUB could not be verified\n")
     }
 
     return nil
@@ -184,7 +189,8 @@ func unzipEpub(path, dest string) (string, error) {
 func filterLinksWithCorrectExtension(links []ManifestLink, contentFilePath string) (result []string) {
     for _, link := range links {
         if strings.Compare(path.Ext(link.Link), ".html") == 0 ||
-            strings.Compare(path.Ext(link.Link), ".xhtml") == 0 {
+            strings.Compare(path.Ext(link.Link), ".xhtml") == 0 ||
+            strings.Compare(path.Ext(link.Link), ".htm") == 0 {
             result = append(result, contentFilePath + link.Link)
         }
     }

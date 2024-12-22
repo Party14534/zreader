@@ -13,7 +13,7 @@ import (
 	"github.com/Party14534/zReader/internal/pkg"
 )
 
-func loadImage(filename string) image.Image {
+func loadImage(filename string) (image.Image, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatalf("failed to open image: %v", err)
@@ -21,9 +21,9 @@ func loadImage(filename string) image.Image {
 	defer file.Close()
 	img, _, err := image.Decode(file)
 	if err != nil {
-		log.Fatalf("failed to decode image: %v", err)
+        return img, err
 	}
-	return img
+	return img, nil
 }
 
 func clearChapterLengths() {
@@ -86,6 +86,9 @@ func initializeMenu() {
 }
 
 func getEBooks() error {
+    // Clear old books
+    menuBooks = menuBooks[:0]
+
     // Get the location of the ebooks
     var err error
     if basePath == "" {

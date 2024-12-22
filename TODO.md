@@ -29,6 +29,7 @@
     - etc
 - [X] Add main menu
     - Load epubs
+- [ ] Add scrolling if content on page is too long
 - [ ] Add config file support
     - Set default font
     - etc

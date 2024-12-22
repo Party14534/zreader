@@ -88,6 +88,12 @@ func handleEReaderEvents(gtx *C) {
                 Name: "]",
             },
             key.Filter {
+                Name: key.NameUpArrow,
+            },
+            key.Filter {
+                Name: key.NameDownArrow,
+            },
+            key.Filter {
                 Name: key.NameEscape,
             },
             key.Filter{
@@ -138,7 +144,7 @@ func handleEReaderEvents(gtx *C) {
                         }
                         readChapter()
                     }
-                }
+                } else { scrollY = 0 }
             }
 
         case key.Name("K"):
@@ -153,7 +159,7 @@ func handleEReaderEvents(gtx *C) {
                         pageNumber = 0
                         readChapter()
                     }
-                }
+                } else { scrollY = 0 }
             }
 
         case key.Name("["):
@@ -172,6 +178,12 @@ func handleEReaderEvents(gtx *C) {
                 needToBuildPages = true
                 clearChapterLengths()
             }
+
+        case key.NameUpArrow:
+            scrollY = max(0, scrollY - scrollStep)
+
+        case key.NameDownArrow:
+            if beforeEnd { scrollY += scrollStep }
 
         case key.NameEscape:
             quitEReader()

@@ -6,7 +6,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	bookstate "github.com/Party14534/zReader/internal/app/ebook/bookState"
 	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
@@ -19,7 +18,8 @@ func LoadFile(ebookPath, dest string) (ebooktype.EBook, error) {
     var ebook ebooktype.EBook
     var err error
 
-    // Check if the ebook has been read before
+    /* Don't do this so users can rebuild the ebook if they need to
+    Check if the ebook has been read before
     pathPieces := strings.Split(ebookPath, string(os.PathSeparator))
     bookPath := filepath.Join(dest, pathPieces[len(pathPieces) - 1])
 
@@ -27,6 +27,7 @@ func LoadFile(ebookPath, dest string) (ebooktype.EBook, error) {
     if err == nil {
         return ebook, nil
     }
+    */
 
     switch extension {
         case ".epub":

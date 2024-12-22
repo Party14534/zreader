@@ -43,7 +43,7 @@ func drawMenuScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) {
     menuFlexCol.Layout(*gtx,
         // Title
         layout.Rigid( func(gtx C) D {
-            title := material.H3(theme, "zreader")
+            title := material.H1(theme, "zreader")
             title.Font.Typeface = font.Typeface(ereaderFont)
 
             title.TextSize *= fontScale
@@ -61,7 +61,17 @@ func drawMenuScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) {
                         // Build image 
                         coverPath := filepath.Join(menuBooks[menuBookIndex].Dest,
                             menuBooks[menuBookIndex].Cover)
-                        img := loadImage(coverPath)
+                        img, err := loadImage(coverPath)
+                        if err != nil {
+                            message := material.H3(theme, menuBooks[menuBookIndex].Title)
+                            message.Font.Typeface = font.Typeface(ereaderFont)
+                            message.TextSize *= fontScale
+                            message.Alignment = text.Middle
+                            message.Color = color.NRGBA{R: textColor,
+                                        G: textColor, B: textColor, A: 255}
+                            return message.Layout(gtx)
+                        }
+
                         imgOp := paint.NewImageOp(img)
                         imgOp.Filter = paint.FilterNearest
                         imgOp.Add(ops)

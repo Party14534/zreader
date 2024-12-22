@@ -35,6 +35,8 @@ var labelStyles []material.LabelStyle
 var pageLabelStyles [][]pageStyleIndices
 // TODO: var chapterProgress []int
 var pageNumber int = 0
+var scrollY int = 0
+var scrollStep int = 32
 
 // Page design
 var textWidth unit.Dp = 550
@@ -55,4 +57,5 @@ var isDarkMode bool = true
 // var atBottom bool = false
 var needToBuildPages bool
 var justStarted bool = true
+var beforeEnd bool = true
 
