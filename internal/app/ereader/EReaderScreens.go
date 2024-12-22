@@ -56,27 +56,38 @@ func drawMenuScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) {
         // Books
         layout.Rigid( func(gtx C) D {
             return bookMenuMargins.Layout(gtx, func(gtx C) D {
-                return layout.Center.Layout(gtx, func(gtx C) D {
-                    // Build image 
-                    coverPath := filepath.Join(menuBooks[menuBookIndex].Dest,
-                        menuBooks[menuBookIndex].Cover)
-                    img := loadImage(coverPath)
-                    imgOp := paint.NewImageOp(img)
-                    imgOp.Filter = paint.FilterNearest
-                    imgOp.Add(ops)
+                if len(menuBooks) > 0 {
+                    return layout.Center.Layout(gtx, func(gtx C) D {
+                        // Build image 
+                        coverPath := filepath.Join(menuBooks[menuBookIndex].Dest,
+                            menuBooks[menuBookIndex].Cover)
+                        img := loadImage(coverPath)
+                        imgOp := paint.NewImageOp(img)
+                        imgOp.Filter = paint.FilterNearest
+                        imgOp.Add(ops)
 
-                    scale := 1
-                    fScale := float32(scale)
-                    imgSize := img.Bounds().Size()
-                    imgSize.X *= scale
-                    imgSize.Y *= scale
+                        scale := 1
+                        fScale := float32(scale)
+                        imgSize := img.Bounds().Size()
+                        imgSize.X *= scale
+                        imgSize.Y *= scale
 
-                    op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), 
-                        f32.Pt(fScale, fScale))).Add(ops)
-                    paint.PaintOp{}.Add(gtx.Ops)
+                        op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), 
+                            f32.Pt(fScale, fScale))).Add(ops)
+                        paint.PaintOp{}.Add(gtx.Ops)
 
-                    return layout.Dimensions{Size: imgSize}
-                })
+                        return layout.Dimensions{Size: imgSize}
+                    }) 
+                } else {
+                    message := material.Body1(theme, "No ebooks in library.\n You can add ebooks via the commandline.")
+                    message.Font.Typeface = font.Typeface(ereaderFont)
+
+                    message.TextSize *= fontScale
+                    message.Alignment = text.Middle
+                    message.Color = color.NRGBA{R: textColor,
+                                G: textColor, B: textColor, A: 255}
+                    return message.Layout(gtx)
+                }
             })
         }),
 
