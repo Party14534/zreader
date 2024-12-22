@@ -103,8 +103,8 @@ func drawMenuScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) {
                 } 
 
                 return layout.Inset {
-                    Left: unit.Dp(500),
-                    Right: unit.Dp(500),
+                    Left: unit.Dp(5),
+                    Right: unit.Dp(5),
                 }.Layout(gtx, func(gtx C) D {
                     loadBtn := material.Button(theme, &loadEBookButton, "Load Book")
                     loadBtn.Font.Typeface = font.Typeface(ereaderFont)

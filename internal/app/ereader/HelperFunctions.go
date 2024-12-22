@@ -1,7 +1,6 @@
 package ereader
 
 import (
-	"fmt"
 	"image"
 	"log"
 	"net/url"
@@ -13,7 +12,7 @@ import (
 	bookstate "github.com/Party14534/zreader/internal/app/ebook/bookState"
 	ebooktype "github.com/Party14534/zreader/internal/app/ebook/ebookType"
 	"github.com/Party14534/zreader/internal/pkg"
-	"github.com/rymdport/portal/filechooser"
+	"github.com/sqweek/dialog"
 )
 
 func loadImage(filename string) (image.Image, error) {
@@ -32,12 +31,10 @@ func loadImage(filename string) (image.Image, error) {
 func openFileViewer() error {
     inFileMenu = true
 
-    options := filechooser.OpenFileOptions{Multiple: false}
-    file, err := filechooser.OpenFile("", "Select EBook", &options)
-    if err == nil && len(file) != 0 {
-        // Load the file into the reader
-        err = loadBook(file[0][7:])
-    }
+    filename, err := dialog.File().Filter("EBook File", "epub").Load()
+    if err == nil {
+        err = loadBook(filename)
+    }         
 
     inFileMenu = false
     return err
@@ -45,12 +42,10 @@ func openFileViewer() error {
 
 func loadBook(filename string) (error) {
     // Format the filename
-    fmt.Println(filename)
     filename, err := url.QueryUnescape(filename)
     if err != nil {
         return err
     }
-    fmt.Println(filename)
 
     basePath, err := pkg.GetAppDataDir("zreader")
     if err != nil {
@@ -109,6 +104,8 @@ func initializeEReader(book ebooktype.EBook) {
     needToBuildPages = true
     justStarted = true
     readingBook = true
+    pageNumber = 0
+    chapterNumber = 0
 
     currentBook = book
     numberOfChapters = len(book.Chapters)
@@ -150,7 +147,9 @@ func getEBooks() error {
     for _, entry := range entries {
         if entry.IsDir() {
             book, err := getEBookMenuData(filepath.Join(bookPaths, entry.Name()))
-            if err != nil { continue }
+            if err != nil { 
+                continue 
+            }
 
             menuBooks = append(menuBooks, book)
         }
