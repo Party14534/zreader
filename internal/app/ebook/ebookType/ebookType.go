@@ -18,6 +18,11 @@ type EBook struct {
     Cover string `json:"Cover"`
 
     // Chapters
-    Chapters []string `json:"Chapters"`
+    Chapters []Chapter `json:"Chapters"`
+}
+
+type Chapter struct {
+    Path string `json:"Path"`
+    ID string `json:"ID"`
 }
 

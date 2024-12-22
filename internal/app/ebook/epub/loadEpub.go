@@ -186,12 +186,16 @@ func unzipEpub(path, dest string) (string, error) {
     return ebookPath, nil
 }
 
-func filterLinksWithCorrectExtension(links []ManifestLink, contentFilePath string) (result []string) {
+func filterLinksWithCorrectExtension(links []ManifestLink, contentFilePath string) (result []ebooktype.Chapter) {
     for _, link := range links {
         if strings.Compare(path.Ext(link.Link), ".html") == 0 ||
             strings.Compare(path.Ext(link.Link), ".xhtml") == 0 ||
             strings.Compare(path.Ext(link.Link), ".htm") == 0 {
-            result = append(result, contentFilePath + link.Link)
+            chapter := ebooktype.Chapter {
+                Path: contentFilePath + link.Link,
+                ID: link.ID, 
+            }
+            result = append(result, chapter)
         }
     }
 

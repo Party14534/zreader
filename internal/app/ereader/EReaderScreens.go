@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image/color"
 	"path/filepath"
-	"strconv"
 
 	"gioui.org/f32"
 	"gioui.org/font"
@@ -89,7 +88,7 @@ func drawMenuScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) {
                         return layout.Dimensions{Size: imgSize}
                     }) 
                 } else {
-                    message := material.Body1(theme, "No ebooks in library.\n You can add ebooks via the commandline.")
+                    message := material.Body1(theme, "No ebooks in library.")
                     message.Font.Typeface = font.Typeface(ereaderFont)
 
                     message.TextSize *= fontScale
@@ -100,6 +99,31 @@ func drawMenuScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) {
                 }
             })
         }),
+
+        // Book Info
+        layout.Rigid( func(gtx C) D {
+            if len(menuBooks) > 0 {
+                book := menuBooks[menuBookIndex]
+                infoText := book.Title + "\n" + book.Creator
+                info := material.Body1(theme, infoText)
+                info.Font.Typeface = font.Typeface(ereaderFont)
+
+                info.TextSize *= fontScale
+                info.Alignment = text.Middle
+                info.Color = color.NRGBA{R: textColor,
+                            G: textColor, B: textColor, A: 255}
+                return info.Layout(gtx)
+            }
+
+                message := material.Body1(theme, "You can add ebooks via the commandline.")
+                message.Font.Typeface = font.Typeface(ereaderFont)
+
+                message.TextSize *= fontScale
+                message.Alignment = text.Middle
+                message.Color = color.NRGBA{R: textColor,
+                            G: textColor, B: textColor, A: 255}
+                return message.Layout(gtx)
+        },),
 
         // Spacer
         layout.Rigid( func(gtx C) D {
@@ -133,7 +157,7 @@ func drawEReaderScreen(gtx *layout.Context, ops *op.Ops, theme *material.Theme) 
     flexCol.Layout(*gtx,
         layout.Rigid(
             func(gtx C) D{
-                chapterNumber := material.Body2(theme, strconv.Itoa(chapterNumber) + " ")
+                chapterNumber := material.Body2(theme, currentBook.Chapters[chapterNumber].ID + " ")
                 chapterNumber.Font.Typeface = font.Typeface(ereaderFont)
 
                 chapterNumber.TextSize *= fontScale

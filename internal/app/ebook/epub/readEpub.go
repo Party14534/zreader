@@ -13,7 +13,7 @@ import (
 func ReadChapter(ebook ebooktype.EBook, chapter int) (string, error) {
     // Get the name of the file and load the file in
     chapterName := ebook.Chapters[chapter]
-    text, err := os.ReadFile(ebook.Dest + string(os.PathSeparator) + chapterName)
+    text, err := os.ReadFile(ebook.Dest + string(os.PathSeparator) + chapterName.Path)
 
     // Convert the html into html elements and parse it for the text
     htmlElements := parser.ParseHTML(string(text))
@@ -26,12 +26,12 @@ func ReadChapter(ebook ebooktype.EBook, chapter int) (string, error) {
 func ReadChapterChunks(ebook ebooktype.EBook, chapter int) (parsedChunks []string, imageIndices []int, err error) {
     // Get the name of the file and load the file in
     chapterName := ebook.Chapters[chapter]
-    text, err := os.ReadFile(ebook.Dest + string(os.PathSeparator) + chapterName)
+    text, err := os.ReadFile(ebook.Dest + string(os.PathSeparator) + chapterName.Path)
 
     // Convert the html into html elements and parse it for the text
     htmlElements := parser.ParseHTML(string(text))
     
-    fileDomainSlice := splitFilePath(chapterName)
+    fileDomainSlice := splitFilePath(chapterName.Path)
     fileDomain := ""
     for i, dir := range fileDomainSlice {
         if i == len(fileDomainSlice) - 1 { continue }

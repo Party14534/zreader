@@ -6,3 +6,4 @@ type BookState struct {
     FontScale float64 `json:"FontScale"`
     DarkMode bool `json:"DarkMode"`
 }
+
