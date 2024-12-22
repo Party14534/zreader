@@ -1,17 +1,13 @@
 package ereader
 
 import (
-	"fmt"
-	"image"
 	"image/color"
 	"log"
 	"os"
-	"strconv"
 
 	"gioui.org/app"
 	"gioui.org/f32"
 	"gioui.org/font"
-	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/paint"
@@ -19,62 +15,39 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget/material"
 	"github.com/Party14534/zReader/internal/app/ebook"
-	bookstate "github.com/Party14534/zReader/internal/app/ebook/bookState"
 	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
 	"github.com/Party14534/zReader/internal/app/parser"
 )
 
-type C = layout.Context
-type D = layout.Dimensions
-type pageStyleIndices struct {
-    start int
-    end int
-}
-
-// EBook metadata
-var chapterNumber int
-var currentBook ebooktype.EBook
-var numberOfChapters int
-
-// Current chapter data
-var chapterChunks [][]string
-var chunkTypes [][]int
-var chapterLengths []unit.Dp
-var labelStyles []material.LabelStyle
-var pageLabelStyles [][]pageStyleIndices
-// TODO: var chapterProgress []int
-var pageNumber int = 0
-
-// Page design
-var textWidth unit.Dp = 550
-var marginWidth unit.Dp
-// var smallScrollStepSize unit.Dp = 50
-// var largeScrollStepSize unit.Dp = 50
-var fontScale unit.Sp = 1.0
-var ereaderFont string = "RobotoMono Nerd Font, Times New Roman"
-var textColor uint8 = 255
-var backgroundColor uint8 = 0
-var darkModeTextColor uint8 = 255
-var darkModeBackgroundColor uint8 = 0
-var lightModeTextColor uint8 = 0
-var lightModeBackgroundColor uint8 = 255
-
-// Booleans
-var isDarkMode bool = true
-// var atBottom bool = false
-var needToBuildPages bool
-var justStarted bool = true
+var readingBook bool = false
+var switched bool = false
 
 func StartReader(book ebooktype.EBook) {
-    currentBook = book
-    numberOfChapters = len(book.Chapters)
-    chapterChunks = make([][]string, len(book.Chapters))
-    chunkTypes = make([][]int, len(book.Chapters))
-    chapterLengths = make([]unit.Dp, len(book.Chapters))
-    pageLabelStyles = make([][]pageStyleIndices, len(book.Chapters))
+    theme = material.NewTheme()
 
-    // Load history
-    loadEbookHistory()
+    readingBook = true
+    initializeEReader(book)
+
+    go func() {
+        window := new(app.Window)
+        window.Option(app.Title("ZReader"))
+
+        err := run(window)
+        if err != nil {
+            log.Fatal(err)
+        }
+
+        os.Exit(0)
+    }()
+
+    app.Main()
+}
+
+func StartMenu() {
+    theme = material.NewTheme()
+
+    readingBook = false
+    initializeMenu()
 
     go func() {
         window := new(app.Window)
@@ -92,10 +65,7 @@ func StartReader(book ebooktype.EBook) {
 }
 
 func run(window *app.Window) error {
-    theme := material.NewTheme()
     var ops op.Ops
-
-    // smallScrollStepSize = 32
 
     if isDarkMode {
         textColor = darkModeTextColor
@@ -105,13 +75,10 @@ func run(window *app.Window) error {
         backgroundColor = lightModeBackgroundColor
     }
 
-    // Read first chapter
-    readChapter(theme)
-
     for {
         switch e := window.Event().(type) {
         case app.DestroyEvent:
-            quitEreader()
+            if readingBook { quitEReader() }
             return e.Err
 
         case app.ConfigEvent: 
@@ -121,71 +88,18 @@ func run(window *app.Window) error {
             // This graphics context is used for managing the rendering state
             gtx := app.NewContext(&ops, e)
 
-            // largeScrollStepSize = unit.Dp(float32(gtx.Constraints.Max.Y) * 0.95)
-
-            // Handle key events
-            handleKeyEvents(&gtx, theme)
-
-            flexCol := layout.Flex {
-                Axis: layout.Vertical,
-                Spacing: layout.SpaceStart,
+            // If the user is reading a book draw the ereader screen, else
+            // they are on the main menu
+            if readingBook {
+                drawEReaderScreen(&gtx, &ops, theme)
+            } else {
+                drawMenuScreen(&gtx, &ops, theme)
             }
 
-            // Before drawing get chapter length so we can reset the ops after
-            if chapterLengths[chapterNumber] == 0 || needToBuildPages {
-                chapterLengths[chapterNumber] = buildChapterPages(gtx, &ops)
-                pageNumber = min(pageNumber, len(pageLabelStyles[chapterNumber]) - 1)
-
-                gtx.Reset()
-                needToBuildPages = false
+            // If we switched screens we need to redraw directly after
+            if switched {
+                window.Invalidate()
             }
-
-            // Drawing to screen
-            paint.Fill(&ops, color.NRGBA{R: backgroundColor,
-                        G: backgroundColor, B: backgroundColor, A: 255})
-            
-            layoutList(gtx, &ops)
-
-            // Chapter number
-            flexCol.Layout(gtx,
-                layout.Rigid(
-                    func(gtx C) D{
-                        chapterNumber := material.Body2(theme, strconv.Itoa(chapterNumber) + " ")
-                        chapterNumber.Font.Typeface = font.Typeface(ereaderFont)
-
-                        chapterNumber.TextSize *= fontScale
-                        chapterNumber.Alignment = text.End
-                        chapterNumber.Color = color.NRGBA{R: textColor,
-                                    G: textColor, B: textColor, A: 255}
-                        return chapterNumber.Layout(gtx)
-                    },
-                ),
-            )
-
-            // Chapter completion percent
-            flexCol.Layout(gtx,
-                layout.Rigid(
-                    func(gtx C) D{
-                        percentage := 0.0
-                        if chapterLengths[chapterNumber] <= 0 {
-                            percentage = 1.0
-                        } else {
-                            percentage = float64(pageNumber) /
-                                float64(len(pageLabelStyles[chapterNumber]) - 1)
-                        }
-                        completion := " " + fmt.Sprintf("%.0f", percentage * 100) + 
-                            "%"
-                        chapterNumber := material.Body2(theme, completion)
-                        chapterNumber.Font.Typeface = font.Typeface(ereaderFont)
-
-                        chapterNumber.TextSize *= fontScale
-                        chapterNumber.Alignment = text.Start
-                        chapterNumber.Color = color.NRGBA{R: textColor,
-                                    G: textColor, B: textColor, A: 255}
-                        return chapterNumber.Layout(gtx)
-                    },
-                ),           
-            )
 
             // Pass the drawing operations to the GPU
             e.Frame(gtx.Ops)
@@ -193,129 +107,7 @@ func run(window *app.Window) error {
     }
 }
 
-func handleKeyEvents(gtx *layout.Context, theme *material.Theme) {
-    // Handle key events
-    for {
-        keyEvent, ok := gtx.Event(
-            key.Filter {
-                Name: "L",
-            },
-            key.Filter {
-                Name: "H",
-            },
-            key.Filter {
-                Name: "J",
-            },
-            key.Filter {
-                Name: "K",
-            },
-            key.Filter {
-                Name: "[",
-            },
-            key.Filter {
-                Name: "]",
-            },
-            key.Filter{
-                Name: key.NameSpace,
-            },
-        )
-        if !ok { break }
-
-        ev, ok := keyEvent.(key.Event)
-        if !ok { break }
-
-        switch ev.Name {
-        case key.Name("L"):
-            if ev.State == key.Release { 
-                chapterNumber++ 
-                if chapterNumber >= numberOfChapters { 
-                    chapterNumber = numberOfChapters - 1
-                } else {
-                    readChapter(theme)
-                }
-            }
-
-        case key.Name("H"):
-            if ev.State == key.Release { 
-                chapterNumber--
-                if chapterNumber < 0 { 
-                    chapterNumber = 0 
-                } else {
-                    readChapter(theme)
-                }
-            }
-            
-        case key.Name("J"):
-            if ev.State == key.Release { 
-                pageNumber--
-                if pageNumber < 0 {
-                    pageNumber = 0
-                }
-            }
-
-        case key.Name("K"):
-            if ev.State == key.Release { 
-                pageNumber++
-                if pageNumber >= len(pageLabelStyles[chapterNumber]) {
-                    pageNumber = len(pageLabelStyles[chapterNumber]) - 1
-                }
-            }
-
-        /* Not needed anymore
-        case key.Name("D"):
-            if ev.State == key.Release && !atBottom { 
-                scrollY += largeScrollStepSize 
-
-                // Prevent overscroll
-                if chapterLengths[chapterNumber] > 0 && scrollY > chapterLengths[chapterNumber] {
-                    scrollY = chapterLengths[chapterNumber]
-                }
-            }
-
-        case key.Name("U"):
-            if ev.State == key.Release { 
-                scrollY -= largeScrollStepSize 
-                if scrollY < 0 { scrollY = 0 }
-            }
-        */
-
-        case key.Name("["):
-            if ev.State == key.Release {
-                fontScale -= 0.05
-                if fontScale < 0.05 { fontScale = 0.05 }
-                buildPageLayout(theme)
-                needToBuildPages = true
-                clearChapterLengths()
-            }
-
-        case key.Name("]"):
-            if ev.State == key.Release {
-                fontScale += 0.05
-                buildPageLayout(theme)
-                needToBuildPages = true
-                clearChapterLengths()
-            }
-
-        case key.NameSpace:
-            if ev.State == key.Release {
-                isDarkMode = !isDarkMode
-
-                if isDarkMode {
-                    textColor = darkModeTextColor
-                    backgroundColor = darkModeBackgroundColor
-                } else {
-                    textColor = lightModeTextColor
-                    backgroundColor = lightModeBackgroundColor
-                }
-
-                buildPageLayout(theme)
-            }
-
-        }
-    }
-}
-
-func readChapter(theme *material.Theme) {
+func readChapter() {
     var err error
     
     if chapterChunks[chapterNumber] == nil {
@@ -324,16 +116,10 @@ func readChapter(theme *material.Theme) {
         if err != nil { panic(err) }
     }
 
-    if !justStarted {
-        pageNumber = 0
-    } else {
-        justStarted = false
-    }
-
-    buildPageLayout(theme)
+    buildPageLayout()
 }
 
-func buildPageLayout(theme *material.Theme) {
+func buildPageLayout() {
     labelStyles = labelStyles[:0]
     for i, chunk := range chapterChunks[chapterNumber] {
         var label material.LabelStyle
@@ -558,63 +344,4 @@ func buildChapterPages(gtx C, ops *op.Ops) unit.Dp {
 
     return unit.Dp(emptyList.Position.OffsetLast * -1)
 }
-
-func loadImage(filename string) image.Image {
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Fatalf("failed to open image: %v", err)
-	}
-	defer file.Close()
-	img, _, err := image.Decode(file)
-	if err != nil {
-		log.Fatalf("failed to decode image: %v", err)
-	}
-	return img
-}
-
-func clearChapterLengths() {
-    for i := range chapterLengths {
-        chapterLengths[i] = 0
-    }
-}
-
-func loadEbookHistory() {
-    state, err := ebook.GetEBookHistory(currentBook)
-    if err != nil { 
-        return 
-    }
-
-    chapterNumber = state.ChapterNumber
-    pageNumber = state.PageNumber
-    fontScale = unit.Sp(state.FontScale)
-    isDarkMode = state.DarkMode
-}
-
-func quitEreader() {
-    state := bookstate.BookState{
-        ChapterNumber: chapterNumber,
-        PageNumber: pageNumber,
-        FontScale: float64(fontScale),
-        DarkMode: isDarkMode,
-    }
-    ebook.SaveEBookHistory(currentBook, state)
-}
-
-/*
-func chunkString(input string) (chunks []string) {
-    start := 0
-    alreadyChunked := false
-    for i := 1; i < len(input); i++ {
-          if input[i] == '\n' && !alreadyChunked {
-              chunks = append(chunks, input[start:i])
-              start = i+1
-              alreadyChunked = true
-          } else { alreadyChunked = false }
-    }
-
-    chunks = append(chunks, input[start:])
-
-	return chunks
-} 
-*/
 

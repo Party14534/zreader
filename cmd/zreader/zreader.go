@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -11,22 +10,23 @@ import (
 )
 
 func main() {
-    if len(os.Args) != 2 {
-        panic(fmt.Errorf("Invalid number of arguments"))
+    if len(os.Args) == 2 {
+        epubPath := os.Args[1]
+
+        // Get the base path of the ebook metadata
+        basePath, err := pkg.GetAppDataDir("zreader")
+        if err != nil {
+            panic(err)
+        }
+
+        book ,err := ebook.LoadFile(epubPath, filepath.Join(basePath, ".ebookfiles"))
+        if err != nil {
+            panic(err)
+        }
+
+        ereader.StartReader(book)
+    } else {
+        ereader.StartMenu()
     }
 
-    epubPath := os.Args[1]
-
-    // Get the base path of the ebook metadata
-    basePath, err := pkg.GetAppDataDir("zreader")
-    if err != nil {
-        panic(err)
-    }
-
-    book ,err := ebook.LoadFile(epubPath, filepath.Join(basePath, ".ebookfiles"))
-    if err != nil {
-        panic(err)
-    }
-
-    ereader.StartReader(book)
 }

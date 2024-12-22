@@ -66,6 +66,13 @@ func LoadEpubBook(path, dest string, e *ebooktype.EBook) error {
     // Only add chapters to list when they link to html
     e.Chapters = filterLinksWithCorrectExtension(content.Links, contentFilePath)
 
+    // Get cover image path
+    coverId := getCoverId(&content.Meta.Meta)
+    if coverId != "" {
+        e.Cover = getCoverPath(content.Links, contentFilePath, coverId)
+        e.Cover = removeDoublePeriodsInPath(e.Cover)
+    }
+
     return nil
 }
 
@@ -174,8 +181,8 @@ func unzipEpub(path, dest string) (string, error) {
     return ebookPath, nil
 }
 
-func filterLinksWithCorrectExtension(slice []ManifestLink, contentFilePath string) (result []string) {
-    for _, link := range slice {
+func filterLinksWithCorrectExtension(links []ManifestLink, contentFilePath string) (result []string) {
+    for _, link := range links {
         if strings.Compare(path.Ext(link.Link), ".html") == 0 ||
             strings.Compare(path.Ext(link.Link), ".xhtml") == 0 {
             result = append(result, contentFilePath + link.Link)
@@ -183,4 +190,22 @@ func filterLinksWithCorrectExtension(slice []ManifestLink, contentFilePath strin
     }
 
     return result
+}
+
+func getCoverId(metaSlice *[]Meta) string {
+    for _, meta := range *metaSlice {
+        if meta.Name == "cover" { return meta.Content }
+    }
+
+    return ""
+}
+
+func getCoverPath(links []ManifestLink, contentFilePath string, coverId string) string {
+    for _, link := range links {
+        if link.ID == coverId {
+            return filepath.Join(contentFilePath, link.Link)
+        }
+    }
+    
+    return ""
 }

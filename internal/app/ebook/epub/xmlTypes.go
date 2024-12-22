@@ -22,5 +22,11 @@ type Metadata struct {
     Title string `xml:"http://purl.org/dc/elements/1.1/ title"`
     Creator string `xml:"http://purl.org/dc/elements/1.1/ creator"`
     Language string `xml:"http://purl.org/dc/elements/1.1/ language"`
+    Meta []Meta `xml:"meta"`
+}
+
+type Meta struct {
+    Name string `xml:"name,attr"`
+    Content string `xml:"content,attr"`
 }
 

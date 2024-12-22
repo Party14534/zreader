@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	bookstate "github.com/Party14534/zReader/internal/app/ebook/bookState"
 	ebooktype "github.com/Party14534/zReader/internal/app/ebook/ebookType"
@@ -18,11 +19,25 @@ func LoadFile(ebookPath, dest string) (ebooktype.EBook, error) {
     var ebook ebooktype.EBook
     var err error
 
+    // Check if the ebook has been read before
+    pathPieces := strings.Split(ebookPath, string(os.PathSeparator))
+    bookPath := filepath.Join(dest, pathPieces[len(pathPieces) - 1])
+
+    ebook, err = GetEBookMetaData(bookPath)
+    if err == nil {
+        return ebook, nil
+    }
+
     switch extension {
         case ".epub":
             err = epub.LoadEpubBook(ebookPath, dest, &ebook)            
         default:
             err = fmt.Errorf("Ebook type not supported\n")
+    }
+
+    // Save the metadata to not do it again
+    if err == nil {
+        err = SaveEBookMetaData(ebook)
     }
 
     return ebook, err
@@ -64,5 +79,21 @@ func SaveEBookHistory(ebook ebooktype.EBook, state bookstate.BookState) error {
     }
 
     err = os.WriteFile(filepath.Join(ebook.Dest, "state.json"), jsonState, 0644)
+    return err
+}
+
+func GetEBookMetaData(bookPath string) (book ebooktype.EBook, err error) {
+    metaJson, err := os.ReadFile(filepath.Join(bookPath, "metadata.json"))
+    if err != nil { return book, err }
+
+    err = json.Unmarshal(metaJson, &book)
+    return book, err
+}
+
+func SaveEBookMetaData(ebook ebooktype.EBook) error {
+    metaJson, err := json.Marshal(ebook)
+    if err != nil { return err }
+
+    err = os.WriteFile(filepath.Join(ebook.Dest, "metadata.json"), metaJson, 0644)
     return err
 }

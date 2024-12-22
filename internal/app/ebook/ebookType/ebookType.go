@@ -7,16 +7,17 @@ const (
 
 type EBook struct {
     // File Info
-    Dest string
-    ContentFilePath string
-    Type int
+    Dest string `json:"Dest"`
+    ContentFilePath string `json:"ContentFilePath"`
+    Type int `json:"Type"`
     
     // Book metadata
-    Title string
-    Creator string
-    Language string
+    Title string `json:"Title"`
+    Creator string `json:"Creator"`
+    Language string `json:"Language"`
+    Cover string `json:"Cover"`
 
     // Chapters
-    Chapters []string
+    Chapters []string `json:"Chapters"`
 }
 
