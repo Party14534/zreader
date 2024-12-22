@@ -27,11 +27,12 @@
     - Font size
     - Font
     - etc
-- [ ] Update readme.md
-- [ ] Add main menu ??
-    - Change font
+- [X] Add main menu ??
     - Load epubs
+- [ ] Add config file support
+    - Set default font
     - etc
+- [ ] Update readme.md
 - [ ] PDF support?!?
 
 ## Resources and Notes
